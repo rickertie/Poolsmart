@@ -1,0 +1,360 @@
+"""Acceptance tests T1 - T12 from HANDOFF.md.
+
+T1 and T2 are regression tests for the two bugs that caused the rebuild:
+the pump sitting idle before the filtration window closed, and the pump
+oscillating on and off once the daily quota had been met.
+"""
+
+from __future__ import annotations
+
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"))
+
+from core import filtration as filt  # noqa: E402
+from core import heating, ladder, safety  # noqa: E402
+from core.config import (  # noqa: E402
+    ComfortSettings,
+    EnergySettings,
+    FiltrationSettings,
+    HeatPumpSpec,
+    PoolConfig,
+    PoolSpec,
+    PumpSpec,
+)
+from core.models import Branch, Decision, Mode, PoolState, SensorReading  # noqa: E402
+
+TZ = timezone(timedelta(hours=2))
+
+
+def make_config(**overrides) -> PoolConfig:
+    """Rick's installation, used as a realistic fixture."""
+    base = {
+        "pool": PoolSpec(volume_l=3834, surface_m2=6.0, depth_m=0.66),
+        "pump": PumpSpec(flow_m3h=3.596, flow_is_measured=True, power_kw=0.10),
+        "heat_pump": HeatPumpSpec(
+            input_kw=0.58,
+            thermal_kw=3.0,
+            cop_ref=5.17,
+            cop_ref_temp=26.0,
+            cop_low=4.18,
+            cop_low_temp=15.0,
+            air_temp_min=11.0,
+            air_temp_max=43.0,
+            flow_min_m3h=2.0,
+        ),
+        "filtration": FiltrationSettings(turnover_factor=2.0),
+        "comfort": ComfortSettings(),
+        "energy": EnergySettings(max_price=0.25),
+    }
+    base.update(overrides)
+    return PoolConfig(**base)
+
+
+def make_state(now: datetime, **overrides) -> PoolState:
+    defaults = {
+        "now": now,
+        "mode": Mode.AUTO,
+        "water_temp": SensorReading(27.0, 10, "water"),
+        "air_temp": SensorReading(20.0, 10, "air"),
+        "hp_inlet": SensorReading(27.0, 10, "hp_inlet"),
+        "hp_outlet": SensorReading(30.0, 10, "hp_outlet"),
+        "flow_m3h": SensorReading(3.5, 10, "flow"),
+        "pump_power_w": SensorReading(100.0, 10, "pump_power"),
+        "hp_power_w": SensorReading(0.0, 10, "hp_power"),
+        "pump_on": False,
+        "heat_pump_on": False,
+        "target_temp": 28.0,
+        "price_total": 0.30,
+        "price_energy": 0.08,
+    }
+    defaults.update(overrides)
+    return PoolState(**defaults)
+
+
+def run_tick(state: PoolState, config: PoolConfig, done_h: float, previous=None,
+             active_block=None) -> Decision:
+    faults = safety.evaluate(state, config)
+    status = filt.evaluate(state.now, config, done_h, active_block=active_block)
+    available, reason = safety.heat_pump_available(state, config, faults)
+    return ladder.decide(state, config, status, faults, available, reason, previous)
+
+
+# ---------------------------------------------------------------------------
+# T1 - the pump must circulate when the quota would otherwise go unmet
+# ---------------------------------------------------------------------------
+
+def test_t1_deadline_forces_circulation():
+    config = make_config()
+    required = config.daily_filtration_hours
+    now = datetime(2026, 7, 30, 20, 0, tzinfo=TZ)
+    # 45 minutes still owed, last window closes at 21:00, price is high.
+    state = make_state(now, price_total=0.45, water_temp=SensorReading(28.5, 10, "water"))
+    decision = run_tick(state, config, done_h=required - 0.75)
+
+    assert decision.pump is True, decision.reason
+    assert decision.branch is Branch.FILTRATION_DEADLINE
+    assert "Price is ignored" in decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T2 - no oscillation once the quota has been met
+# ---------------------------------------------------------------------------
+
+def test_t2_no_oscillation_after_quota_met():
+    config = make_config()
+    required = config.daily_filtration_hours
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+
+    # Start from a decision that had the pump running, as if a block just ended.
+    previous = Decision(
+        pump=True,
+        heat_pump=False,
+        branch=Branch.FILTRATION_BLOCK,
+        reason="block running",
+        detail={"mode_at_decision": Mode.AUTO.value},
+        hold_until=now,
+    )
+
+    switches = 0
+    decisions = []
+    for minute in range(0, 6 * 60, 1):  # 14:00 to 20:00, one tick per minute
+        tick = now + timedelta(minutes=minute)
+        state = make_state(tick, water_temp=SensorReading(28.4, 10, "water"), pump_on=previous.pump)
+        decision = run_tick(state, config, done_h=required, previous=previous)
+        if not decision.same_outputs(previous):
+            switches += 1
+        decisions.append(decision)
+        previous = decision
+
+    # Exactly one transition: the pump turning off when the quota was complete.
+    assert switches == 1, f"expected a single switch, got {switches}"
+    assert all(d.pump is False for d in decisions[1:]), "pump came back on"
+    assert decisions[-1].branch is Branch.IDLE
+    assert "filtration is complete" in decisions[-1].reason
+
+
+# ---------------------------------------------------------------------------
+# T3 - a restart mid-block preserves the quota and finishes the block
+# ---------------------------------------------------------------------------
+
+def test_t3_restart_midblock_preserves_quota():
+    config = make_config()
+    now = datetime(2026, 7, 30, 13, 30, tzinfo=TZ)
+    block = filt.BlockPlan(
+        index=1,
+        start=now - timedelta(minutes=20),
+        end=now + timedelta(minutes=22),
+        rationale="restored after restart",
+    )
+    state = make_state(now, water_temp=SensorReading(28.4, 10, "water"))
+    decision = run_tick(state, config, done_h=0.33, previous=None, active_block=block)
+
+    assert decision.pump is True
+    assert decision.branch is Branch.FILTRATION_BLOCK
+    assert decision.hold_until == block.end, "the block must hold until its own end"
+
+
+# ---------------------------------------------------------------------------
+# T4 - below the operating envelope nothing heats, not even for free power
+# ---------------------------------------------------------------------------
+
+def test_t4_cold_air_blocks_heating_even_with_negative_price():
+    config = make_config()
+    now = datetime(2026, 7, 30, 13, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        air_temp=SensorReading(9.0, 10, "air"),
+        water_temp=SensorReading(20.0, 10, "water"),
+        price_total=-0.05,
+        price_energy=-0.12,
+    )
+    faults = safety.evaluate(state, config)
+    available, reason = safety.heat_pump_available(state, config, faults)
+
+    assert available is False
+    assert "below the heat pump minimum" in reason
+
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T5 - flow below the heat pump minimum stops heating within one tick
+# ---------------------------------------------------------------------------
+
+def test_t5_low_flow_stops_heat_pump():
+    config = make_config()
+    now = datetime(2026, 7, 30, 13, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        flow_m3h=SensorReading(1.8, 10, "flow"),
+        pump_on=True,
+        heat_pump_on=True,
+        water_temp=SensorReading(24.0, 10, "water"),
+        price_total=0.10,
+    )
+    faults = safety.evaluate(state, config)
+    codes = {f.code for f in faults}
+    assert "flow_below_heat_pump_minimum" in codes
+
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T6 - reaching target stops the heat pump immediately, hold or no hold
+# ---------------------------------------------------------------------------
+
+def test_t6_target_reached_overrides_hold():
+    config = make_config()
+    now = datetime(2026, 7, 30, 13, 0, tzinfo=TZ)
+    previous = Decision(
+        pump=True,
+        heat_pump=True,
+        branch=Branch.HEATING,
+        reason="heating",
+        detail={"mode_at_decision": Mode.AUTO.value},
+        hold_until=now + timedelta(minutes=12),
+    )
+    state = make_state(
+        now,
+        water_temp=SensorReading(28.0, 10, "water"),
+        pump_on=True,
+        heat_pump_on=True,
+        price_total=0.10,
+    )
+    decision = run_tick(state, config, done_h=config.daily_filtration_hours, previous=previous)
+    assert decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T7 - a large temperature rise becomes a multi-day plan
+# ---------------------------------------------------------------------------
+
+def test_t7_large_rise_is_seasonal():
+    config = make_config()
+    est = heating.estimate(config, water_temp=22.0, target_temp=28.0, air_temp=20.0,
+                           hours_available=4.0)
+    assert est.plan_mode is heating.PlanMode.SEASONAL
+    assert 8.0 < est.hours_needed < 14.0, est.hours_needed
+
+    maintenance = heating.estimate(config, water_temp=27.0, target_temp=28.0, air_temp=20.0,
+                                   hours_available=6.0)
+    assert maintenance.plan_mode is heating.PlanMode.MAINTENANCE
+
+
+# ---------------------------------------------------------------------------
+# T8 - aliased sensors must not report a phantom fault
+# ---------------------------------------------------------------------------
+
+def test_t8_aliased_sensors_no_fault():
+    config = make_config(sensor_aliases=frozenset({frozenset({"hp_inlet", "hp_outlet"})}))
+    now = datetime(2026, 7, 30, 13, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        hp_inlet=SensorReading(27.0, 10, "hp_inlet"),
+        hp_outlet=SensorReading(27.0, 10, "hp_outlet"),
+        heat_pump_on=True,
+        pump_on=True,
+        heat_pump_runtime_seconds=45 * 60,
+    )
+    faults = safety.evaluate(state, config)
+    assert not any(f.code == "heat_pump_not_producing" for f in faults)
+
+    # Without the alias the same readings must be flagged.
+    strict = safety.evaluate(state, make_config())
+    assert any(f.code == "heat_pump_not_producing" for f in strict)
+
+
+# ---------------------------------------------------------------------------
+# T9 - the engine never latches on an assumed switch state
+# ---------------------------------------------------------------------------
+
+def test_t9_no_latching_on_actual_state():
+    config = make_config()
+    now = datetime(2026, 7, 30, 23, 30, tzinfo=TZ)
+    # The plug reports itself as on, but nothing justifies running.
+    state = make_state(
+        now,
+        pump_on=True,
+        heat_pump_on=True,
+        water_temp=SensorReading(28.5, 10, "water"),
+    )
+    decision = run_tick(state, config, done_h=config.daily_filtration_hours)
+    assert decision.pump is False and decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T10 - frost protection works even in OFF mode
+# ---------------------------------------------------------------------------
+
+def test_t10_frost_protection_in_off_mode():
+    config = make_config()
+    now = datetime(2026, 12, 15, 3, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.OFF,
+        air_temp=SensorReading(2.0, 10, "air"),
+        water_temp=SensorReading(6.0, 10, "water"),
+    )
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.pump is True
+    assert decision.branch is Branch.FROST_PROTECTION
+    assert decision.heat_pump is False, "the heat pump may not run at 2 C"
+
+
+# ---------------------------------------------------------------------------
+# T11 - heating runtime counts towards the filtration quota
+# ---------------------------------------------------------------------------
+
+def test_t11_heating_credits_filtration():
+    config = make_config()
+    now = datetime(2026, 7, 30, 18, 0, tzinfo=TZ)
+    status = filt.evaluate(now, config, done_h=9.0)
+    assert status.satisfied
+    assert status.deadline_critical is False
+
+    state = make_state(now, water_temp=SensorReading(28.4, 10, "water"))
+    decision = run_tick(state, config, done_h=9.0)
+    assert decision.pump is False
+    assert decision.branch is Branch.IDLE
+
+
+# ---------------------------------------------------------------------------
+# T12 - the integration works without a price source
+# ---------------------------------------------------------------------------
+
+def test_t12_works_without_price_data():
+    config = make_config(energy=EnergySettings(max_price=None))
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        price_total=None,
+        price_energy=None,
+        solar_power_w=None,
+        water_temp=SensorReading(25.0, 10, "water"),
+    )
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.heat_pump is True, decision.reason
+    assert decision.branch is Branch.HEATING
+
+
+# ---------------------------------------------------------------------------
+# Derived figures sanity check
+# ---------------------------------------------------------------------------
+
+def test_derived_filtration_figures():
+    config = make_config()
+    assert abs(config.daily_filtration_hours - 2.132) < 0.01
+    assert abs(config.block_hours - 0.711) < 0.01
+    assert abs(config.pool.kwh_thermal_per_degree - 4.458) < 0.01
+    assert abs(config.heat_pump.cop_at(26.0) - 5.17) < 0.001
+    assert abs(config.heat_pump.thermal_kw_at(15.0) - 2.424) < 0.01
+
+
+def test_datasheet_flow_is_derated():
+    spec = PumpSpec(flow_m3h=3.596, flow_is_measured=False, power_kw=0.1)
+    assert abs(spec.effective_flow_m3h - 2.517) < 0.01

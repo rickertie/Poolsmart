@@ -1,0 +1,154 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Zwembad",
+        "description": "Filtratietijd, opwarmtijd en het energiebudget worden allemaal uit deze waarden berekend, dus je hoeft niets in uren op te geven.",
+        "data": {
+          "name": "Naam",
+          "volume_l": "Waterinhoud (liter)",
+          "surface_m2": "Wateroppervlak (m²)",
+          "depth_m": "Waterdiepte (m)",
+          "target_temp": "Gewenste temperatuur (°C)",
+          "max_temp": "Maximale temperatuur (°C)"
+        }
+      },
+      "pump": {
+        "title": "Circulatiepomp",
+        "description": "Fabrikanten geven de pompflow zonder filter. Met een filter erin blijft daar ruwweg {derate}% van over, en dat zakt verder als het filter vervuilt. Heb je de werkelijke flow gemeten, vink dan het vakje aan; dan wordt de waarde ongewijzigd gebruikt.",
+        "data": {
+          "pump_flow_m3h": "Flow (m³/u)",
+          "pump_flow_measured": "Dit is een gemeten waarde, niet uit de brochure",
+          "pump_power_kw": "Elektrisch vermogen (kW)"
+        }
+      },
+      "heat_pump": {
+        "title": "Warmtepomp",
+        "description": "Aanbeveling: zet de eigen thermostaat van de warmtepomp op {recommended_setpoint} °C. Daaronder houd je volledige softwarecontrole, en erboven grijpt de hardware in als de software ooit niet uitschakelt. Laat het tweede COP-punt leeg voor een vlakke curve.",
+        "data": {
+          "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
+          "hp_thermal_kw": "Thermisch vermogen (kW)",
+          "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
+          "hp_cop_low": "COP bij een tweede, lagere luchttemperatuur",
+          "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
+          "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
+          "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)"
+        }
+      },
+      "entities": {
+        "title": "Verplichte entiteiten",
+        "description": "De twee schakelaars en de zwembadtemperatuur. Zonder deze werkt er niets.",
+        "data": {
+          "pump_switch": "Schakelaar circulatiepomp",
+          "heat_pump_switch": "Schakelaar warmtepomp",
+          "water_temp_sensor": "Zwembadwatertemperatuur"
+        }
+      },
+      "optional": {
+        "title": "Optionele entiteiten",
+        "description": "Elk veld mag leeg blijven; de bijbehorende functie wordt dan uitgeschakeld en gemeld in plaats van dat er iets faalt. Met de tot nu toe ingevulde waarden is er ongeveer {daily_hours} uur filtratie per dag nodig, zo'n {block_minutes} minuten per blok.",
+        "data": {
+          "air_temp_sensor": "Buitentemperatuur",
+          "hp_inlet_sensor": "Inlaattemperatuur warmtepomp",
+          "hp_outlet_sensor": "Uitlaattemperatuur warmtepomp",
+          "flow_sensor": "Debietmeter (m³/u)",
+          "pump_power_sensor": "Vermogen pomp",
+          "hp_power_sensor": "Vermogen warmtepomp",
+          "price_sensor": "Stroomprijs (per kWh)",
+          "solar_power_sensor": "Actuele zonneopbrengst",
+          "solar_forecast_sensor": "Zonneverwachting",
+          "weather_entity": "Weer"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "PoolSmart-instellingen",
+        "data": {
+          "turnover_factor": "Turnover-factor (keer de zwembadinhoud per dag)",
+          "min_block_minutes": "Minimale blokduur (minuten)",
+          "night_start": "Nachtrust begint (UU:MM)",
+          "night_end": "Nachtrust eindigt (UU:MM)",
+          "min_on_minutes": "Minimale draaitijd (minuten)",
+          "min_off_minutes": "Minimale stilstandtijd (minuten)",
+          "pump_rundown_minutes": "Naloop pomp na verwarmen (minuten)",
+          "temp_hysteresis": "Temperatuurhysterese (°C)",
+          "min_water_temp": "Minimale watertemperatuur (°C)",
+          "frost_air_temp": "Vorstbeveiliging onder (°C)",
+          "max_price": "Maximale prijs voor verwarmen (per kWh)",
+          "negative_price_basis": "Welke prijs geldt als onder nul",
+          "solar_threshold_w": "Drempel zonoverschot (W)",
+          "solar_hysteresis_w": "Hysterese zon (W)",
+          "eco_price_factor": "Strengheidsfactor ECO",
+          "chemistry_cycle_minutes": "Duur chemiecyclus (minuten)",
+          "learning_enabled": "Zelflerend actief"
+        }
+      }
+    }
+  },
+  "selector": {
+    "negative_price_basis": {
+      "options": {
+        "total": "Totaalprijs onder nul (zeldzaam, maar dan verdien je echt geld)",
+        "market": "Marktprijs onder nul (vaker, maar je betaalt nog belasting)"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": { "name": "Status" },
+      "ready_at": { "name": "Klaar om" },
+      "heating_time_required": { "name": "Benodigde opwarmtijd" },
+      "delta_t": { "name": "Delta-T" },
+      "cop_expected": { "name": "COP verwacht" },
+      "cop_measured": { "name": "COP gemeten" },
+      "thermal_power": { "name": "Thermisch vermogen" },
+      "flow_rate": { "name": "Debiet" },
+      "filtration_required_today": { "name": "Filtratie nodig vandaag" },
+      "filtration_completed_today": { "name": "Filtratie gedaan vandaag" },
+      "filtration_remaining_today": { "name": "Filtratie resterend vandaag" },
+      "heating_rate": { "name": "Opwarmsnelheid" },
+      "heat_loss_rate": { "name": "Warmteverlies" },
+      "energy_today": { "name": "Energie vandaag" },
+      "cost_today": { "name": "Kosten vandaag" },
+      "cost_saved_today": { "name": "Besparing vandaag" }
+    },
+    "binary_sensor": {
+      "heating": { "name": "Verwarmt" },
+      "circulating": { "name": "Circuleert" },
+      "heat_pump_available": { "name": "Warmtepomp beschikbaar" },
+      "fault": { "name": "Storing" },
+      "filter_service_needed": { "name": "Filter moet schoongemaakt" }
+    },
+    "select": {
+      "mode": {
+        "name": "Modus",
+        "state": {
+          "auto": "Automatisch",
+          "boost": "Boost",
+          "eco": "Eco",
+          "pump": "Alleen pomp",
+          "standby": "Stand-by",
+          "off": "Uit"
+        }
+      }
+    },
+    "number": {
+      "target_temperature": { "name": "Doeltemperatuur" },
+      "max_price": { "name": "Maximale prijs" }
+    },
+    "switch": {
+      "manual_override": { "name": "Handmatige overname" },
+      "learning_enabled": { "name": "Zelflerend" }
+    },
+    "button": {
+      "boost_now": { "name": "Nu verwarmen" },
+      "force_filtration": { "name": "Volledige filtratiecyclus forceren" },
+      "start_chemistry_cycle": { "name": "Chemiecyclus starten" },
+      "reset_learning": { "name": "Leerwaarden wissen" }
+    }
+  }
+}

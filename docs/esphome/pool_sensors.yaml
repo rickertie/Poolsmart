@@ -1,0 +1,149 @@
+# ---------------------------------------------------------------------------
+# PoolSmart -- example ESPHome configuration
+#
+# ESPHome measures. Home Assistant decides. This file therefore contains no
+# thresholds, no schedules and no pool-specific constants: those all live in the
+# integration's config flow so they can be changed without reflashing.
+#
+# Replace the substitutions with your own values. The one-wire addresses are
+# printed in the ESPHome log on first boot.
+# ---------------------------------------------------------------------------
+
+substitutions:
+  device_name: pool-sensors
+  friendly_name: Pool sensors
+
+  # One-wire sensor addresses. Read them from the boot log and paste them here.
+  addr_pool: "0x0000000000000000"      # Pool water
+  addr_pump_in: "0x0000000000000000"   # Pump inlet, from the pool
+  addr_pump_out: "0x0000000000000000"  # Pump outlet, into the heat pump
+  addr_hp_out: "0x0000000000000000"    # Heat pump outlet, back to the pool
+  addr_outdoor: "0x0000000000000000"   # Outdoor air
+
+  # Flow meter calibration. See the sensor datasheet, or determine it by
+  # filling a known volume.
+  flow_pulses_per_litre: "38.0"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: seeed_xiao_esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+api:
+  # If the connection to Home Assistant is lost the integration stops receiving
+  # data, notices the readings going stale and switches off. There is nothing to
+  # interlock here because the plugs are on Zigbee, not on this board.
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap: {}
+
+captive_portal:
+
+one_wire:
+  - platform: gpio
+    pin: GPIO2
+
+sensor:
+  - platform: dallas_temp
+    address: ${addr_pool}
+    name: Pool water temperature
+    id: pool_water
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: dallas_temp
+    address: ${addr_pump_in}
+    name: Pump inlet temperature
+    id: pump_in
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+
+  - platform: dallas_temp
+    address: ${addr_pump_out}
+    name: Pump outlet temperature
+    id: pump_out
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+
+  # If the plumbing runs pool -> pump -> heat pump -> pool, the pump outlet is
+  # physically the heat pump inlet. Point the integration's "heat pump inlet" at
+  # that sensor and delta-T works without a separate probe.
+  - platform: dallas_temp
+    address: ${addr_hp_out}
+    name: Heat pump outlet temperature
+    id: hp_out
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+
+  - platform: dallas_temp
+    address: ${addr_outdoor}
+    name: Outdoor temperature
+    id: outdoor
+    update_interval: 60s
+    filters:
+      - filter_out: nan
+
+  - platform: pulse_counter
+    pin:
+      number: GPIO3
+      mode:
+        input: true
+        pullup: true
+    name: Pool flow rate
+    id: flow_rate
+    unit_of_measurement: m³/h
+    accuracy_decimals: 2
+    update_interval: 10s
+    filters:
+      # pulses/min -> litres/min -> m3/h
+      - lambda: return x / ${flow_pulses_per_litre} * 60.0 / 1000.0;
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+
+  # Thermal output across the heat pump. Basic arithmetic belongs here; the
+  # decision about what to do with it does not.
+  - platform: template
+    name: Pool thermal power
+    id: thermal_power
+    unit_of_measurement: kW
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (isnan(id(flow_rate).state) || isnan(id(hp_out).state) || isnan(id(pump_out).state)) {
+        return NAN;
+      }
+      float delta = id(hp_out).state - id(pump_out).state;
+      return id(flow_rate).state * delta * 1.163;
+
+  - platform: template
+    name: Pool delta T
+    unit_of_measurement: °C
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (isnan(id(hp_out).state) || isnan(id(pump_out).state)) return NAN;
+      return id(hp_out).state - id(pump_out).state;
+
+binary_sensor:
+  - platform: template
+    name: Pool sensor fault
+    id: sensor_fault
+    lambda: |-
+      return isnan(id(pool_water).state) || isnan(id(outdoor).state);
