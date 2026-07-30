@@ -1,0 +1,241 @@
+"""Core data models for ha_poolsmart.
+
+Pure Python: no Home Assistant imports, so the decision engine can be unit
+tested without a running Home Assistant instance.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta
+from enum import Enum, IntEnum
+
+
+class Mode(str, Enum):
+    """Operating mode selected by the user.
+
+    A mode does not carry its own logic. It enables or disables branches of the
+    single decision ladder, which is what keeps the decision logic in one place.
+    """
+
+    AUTO = "auto"
+    BOOST = "boost"
+    ECO = "eco"
+    PUMP = "pump"
+    STANDBY = "standby"
+    OFF = "off"
+
+
+class Branch(IntEnum):
+    """Branches of the decision ladder, in priority order.
+
+    The ladder is walked from the top. The first branch that matches produces
+    the decision and lower branches are not evaluated.
+    """
+
+    EMERGENCY_STOP = 0
+    FROST_PROTECTION = 1
+    MANUAL = 2
+    CHEMISTRY = 3
+    FILTRATION_DEADLINE = 4
+    FREE_POWER = 5
+    HEATING = 6
+    FILTRATION_BLOCK = 7
+    PUMP_RUNDOWN = 8
+    IDLE = 9
+
+
+#: Branches that represent safety or a non-negotiable obligation. These ignore
+#: the night window and may always override an active hold.
+PRIORITY_BRANCHES = frozenset(
+    {
+        Branch.EMERGENCY_STOP,
+        Branch.FROST_PROTECTION,
+        Branch.MANUAL,
+        Branch.CHEMISTRY,
+        Branch.FILTRATION_DEADLINE,
+    }
+)
+
+#: Branches allowed per mode.
+MODE_BRANCHES: dict[Mode, frozenset[Branch]] = {
+    Mode.AUTO: frozenset(Branch),
+    Mode.BOOST: frozenset(Branch),
+    Mode.ECO: frozenset(Branch),
+    Mode.PUMP: frozenset(
+        {
+            Branch.EMERGENCY_STOP,
+            Branch.FROST_PROTECTION,
+            Branch.MANUAL,
+            Branch.CHEMISTRY,
+            Branch.FILTRATION_DEADLINE,
+            Branch.FREE_POWER,
+            Branch.IDLE,
+        }
+    ),
+    Mode.STANDBY: frozenset(
+        {
+            Branch.EMERGENCY_STOP,
+            Branch.FROST_PROTECTION,
+            Branch.MANUAL,
+            Branch.CHEMISTRY,
+            Branch.FILTRATION_DEADLINE,
+            Branch.FREE_POWER,
+            Branch.FILTRATION_BLOCK,
+            Branch.PUMP_RUNDOWN,
+            Branch.IDLE,
+        }
+    ),
+    # OFF still protects against freezing. An off switch must not be able to
+    # cause damage.
+    Mode.OFF: frozenset({Branch.EMERGENCY_STOP, Branch.FROST_PROTECTION, Branch.IDLE}),
+}
+
+
+class Severity(str, Enum):
+    """How bad a fault is."""
+
+    #: Everything off. Overrides any hold.
+    CRITICAL = "critical"
+    #: Heat pump may not run; circulation is still allowed.
+    HEATING_BLOCKED = "heating_blocked"
+    #: Informational; needs attention but does not change control.
+    WARNING = "warning"
+
+
+@dataclass(frozen=True)
+class Fault:
+    """A detected problem."""
+
+    code: str
+    severity: Severity
+    message: str
+    detail: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SensorReading:
+    """A single sensor value with the age of the reading.
+
+    ``value`` is ``None`` when the sensor is not configured or unavailable. The
+    engine must treat "not configured" as "feature disabled", never as an
+    assumed value.
+    """
+
+    value: float | None
+    age_seconds: float | None = None
+    #: Logical role, used for alias-aware plausibility checks.
+    role: str = ""
+
+    @property
+    def available(self) -> bool:
+        return self.value is not None
+
+
+@dataclass(frozen=True)
+class PoolState:
+    """Immutable snapshot of everything known at one tick."""
+
+    now: datetime
+    mode: Mode
+
+    # -- Measurements ------------------------------------------------------
+    water_temp: SensorReading
+    air_temp: SensorReading
+    hp_inlet: SensorReading
+    hp_outlet: SensorReading
+    flow_m3h: SensorReading
+    pump_power_w: SensorReading
+    hp_power_w: SensorReading
+
+    # -- Actual switch states, read back from the plugs --------------------
+    pump_on: bool
+    heat_pump_on: bool
+
+    # -- External data -----------------------------------------------------
+    #: All-in price per kWh, including taxes and levies.
+    price_total: float | None = None
+    #: Raw spot price per kWh, excluding taxes and levies.
+    price_energy: float | None = None
+    #: Cheapest upcoming intervals, as (start, end, all-in price) tuples.
+    price_forecast: tuple[tuple[datetime, datetime, float], ...] = ()
+    solar_power_w: float | None = None
+    solar_forecast_w: tuple[tuple[datetime, float], ...] = ()
+
+    # -- Targets and plan --------------------------------------------------
+    target_temp: float = 28.0
+    #: Next moment the pool must be at target, if any.
+    swim_time: datetime | None = None
+    #: Set by the heating planner in WP3. Until then heating is reactive.
+    heating_session_active: bool = False
+    heating_session_planned_start: datetime | None = None
+
+    # -- Runtime bookkeeping ----------------------------------------------
+    #: Pump runtime credited to today's filtration quota, in hours. Heating
+    #: runs the pump too, so those hours count and are included here.
+    filtration_done_h: float = 0.0
+    #: Currently running filtration block, if any: (index, start, end).
+    active_block: tuple[int, datetime, datetime] | None = None
+    #: Continuous seconds the heat pump has been running, for output checks.
+    heat_pump_runtime_seconds: float = 0.0
+    #: Moment the heat pump last switched off, for the rundown branch.
+    heat_pump_stopped_at: datetime | None = None
+    #: A chemistry cycle requested by the user, with its end time.
+    chemistry_until: datetime | None = None
+    #: Manual override requested through the switch entity.
+    manual_pump_request: bool = False
+
+    # -- Learned values ----------------------------------------------------
+    heat_loss_c_per_h: float = 0.08
+    measured_flow_m3h: float | None = None
+
+    # -- Derived -----------------------------------------------------------
+
+    @property
+    def delta_t(self) -> float | None:
+        """Temperature rise across the heat pump."""
+        if not (self.hp_inlet.available and self.hp_outlet.available):
+            return None
+        return self.hp_outlet.value - self.hp_inlet.value
+
+    @property
+    def effective_flow_m3h(self) -> float | None:
+        """Best available figure for the real flow."""
+        if self.flow_m3h.available:
+            return self.flow_m3h.value
+        return self.measured_flow_m3h
+
+    def replace(self, **changes) -> PoolState:
+        """Return a copy with the given fields changed."""
+        return replace(self, **changes)
+
+
+@dataclass(frozen=True)
+class Decision:
+    """The single output of the decision engine.
+
+    Everything the user sees is a rendering of this object. Nothing else in the
+    integration may switch a relay.
+    """
+
+    pump: bool
+    heat_pump: bool
+    branch: Branch
+    reason: str
+    detail: dict = field(default_factory=dict)
+    #: The decision is not revisited before this moment, except by a branch in
+    #: PRIORITY_BRANCHES or by a stop condition. This is where hysteresis lives:
+    #: a decision that switches something records how long it stays valid, so no
+    #: code path can flip a relay inside the hold window.
+    hold_until: datetime | None = None
+    taken_at: datetime | None = None
+
+    def with_hold(self, now: datetime, minutes: int) -> Decision:
+        """Return a copy holding for the given number of minutes from ``now``."""
+        return replace(self, hold_until=now + timedelta(minutes=minutes), taken_at=now)
+
+    def same_outputs(self, other: Decision | None) -> bool:
+        """Whether the physical outputs are identical."""
+        if other is None:
+            return False
+        return self.pump == other.pump and self.heat_pump == other.heat_pump

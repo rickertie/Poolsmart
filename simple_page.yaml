@@ -1,0 +1,225 @@
+"""Persistent state for PoolSmart.
+
+Filtration runtime is kept as a list of closed intervals rather than a running
+counter. That distinction is what makes a restart survivable: a counter that
+lives in an entity loses everything, whereas a list of intervals loses at most
+the tick that was in flight, and an interval left open by a crash is closed at
+the last timestamp that was written.
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
+
+from .const import DECISION_LOG_SIZE, STORAGE_KEY, STORAGE_VERSION
+
+_LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class RuntimeInterval:
+    """A period during which the circulation pump was running."""
+
+    start: datetime
+    end: datetime | None = None
+
+    @property
+    def hours(self) -> float:
+        if self.end is None:
+            return 0.0
+        return max(0.0, (self.end - self.start).total_seconds() / 3600.0)
+
+    def as_dict(self) -> dict:
+        return {
+            "start": self.start.isoformat(),
+            "end": self.end.isoformat() if self.end else None,
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> RuntimeInterval:
+        return cls(
+            start=datetime.fromisoformat(raw["start"]),
+            end=datetime.fromisoformat(raw["end"]) if raw.get("end") else None,
+        )
+
+
+@dataclass
+class LearnedValues:
+    """Values the system improves after each session."""
+
+    heating_rate_c_per_h: float | None = None
+    heat_loss_c_per_h: float | None = None
+    measured_flow_m3h: float | None = None
+    cop_by_air_bucket: dict[str, float] = field(default_factory=dict)
+    session_count: int = 0
+
+    def as_dict(self) -> dict:
+        return {
+            "heating_rate_c_per_h": self.heating_rate_c_per_h,
+            "heat_loss_c_per_h": self.heat_loss_c_per_h,
+            "measured_flow_m3h": self.measured_flow_m3h,
+            "cop_by_air_bucket": self.cop_by_air_bucket,
+            "session_count": self.session_count,
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> LearnedValues:
+        return cls(
+            heating_rate_c_per_h=raw.get("heating_rate_c_per_h"),
+            heat_loss_c_per_h=raw.get("heat_loss_c_per_h"),
+            measured_flow_m3h=raw.get("measured_flow_m3h"),
+            cop_by_air_bucket=raw.get("cop_by_air_bucket", {}),
+            session_count=raw.get("session_count", 0),
+        )
+
+
+class PoolStore:
+    """Wrapper around Home Assistant's Store helper."""
+
+    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+        self._store: Store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry_id}")
+        self.quota_date: date | None = None
+        self.intervals: list[RuntimeInterval] = []
+        self.learned = LearnedValues()
+        self.active_block: dict | None = None
+        self.heat_pump_stopped_at: datetime | None = None
+        self.chemistry_until: datetime | None = None
+        self.mode: str | None = None
+        self.target_temp: float | None = None
+        self.decision_log: list[dict] = []
+        self.energy_today_kwh: float = 0.0
+        self.cost_today: float = 0.0
+        self.cost_baseline_today: float = 0.0
+
+    # -- Loading and saving ------------------------------------------------
+
+    async def async_load(self) -> None:
+        raw = await self._store.async_load() or {}
+        try:
+            if raw.get("quota_date"):
+                self.quota_date = date.fromisoformat(raw["quota_date"])
+            self.intervals = [
+                RuntimeInterval.from_dict(item) for item in raw.get("intervals", [])
+            ]
+            self.learned = LearnedValues.from_dict(raw.get("learned", {}))
+            self.active_block = raw.get("active_block")
+            if raw.get("heat_pump_stopped_at"):
+                self.heat_pump_stopped_at = datetime.fromisoformat(raw["heat_pump_stopped_at"])
+            if raw.get("chemistry_until"):
+                self.chemistry_until = datetime.fromisoformat(raw["chemistry_until"])
+            self.mode = raw.get("mode")
+            self.target_temp = raw.get("target_temp")
+            self.decision_log = raw.get("decision_log", [])
+            self.energy_today_kwh = raw.get("energy_today_kwh", 0.0)
+            self.cost_today = raw.get("cost_today", 0.0)
+            self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
+
+        self._close_open_interval()
+
+    def _close_open_interval(self) -> None:
+        """Close an interval that a crash or restart left open.
+
+        The pump state after a restart is unknown until the first tick, so the
+        interval is closed at its own start. At worst one tick of runtime is lost;
+        the alternative -- assuming it kept running -- would silently inflate the
+        quota and skip real filtration.
+        """
+        for interval in self.intervals:
+            if interval.end is None:
+                interval.end = interval.start
+                _LOGGER.debug("Closed a filtration interval left open by a restart")
+
+    async def async_save(self) -> None:
+        await self._store.async_save(
+            {
+                "quota_date": self.quota_date.isoformat() if self.quota_date else None,
+                "intervals": [i.as_dict() for i in self.intervals],
+                "learned": self.learned.as_dict(),
+                "active_block": self.active_block,
+                "heat_pump_stopped_at": (
+                    self.heat_pump_stopped_at.isoformat()
+                    if self.heat_pump_stopped_at
+                    else None
+                ),
+                "chemistry_until": (
+                    self.chemistry_until.isoformat() if self.chemistry_until else None
+                ),
+                "mode": self.mode,
+                "target_temp": self.target_temp,
+                "decision_log": self.decision_log[-DECISION_LOG_SIZE:],
+                "energy_today_kwh": self.energy_today_kwh,
+                "cost_today": self.cost_today,
+                "cost_baseline_today": self.cost_baseline_today,
+            }
+        )
+
+    # -- Filtration quota --------------------------------------------------
+
+    def roll_day(self, now: datetime) -> bool:
+        """Reset the quota when the date changes. Returns True if it rolled."""
+        if self.quota_date == now.date():
+            return False
+        self.quota_date = now.date()
+        self.intervals = []
+        self.active_block = None
+        self.energy_today_kwh = 0.0
+        self.cost_today = 0.0
+        self.cost_baseline_today = 0.0
+        return True
+
+    def record_pump(self, now: datetime, running: bool) -> None:
+        """Update the interval list from the pump's actual state."""
+        open_interval = next((i for i in self.intervals if i.end is None), None)
+        if running and open_interval is None:
+            self.intervals.append(RuntimeInterval(start=now))
+        elif running and open_interval is not None:
+            # Keep the open interval open, but remember how far it has come so a
+            # crash loses only the last tick.
+            open_interval.end = None
+        elif not running and open_interval is not None:
+            open_interval.end = now
+
+    def runtime_hours(self, now: datetime) -> float:
+        """Filtration runtime credited today, including any open interval.
+
+        Heating sessions run the pump too, so their runtime lands here
+        automatically. Without that credit the system would filter substantially
+        more than needed on heating days.
+        """
+        total = 0.0
+        for interval in self.intervals:
+            end = interval.end or now
+            total += max(0.0, (end - interval.start).total_seconds() / 3600.0)
+        return total
+
+    # -- Decision log ------------------------------------------------------
+
+    def log_decision(self, payload: dict) -> None:
+        self.decision_log.append(payload)
+        if len(self.decision_log) > DECISION_LOG_SIZE:
+            self.decision_log = self.decision_log[-DECISION_LOG_SIZE:]
+
+    # -- Learned values ----------------------------------------------------
+
+    def apply_learned(self, name: str, value: float, max_step_ratio: float) -> float:
+        """Update a learned value with a capped step.
+
+        A single strange session must not be able to wreck the model, so each
+        update may move the value by at most ``max_step_ratio``.
+        """
+        current = getattr(self.learned, name, None)
+        if current is None or current == 0:
+            setattr(self.learned, name, value)
+            return value
+        limit = abs(current) * max_step_ratio
+        delta = max(-limit, min(limit, value - current))
+        updated = current + delta
+        setattr(self.learned, name, updated)
+        return updated

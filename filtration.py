@@ -1,0 +1,130 @@
+"""Constants and configuration keys for PoolSmart."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+DOMAIN = "poolsmart"
+DEFAULT_NAME = "Pool"
+
+#: How often the decision engine runs.
+UPDATE_INTERVAL = timedelta(seconds=30)
+
+#: Storage key and version for persisted state.
+STORAGE_KEY = f"{DOMAIN}.state"
+STORAGE_VERSION = 1
+
+#: Number of decisions kept in the log.
+DECISION_LOG_SIZE = 100
+
+# -- Step 1: pool ----------------------------------------------------------
+CONF_VOLUME_L = "volume_l"
+CONF_SURFACE_M2 = "surface_m2"
+CONF_DEPTH_M = "depth_m"
+CONF_TARGET_TEMP = "target_temp"
+CONF_MAX_TEMP = "max_temp"
+
+# -- Step 2: circulation pump ---------------------------------------------
+CONF_PUMP_FLOW_M3H = "pump_flow_m3h"
+CONF_PUMP_FLOW_MEASURED = "pump_flow_measured"
+CONF_PUMP_POWER_KW = "pump_power_kw"
+CONF_PUMP_DERATE = "pump_datasheet_derate"
+
+# -- Step 3: heat pump -----------------------------------------------------
+CONF_HP_INPUT_KW = "hp_input_kw"
+CONF_HP_THERMAL_KW = "hp_thermal_kw"
+CONF_HP_COP_REF = "hp_cop_ref"
+CONF_HP_COP_REF_TEMP = "hp_cop_ref_temp"
+CONF_HP_COP_LOW = "hp_cop_low"
+CONF_HP_COP_LOW_TEMP = "hp_cop_low_temp"
+CONF_HP_COP_CLAMP_MIN = "hp_cop_clamp_min"
+CONF_HP_COP_CLAMP_MAX = "hp_cop_clamp_max"
+CONF_HP_AIR_TEMP_MIN = "hp_air_temp_min"
+CONF_HP_AIR_TEMP_MAX = "hp_air_temp_max"
+CONF_HP_FLOW_MIN_M3H = "hp_flow_min_m3h"
+
+# -- Step 4: required entities --------------------------------------------
+CONF_PUMP_SWITCH = "pump_switch"
+CONF_HP_SWITCH = "heat_pump_switch"
+CONF_WATER_TEMP_SENSOR = "water_temp_sensor"
+
+# -- Step 5: optional entities --------------------------------------------
+CONF_AIR_TEMP_SENSOR = "air_temp_sensor"
+CONF_HP_INLET_SENSOR = "hp_inlet_sensor"
+CONF_HP_OUTLET_SENSOR = "hp_outlet_sensor"
+CONF_FLOW_SENSOR = "flow_sensor"
+CONF_PUMP_POWER_SENSOR = "pump_power_sensor"
+CONF_HP_POWER_SENSOR = "hp_power_sensor"
+CONF_PRICE_SENSOR = "price_sensor"
+CONF_SOLAR_POWER_SENSOR = "solar_power_sensor"
+CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
+CONF_WEATHER_ENTITY = "weather_entity"
+
+OPTIONAL_ENTITY_KEYS = (
+    CONF_AIR_TEMP_SENSOR,
+    CONF_HP_INLET_SENSOR,
+    CONF_HP_OUTLET_SENSOR,
+    CONF_FLOW_SENSOR,
+    CONF_PUMP_POWER_SENSOR,
+    CONF_HP_POWER_SENSOR,
+    CONF_PRICE_SENSOR,
+    CONF_SOLAR_POWER_SENSOR,
+    CONF_SOLAR_FORECAST_SENSOR,
+    CONF_WEATHER_ENTITY,
+)
+
+#: Which capability each optional entity unlocks. Used to tell the user exactly
+#: what is switched off when a field is left blank, instead of failing.
+CAPABILITY_BY_ENTITY = {
+    CONF_AIR_TEMP_SENSOR: "operating_envelope",
+    CONF_HP_INLET_SENSOR: "delta_t_and_cop",
+    CONF_HP_OUTLET_SENSOR: "delta_t_and_cop",
+    CONF_FLOW_SENSOR: "flow_protection",
+    CONF_PUMP_POWER_SENSOR: "energy_and_cost",
+    CONF_HP_POWER_SENSOR: "energy_and_cost",
+    CONF_PRICE_SENSOR: "price_optimisation",
+    CONF_SOLAR_POWER_SENSOR: "solar_optimisation",
+    CONF_SOLAR_FORECAST_SENSOR: "solar_forecast",
+}
+
+# -- Options ---------------------------------------------------------------
+CONF_TURNOVER_FACTOR = "turnover_factor"
+CONF_BLOCK_WINDOWS = "block_windows"
+CONF_MIN_BLOCK_MINUTES = "min_block_minutes"
+CONF_NIGHT_START = "night_start"
+CONF_NIGHT_END = "night_end"
+CONF_MIN_ON_MINUTES = "min_on_minutes"
+CONF_MIN_OFF_MINUTES = "min_off_minutes"
+CONF_PUMP_RUNDOWN_MINUTES = "pump_rundown_minutes"
+CONF_TEMP_HYSTERESIS = "temp_hysteresis"
+CONF_MIN_WATER_TEMP = "min_water_temp"
+CONF_FROST_AIR_TEMP = "frost_air_temp"
+CONF_MAX_PRICE = "max_price"
+CONF_NEGATIVE_PRICE_BASIS = "negative_price_basis"
+CONF_SOLAR_THRESHOLD_W = "solar_threshold_w"
+CONF_SOLAR_HYSTERESIS_W = "solar_hysteresis_w"
+CONF_ECO_PRICE_FACTOR = "eco_price_factor"
+CONF_LEARNING_ENABLED = "learning_enabled"
+CONF_SWIM_WINDOWS = "swim_windows"
+CONF_NOTIFY_TARGETS = "notify_targets"
+CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
+
+DEFAULT_CHEMISTRY_MINUTES = 30
+
+#: Attribute names published by the tibber_prices integration. The all-in price
+#: is the sensor state; the raw spot price and the tax component are attributes.
+ATTR_ENERGY_PRICE = "energy_price"
+ATTR_TAX = "tax"
+
+#: Notification event types the user can route independently.
+NOTIFY_EVENTS = (
+    "heating_started",
+    "target_reached",
+    "flow_fault",
+    "sensor_fault",
+    "chemistry_alarm",
+    "high_energy_cost",
+    "heating_postponed",
+    "ai_recommendation",
+    "filter_service",
+)

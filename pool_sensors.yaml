@@ -1,0 +1,260 @@
+"""Read-only sensors.
+
+Source entities are deliberately not mirrored. Water temperature, outdoor
+temperature and price stay the entities the user selected during setup; only
+computed values get an entity of their own. Mirroring would create a second
+place where the same number lives, which is how the previous design drifted.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTemperature, UnitOfTime
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from .const import DOMAIN
+from .coordinator import PoolSmartCoordinator
+from .entity import PoolSmartEntity
+
+
+@dataclass(frozen=True, kw_only=True)
+class PoolSensorDescription(SensorEntityDescription):
+    """A sensor plus how to derive its value from the coordinator."""
+
+    value_fn: Callable[[PoolSmartCoordinator], object]
+    attributes_fn: Callable[[PoolSmartCoordinator], dict] | None = None
+
+
+def _status_attributes(c: PoolSmartCoordinator) -> dict:
+    decision = c.decision
+    if decision is None:
+        return {}
+    return {
+        "reason": decision.reason,
+        "branch": decision.branch.name,
+        "branch_number": int(decision.branch),
+        "pump": decision.pump,
+        "heat_pump": decision.heat_pump,
+        "hold_until": decision.hold_until.isoformat() if decision.hold_until else None,
+        "heat_pump_available": c.heat_pump_available,
+        "heat_pump_gate_reason": c.heat_pump_gate_reason,
+        "faults": c.fault_codes(),
+        "disabled_capabilities": sorted(c.disabled_capabilities),
+        **{f"detail_{k}": v for k, v in decision.detail.items()},
+    }
+
+
+SENSORS: tuple[PoolSensorDescription, ...] = (
+    PoolSensorDescription(
+        key="status",
+        icon="mdi:information-outline",
+        value_fn=lambda c: c.decision.branch.name.lower() if c.decision else None,
+        attributes_fn=_status_attributes,
+    ),
+    PoolSensorDescription(
+        key="ready_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda c: None,
+    ),
+    PoolSensorDescription(
+        key="heating_time_required",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=1,
+        icon="mdi:timer-sand",
+        value_fn=lambda c: (
+            round(c.estimate.hours_needed, 2)
+            if c.estimate and c.estimate.hours_needed != float("inf")
+            else None
+        ),
+        attributes_fn=lambda c: (
+            {
+                "plan_mode": c.estimate.plan_mode.value,
+                "degrees_needed": round(c.estimate.degrees_needed, 2),
+                "kwh_electric": round(c.estimate.kwh_electric, 2),
+            }
+            if c.estimate
+            else {}
+        ),
+    ),
+    PoolSensorDescription(
+        key="delta_t",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=2,
+        value_fn=lambda c: (
+            round(c.data["state"].delta_t, 2)
+            if c.data and c.data["state"].delta_t is not None
+            else None
+        ),
+    ),
+    PoolSensorDescription(
+        key="cop_expected",
+        suggested_display_precision=2,
+        icon="mdi:chart-line",
+        value_fn=lambda c: round(c.estimate.cop, 2) if c.estimate else None,
+    ),
+    PoolSensorDescription(
+        key="cop_measured",
+        suggested_display_precision=2,
+        icon="mdi:chart-line-variant",
+        value_fn=lambda c: _measured_cop(c),
+    ),
+    PoolSensorDescription(
+        key="thermal_power",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        suggested_display_precision=2,
+        value_fn=lambda c: _thermal_power(c),
+    ),
+    PoolSensorDescription(
+        key="flow_rate",
+        native_unit_of_measurement="m³/h",
+        suggested_display_precision=2,
+        icon="mdi:waves-arrow-right",
+        value_fn=lambda c: (
+            round(c.data["state"].effective_flow_m3h, 2)
+            if c.data and c.data["state"].effective_flow_m3h is not None
+            else None
+        ),
+    ),
+    PoolSensorDescription(
+        key="filtration_required_today",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=2,
+        icon="mdi:filter",
+        value_fn=lambda c: round(c.filtration.required_h, 2) if c.filtration else None,
+        attributes_fn=lambda c: dict(c.filtration.detail) if c.filtration else {},
+    ),
+    PoolSensorDescription(
+        key="filtration_completed_today",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=2,
+        icon="mdi:filter-check",
+        value_fn=lambda c: round(c.filtration.done_h, 2) if c.filtration else None,
+    ),
+    PoolSensorDescription(
+        key="filtration_remaining_today",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=2,
+        icon="mdi:filter-outline",
+        value_fn=lambda c: round(c.filtration.remaining_h, 2) if c.filtration else None,
+        attributes_fn=lambda c: (
+            {
+                "available_h": round(c.filtration.available_h, 2),
+                "deadline_critical": c.filtration.deadline_critical,
+                "next_block_start": (
+                    c.filtration.next_block.start.isoformat()
+                    if c.filtration.next_block
+                    else None
+                ),
+            }
+            if c.filtration
+            else {}
+        ),
+    ),
+    PoolSensorDescription(
+        key="heating_rate",
+        native_unit_of_measurement="°C/h",
+        suggested_display_precision=3,
+        icon="mdi:trending-up",
+        value_fn=lambda c: c.store.learned.heating_rate_c_per_h,
+    ),
+    PoolSensorDescription(
+        key="heat_loss_rate",
+        native_unit_of_measurement="°C/h",
+        suggested_display_precision=3,
+        icon="mdi:trending-down",
+        value_fn=lambda c: c.store.learned.heat_loss_c_per_h,
+    ),
+    PoolSensorDescription(
+        key="energy_today",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
+        value_fn=lambda c: round(c.store.energy_today_kwh, 3),
+    ),
+    PoolSensorDescription(
+        key="cost_today",
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        icon="mdi:cash",
+        value_fn=lambda c: round(c.store.cost_today, 3),
+    ),
+    PoolSensorDescription(
+        key="cost_saved_today",
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        icon="mdi:piggy-bank",
+        value_fn=lambda c: round(c.store.cost_baseline_today - c.store.cost_today, 3),
+    ),
+)
+
+
+def _measured_cop(coordinator: PoolSmartCoordinator) -> float | None:
+    """COP from measured thermal output divided by measured electrical input."""
+    thermal = _thermal_power(coordinator)
+    if thermal is None or not coordinator.data:
+        return None
+    electric = coordinator.data["state"].hp_power_w.value
+    if not electric:
+        return None
+    cop = thermal / (electric / 1000.0)
+    limits = coordinator.pool_config.heat_pump
+    return round(max(limits.cop_clamp_min, min(limits.cop_clamp_max, cop)), 2)
+
+
+def _thermal_power(coordinator: PoolSmartCoordinator) -> float | None:
+    """Thermal output in kW from flow and temperature rise.
+
+    1 m³/h of water carrying 1 K corresponds to about 1.163 kW.
+    """
+    if not coordinator.data:
+        return None
+    state = coordinator.data["state"]
+    delta = state.delta_t
+    flow = state.effective_flow_m3h
+    if delta is None or flow is None or not state.heat_pump_on:
+        return None
+    if coordinator.pool_config.is_aliased("hp_inlet", "hp_outlet"):
+        return None
+    return round(flow * delta * 1.163, 3)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    coordinator: PoolSmartCoordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities(PoolSmartSensor(coordinator, d) for d in SENSORS)
+
+
+class PoolSmartSensor(PoolSmartEntity, SensorEntity):
+    """A computed value derived from the current decision."""
+
+    entity_description: PoolSensorDescription
+
+    def __init__(
+        self, coordinator: PoolSmartCoordinator, description: PoolSensorDescription
+    ) -> None:
+        super().__init__(coordinator, description.key)
+        self.entity_description = description
+
+    @property
+    def native_value(self):
+        return self.entity_description.value_fn(self.coordinator)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        if self.entity_description.attributes_fn is None:
+            return {}
+        return self.entity_description.attributes_fn(self.coordinator)
