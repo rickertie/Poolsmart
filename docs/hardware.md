@@ -35,7 +35,7 @@ The flow meter outputs 5V pulses, so it needs a voltage divider (or a
 5V-tolerant pin) before it reaches the ESP32's GPIO — feeding 5V directly
 into a 3.3V-only pin will damage it.
 
-> 🔌 *A wiring diagram will go here.*
+> 🔌 *wiring diagram .* ![wiring](brands/esp32c6_wiring_overview.png)
 
 ## Photos
 
@@ -43,9 +43,9 @@ into a 3.3V-only pin will damage it.
 > the pump/heat pump plumbing, and the overall setup.*
 
 <!--
-![Enclosure](images/hardware-enclosure.jpg)
-![Sensor placement](images/hardware-sensors.jpg)
-![Overall setup](images/hardware-overview.jpg)
+![Enclosure](brands/Flow_meter.jpg)
+![Sensor placement](brands/DS18B20.jpg)
+![Overall setup](brands/w_eau_mini_power_3kw_warmtepomp.webp)
 -->
 
 ## Calibration
