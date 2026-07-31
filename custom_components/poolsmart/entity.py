@@ -25,3 +25,14 @@ class PoolSmartEntity(CoordinatorEntity[PoolSmartCoordinator]):
             manufacturer="PoolSmart",
             model="Pool controller",
         )
+
+    @property
+    def available(self) -> bool:
+        """Available once a decision has ever been produced.
+
+        The default behaviour ties availability to the last update succeeding,
+        which makes every entity disappear on a single transient failure. The
+        decision the pool is currently running on is still perfectly valid in
+        that situation, so hiding it helps nobody.
+        """
+        return self.coordinator.decision is not None

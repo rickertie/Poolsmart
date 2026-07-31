@@ -114,6 +114,14 @@ def _pump_schema(d: dict) -> vol.Schema:
             vol.Required(
                 c.CONF_PUMP_POWER_KW, default=d[c.CONF_PUMP_POWER_KW]
             ): _positive(0.01, 10, 0.01),
+            vol.Required(
+                c.CONF_FILTER_MEDIA, default=d[c.CONF_FILTER_MEDIA]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["sand", "glass", "balls", "cartridge", "none"],
+                    translation_key="filter_media",
+                )
+            ),
         }
     )
 
@@ -143,6 +151,10 @@ def _heat_pump_schema(d: dict) -> vol.Schema:
             vol.Required(
                 c.CONF_HP_FLOW_MIN_M3H, default=d[c.CONF_HP_FLOW_MIN_M3H]
             ): _positive(0, 50, 0.1),
+            vol.Required(
+                c.CONF_HP_FLOW_MIN_BLOCKING,
+                default=d[c.CONF_HP_FLOW_MIN_BLOCKING],
+            ): bool,
         }
     )
 
@@ -259,7 +271,10 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         flow = float(self._data.get(c.CONF_PUMP_FLOW_M3H, 1))
         measured = bool(self._data.get(c.CONF_PUMP_FLOW_MEASURED, False))
         effective = flow if measured else flow * 0.7
-        daily_h = (volume * 2.0) / (effective * 1000) if effective else 0
+        turnover_h = (volume * 3.0) / (effective * 1000) if effective else 0
+        # The daily minimum usually wins on pools with a generously sized pump,
+        # so quoting only the turnover figure would understate the real runtime.
+        daily_h = max(turnover_h, 4.0)
 
         return self.async_show_form(
             step_id="optional",
@@ -389,7 +404,20 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 vol.Optional(
                     c.CONF_PUMP_FLOW_MEASURED,
                     default=current.get(c.CONF_PUMP_FLOW_MEASURED, False),
-                ): bool
+                ): bool,
+                vol.Optional(
+                    c.CONF_FILTER_MEDIA,
+                    default=current.get(c.CONF_FILTER_MEDIA, "sand"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["sand", "glass", "balls", "cartridge", "none"],
+                        translation_key="filter_media",
+                    )
+                ),
+                vol.Optional(
+                    c.CONF_HP_FLOW_MIN_BLOCKING,
+                    default=current.get(c.CONF_HP_FLOW_MIN_BLOCKING, False),
+                ): bool,
             }
         )
         return self.async_show_form(step_id="hardware", data_schema=schema)
@@ -460,8 +488,12 @@ class PoolSmartOptionsFlow(OptionsFlow):
             {
                 vol.Optional(
                     c.CONF_TURNOVER_FACTOR,
-                    default=current.get(c.CONF_TURNOVER_FACTOR, 2.0),
-                ): _positive(0.5, 4.0, 0.1),
+                    default=current.get(c.CONF_TURNOVER_FACTOR, 3.0),
+                ): _positive(0.5, 6.0, 0.1),
+                vol.Optional(
+                    c.CONF_MIN_DAILY_HOURS,
+                    default=current.get(c.CONF_MIN_DAILY_HOURS, 4.0),
+                ): _positive(0.5, 24.0, 0.5),
                 vol.Optional(
                     c.CONF_MIN_BLOCK_MINUTES,
                     default=current.get(c.CONF_MIN_BLOCK_MINUTES, 20),
@@ -497,7 +529,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     default=current.get(c.CONF_FROST_AIR_TEMP, 3.0),
                 ): _positive(-10, 10, 0.5),
                 vol.Optional(
-                    c.CONF_MAX_PRICE, default=current.get(c.CONF_MAX_PRICE, 0.30)
+                    c.CONF_MAX_PRICE, default=current.get(c.CONF_MAX_PRICE, 0.22)
                 ): _positive(0, 3, 0.01),
                 vol.Optional(
                     c.CONF_NEGATIVE_PRICE_BASIS,

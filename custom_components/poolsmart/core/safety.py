@@ -97,15 +97,22 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
         return faults
 
     if state.heat_pump_on and flow < config.heat_pump.flow_min_m3h:
+        blocking = config.heat_pump.flow_min_blocking
         faults.append(
             Fault(
                 "flow_below_heat_pump_minimum",
-                Severity.HEATING_BLOCKED,
+                Severity.HEATING_BLOCKED if blocking else Severity.WARNING,
                 (
-                    f"Flow of {flow:.2f} m3/h is below the heat pump minimum of "
+                    f"Flow of {flow:.2f} m3/h is below the datasheet minimum of "
                     f"{config.heat_pump.flow_min_m3h:.2f} m3/h."
+                    + (
+                        " Heating is paused."
+                        if blocking
+                        else " Heating continues; the heat pump's own flow switch"
+                        " remains the hardware backstop."
+                    )
                 ),
-                {"flow_m3h": flow},
+                {"flow_m3h": flow, "blocking": blocking},
             )
         )
     elif state.pump_on and flow <= 0.05:
@@ -223,7 +230,12 @@ def heat_pump_available(
         )
 
     flow = state.effective_flow_m3h
-    if flow is not None and flow < config.heat_pump.flow_min_m3h and state.pump_on:
+    if (
+        config.heat_pump.flow_min_blocking
+        and flow is not None
+        and flow < config.heat_pump.flow_min_m3h
+        and state.pump_on
+    ):
         return False, (
             f"Flow of {flow:.2f} m3/h is below the heat pump minimum of "
             f"{config.heat_pump.flow_min_m3h:.2f} m3/h."

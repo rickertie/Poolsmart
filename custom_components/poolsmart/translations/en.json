@@ -26,12 +26,14 @@
         "data": {
           "pump_flow_m3h": "Flow (m³/h)",
           "pump_flow_measured": "This is a measured value, not from the datasheet",
-          "pump_power_kw": "Electrical power (kW)"
+          "pump_power_kw": "Electrical power (kW)",
+          "filter_media": "Filter medium"
         },
         "data_description": {
           "pump_flow_m3h": "On the pump label or in the manual, often written as 'flow rate' in m³/h or litres per hour. Divide L/h by 1000 for m³/h. Example: a small cartridge pump is around 2-4 m³/h.",
           "pump_flow_measured": "Tick only if you measured it with a flow meter. Otherwise the datasheet figure is reduced by 30% to account for filter resistance.",
-          "pump_power_kw": "On the label, in watts. Divide by 1000. Example: 100 W is 0.1 kW."
+          "pump_power_kw": "On the label, in watts. Divide by 1000. Example: 100 W is 0.1 kW.",
+          "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them."
         }
       },
       "heat_pump": {
@@ -45,7 +47,8 @@
           "hp_cop_low_temp": "That second air temperature (°C)",
           "hp_air_temp_min": "Minimum air temperature (°C)",
           "hp_air_temp_max": "Maximum air temperature (°C)",
-          "hp_flow_min_m3h": "Minimum flow required (m³/h)"
+          "hp_flow_min_m3h": "Minimum flow required (m³/h)",
+          "hp_flow_min_blocking": "Pause heating below the minimum flow"
         },
         "data_description": {
           "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
@@ -55,7 +58,8 @@
           "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
           "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
-          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default."
+          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default.",
+          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped."
         }
       },
       "entities": {
@@ -113,11 +117,40 @@
           "swim_time": "Wanted at temperature by (HH:MM)",
           "swim_time_2": "Second time (optional)",
           "swim_days": "Days"
+        },
+        "data_description": {
+          "swim_time": "The planner works backwards from this to decide when heating must start. Leave blank if you have no fixed time; heating then simply keeps the pool at target.",
+          "swim_time_2": "A second time on the same days, for the exceptions. Most people leave this empty.",
+          "swim_days": "Which weekdays the times above apply to."
         }
       },
       "notifications": {
         "title": "Notifications",
-        "description": "Faults repeat with a widening interval until they clear; informational messages fire once. Leave a field blank to use the default target."
+        "description": "Faults repeat with a widening interval until they clear; informational messages fire once. Leave a field blank to use the default target.",
+        "data_description": {
+          "default": "Where anything without its own destination goes.",
+          "heating_started": "Sent when a heating session begins.",
+          "target_reached": "Sent when the pool reaches its target temperature.",
+          "flow_fault": "Flow problems. Worth routing to whoever fixes things.",
+          "sensor_fault": "A sensor stopped reporting or reported something implausible.",
+          "chemistry_alarm": "Chemical treatment messages.",
+          "high_energy_cost": "Notable price events, including electricity going below zero.",
+          "heating_postponed": "Heating is waiting for a cheaper moment.",
+          "ai_recommendation": "The weekly review summary, when you run one.",
+          "filter_service": "Flow has dropped enough that the filter probably needs cleaning."
+        },
+        "data": {
+          "default": "Default",
+          "heating_started": "Heating started",
+          "target_reached": "Target reached",
+          "flow_fault": "Flow fault",
+          "sensor_fault": "Sensor fault",
+          "chemistry_alarm": "Chemistry alarm",
+          "high_energy_cost": "High energy cost",
+          "heating_postponed": "Heating postponed",
+          "ai_recommendation": "Ai recommendation",
+          "filter_service": "Filter service"
+        }
       },
       "general": {
         "title": "PoolSmart settings",
@@ -140,7 +173,30 @@
           "chemistry_cycle_minutes": "Chemistry cycle length (minutes)",
           "learning_enabled": "Self-learning enabled",
           "stale_warning_seconds": "Warn when a reading is older than (seconds)",
-          "stale_blocking_seconds": "Treat a sensor as dead after (seconds)"
+          "stale_blocking_seconds": "Treat a sensor as dead after (seconds)",
+          "min_daily_hours": "Minimum filtration per day at swimming temperature (hours)"
+        },
+        "data_description": {
+          "turnover_factor": "How many times the whole pool should pass the filter per day. Filtered water mixes back in, so one pass cleans about 63% of the pool, two 86%, three 95%. Three is where the gains flatten off.",
+          "min_daily_hours": "A time-based floor, used when it is larger than the turnover figure. Skimming, sanitiser contact and avoiding stagnation all depend on hours running, not on how fast the pump is. This value applies around 25 °C and scales from half of it in cold water to one and a half times above 30 °C.",
+          "min_block_minutes": "Runs shorter than this are not worth starting; the water barely reaches the filter.",
+          "night_start": "Quiet hours begin. Only safety, the filtration deadline, a negative price or a manual boost run after this.",
+          "night_end": "Quiet hours end.",
+          "min_on_minutes": "Once something switches on it stays on at least this long. This is what stops the pump chattering.",
+          "min_off_minutes": "Once something switches off it stays off at least this long.",
+          "pump_rundown_minutes": "The pump keeps circulating this long after the heat pump stops, to carry the residual heat away from it.",
+          "temp_hysteresis": "How far below target the water must fall before heating restarts. Stopping happens exactly at target.",
+          "min_water_temp": "Below this the pool is protected regardless of mode. If the air is too cold for the heat pump, protection circulates instead of heating.",
+          "frost_air_temp": "Below this outdoor temperature the pump circulates. Moving water does not freeze.",
+          "max_price": "Heating waits for a cheaper moment above this price. Boost ignores it. Leave it high to effectively switch price optimisation off.",
+          "negative_price_basis": "Which price has to drop below zero before heating runs regardless of everything else.",
+          "solar_threshold_w": "Solar surplus above which heating counts as free and the price limit is ignored.",
+          "solar_hysteresis_w": "Extra margin required in ECO mode, so passing clouds do not start and stop a session.",
+          "eco_price_factor": "ECO multiplies the price limit by this, making it stricter. 0.7 means ECO only heats below 70% of your normal limit.",
+          "chemistry_cycle_minutes": "How long the pump runs when you press the chemistry button.",
+          "stale_warning_seconds": "Some sensors only report when their value changes, so a steady temperature can look old. This is when to start mentioning it.",
+          "stale_blocking_seconds": "When to treat the sensor as dead and pause heating. Circulation and filtration continue.",
+          "learning_enabled": "Whether finished sessions update the heating rate, heat loss and COP figures."
         }
       },
       "init": {
@@ -207,7 +263,9 @@
           "hp_cop_low_temp": "That second air temperature (°C)",
           "hp_air_temp_min": "Minimum air temperature (°C)",
           "hp_air_temp_max": "Maximum air temperature (°C)",
-          "hp_flow_min_m3h": "Minimum flow required (m³/h)"
+          "hp_flow_min_m3h": "Minimum flow required (m³/h)",
+          "filter_media": "Filter medium",
+          "hp_flow_min_blocking": "Pause heating below the minimum flow"
         },
         "data_description": {
           "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
@@ -225,7 +283,9 @@
           "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
           "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
-          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default."
+          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default.",
+          "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
+          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped."
         }
       }
     }
@@ -235,6 +295,15 @@
       "options": {
         "total": "All-in price below zero (rare, but you genuinely earn money)",
         "market": "Spot price below zero (more often, but you still pay taxes)"
+      }
+    },
+    "filter_media": {
+      "options": {
+        "sand": "Sand",
+        "glass": "Glass media",
+        "balls": "Filter balls",
+        "cartridge": "Cartridge",
+        "none": "No filter in line"
       }
     }
   },

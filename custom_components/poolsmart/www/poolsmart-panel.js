@@ -207,6 +207,11 @@ class PoolSmartPanel extends HTMLElement {
         <div class="row"><span>Completed</span><span>${fmtHours(f?.done_h)}</span></div>
         <div class="row"><span>Remaining</span><span>${fmtHours(f?.remaining_h)}</span></div>
         <div class="row"><span>Window left</span><span>${fmtHours(f?.available_h)}</span></div>
+        <div class="row"><span>Set by</span><span>${
+          s.derived.filtration_driver === "turnover"
+            ? `turnover (${s.derived.turnover_factor}\u00d7 volume)`
+            : `daily minimum at ${s.water_temp !== null ? s.water_temp.toFixed(0) : "?"} \u00b0C`
+        }</span></div>
         <div class="bar"><div style="width:${pct}%"></div></div>
         ${
           f?.deadline_critical
@@ -328,6 +333,7 @@ class PoolSmartPanel extends HTMLElement {
                datasheet is used, which is less accurate but perfectly workable.</div>`
         }
       </div>
+      ${this._advisorCard(s)}
       <div class="card">
         <button class="action" data-service="button.press"
           data-payload='{"entity_id":"button.pool_reset_learned_values"}'>Reset learned values</button>
@@ -335,6 +341,32 @@ class PoolSmartPanel extends HTMLElement {
           value far. Resetting is only needed after changing hardware.</div>
       </div>
     `;
+  }
+
+  _advisorCard(s) {
+    const a = s.advisor;
+    if (!a) return "";
+    if (a.error)
+      return `<div class="card"><strong>Review</strong>
+        <div class="reason warn">${esc(a.error)}</div>
+        <div class="reason muted">Suggestions are advisory only; nothing is applied
+          without pressing accept, and the pool runs the same either way.</div></div>`;
+    if (!a.summary && !(a.suggestions || []).length)
+      return `<div class="card"><strong>Review</strong>
+        <div class="reason muted">No review has been run yet. Press "Ask for a review"
+          to have the past week looked over.</div></div>`;
+    return `<div class="card">
+      <strong>Review${a.last_run ? ` &middot; ${fmtDateTime(a.last_run)}` : ""}</strong>
+      <div class="reason">${esc(a.summary)}</div>
+      ${(a.observations || []).map((o) => `<div class="reason muted">&bull; ${esc(o)}</div>`).join("")}
+      ${(a.suggestions || [])
+        .map(
+          (x) =>
+            `<div class="row"><span>${esc(x.setting)} &rarr; ${esc(x.value)}</span>
+             <span class="muted">${esc(x.why)}</span></div>`
+        )
+        .join("")}
+    </div>`;
   }
 
   _settings(s) {
@@ -345,8 +377,18 @@ class PoolSmartPanel extends HTMLElement {
         <div class="row"><span>Pool volume</span><span>${d.volume_l} L</span></div>
         <div class="row"><span>Effective flow</span><span>${d.effective_flow_m3h} m³/h</span></div>
         <div class="row"><span>Turnover factor</span><span>${d.turnover_factor} × per day</span></div>
-        <div class="row"><span>Filtration per day</span><span>${fmtHours(d.daily_filtration_hours)}</span></div>
+        <div class="row"><span>Turnover requirement</span><span>${fmtHours(d.turnover_hours)}</span></div>
+        <div class="row"><span>Daily minimum now</span><span>${fmtHours(d.min_hours)}</span></div>
+        <div class="row"><span><b>Filtration per day</b></span><span><b>${fmtHours(
+          d.daily_filtration_hours
+        )}</b></span></div>
         <div class="row"><span>Per block</span><span>${fmtHours(d.block_hours)}</span></div>
+        <div class="reason muted">The requirement is the larger of the two. Turnover is
+          volume-based: because filtered water mixes back in, one turnover cleans about
+          63% of the pool, three about 95%. The daily minimum is time-based — a skimmer
+          only catches what lands on the surface while it is running, and water that sits
+          still grows algae however well it was filtered earlier. It rises with water
+          temperature.</div>
         <div class="row"><span>Energy per degree</span><span>${d.kwh_thermal_per_degree} kWh</span></div>
       </div>
       <div class="card">
@@ -367,6 +409,17 @@ class PoolSmartPanel extends HTMLElement {
 
   _diagnostics(s) {
     return `
+      ${
+        s.last_error || Object.keys(s.subsystem_errors || {}).length
+          ? `<div class="card"><strong class="warn">Errors</strong>
+             ${s.last_error ? `<div class="reason">${esc(s.last_error)}</div>` : ""}
+             ${Object.entries(s.subsystem_errors || {})
+               .map(([k, v]) => `<div class="reason muted">${esc(k)} failed at ${fmtTime(v)}</div>`)
+               .join("")}
+             <div class="reason muted">Control continues without the failed part; the
+               details are in the Home Assistant log.</div></div>`
+          : ""
+      }
       <div class="card">
         <strong>Decision log</strong>
         <div class="reason muted">Recorded at the moment of deciding, newest first.</div>

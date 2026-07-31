@@ -13,13 +13,14 @@ from datetime import datetime, time, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
 from . import const as c
 from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
 from .core.config import (
+    FILTER_MEDIA_DERATE,
     ComfortSettings,
     EnergySettings,
     FiltrationSettings,
@@ -78,6 +79,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.heat_pump_available: bool = False
         self.heat_pump_gate_reason: str = ""
         self.disabled_capabilities: set[str] = set()
+        #: Last tick-level failure, surfaced in diagnostics and the status sensor.
+        self.last_error: str | None = None
+        #: Optional subsystems that failed, and when. Control continues without them.
+        self.subsystem_errors: dict[str, str] = {}
 
         self._mode: Mode = Mode.AUTO
         self._target_temp: float = self._conf(c.CONF_TARGET_TEMP, 28.0)
@@ -96,6 +101,22 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if key in self.entry.options:
             return self.entry.options[key]
         return self.entry.data.get(key, default)
+
+    def _min_hours_curve(self) -> tuple[tuple[float, float], ...]:
+        """The time-based daily minimum, scaled by water temperature.
+
+        The user sets one number -- the minimum at a normal swimming temperature
+        -- and the curve is derived from it, so there is one dial rather than
+        five to keep consistent.
+        """
+        base = float(self._conf(c.CONF_MIN_DAILY_HOURS, 4.0))
+        return (
+            (15.0, round(base * 0.5, 2)),
+            (20.0, round(base * 0.75, 2)),
+            (25.0, base),
+            (30.0, round(base * 1.25, 2)),
+            (99.0, round(base * 1.5, 2)),
+        )
 
     @property
     def pool_config(self) -> PoolConfig:
@@ -131,7 +152,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 flow_m3h=float(self._conf(c.CONF_PUMP_FLOW_M3H, 3.0)),
                 flow_is_measured=bool(self._conf(c.CONF_PUMP_FLOW_MEASURED, False)),
                 power_kw=float(self._conf(c.CONF_PUMP_POWER_KW, 0.1)),
-                datasheet_derate=float(self._conf(c.CONF_PUMP_DERATE, 0.7)),
+                datasheet_derate=float(
+                    self._conf(
+                        c.CONF_PUMP_DERATE,
+                        FILTER_MEDIA_DERATE.get(
+                            self._conf(c.CONF_FILTER_MEDIA, "sand"), 0.7
+                        ),
+                    )
+                ),
             ),
             heat_pump=HeatPumpSpec(
                 input_kw=float(self._conf(c.CONF_HP_INPUT_KW, 1.0)),
@@ -145,11 +173,16 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 air_temp_min=float(self._conf(c.CONF_HP_AIR_TEMP_MIN, 11.0)),
                 air_temp_max=float(self._conf(c.CONF_HP_AIR_TEMP_MAX, 43.0)),
                 flow_min_m3h=float(self._conf(c.CONF_HP_FLOW_MIN_M3H, 2.0)),
+                flow_min_blocking=bool(
+                    self._conf(c.CONF_HP_FLOW_MIN_BLOCKING, False)
+                ),
             ),
             filtration=FiltrationSettings(
-                turnover_factor=float(self._conf(c.CONF_TURNOVER_FACTOR, 2.0)),
+                turnover_factor=float(self._conf(c.CONF_TURNOVER_FACTOR, 3.0)),
                 windows=windows,
                 min_block_minutes=int(self._conf(c.CONF_MIN_BLOCK_MINUTES, 20)),
+                min_hours_fallback=float(self._conf(c.CONF_MIN_DAILY_HOURS, 4.0)),
+                min_hours_by_temp=self._min_hours_curve(),
             ),
             comfort=ComfortSettings(
                 target_temp=self._target_temp,
@@ -332,7 +365,31 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
     # -- The tick ----------------------------------------------------------
 
     async def _async_update_data(self) -> dict:
+        """One tick.
+
+        The control decision is the only part that may not fail. Everything
+        else -- planning, learning, energy bookkeeping, notifications -- runs
+        inside its own guard, because a hiccup in an optional subsystem must not
+        take the whole integration off the dashboard. Without that separation a
+        single exception anywhere marks every entity unavailable, which is how
+        the entities ended up flapping between Problem and Unavailable.
+        """
         now = dt_util.now()
+        try:
+            data = await self._async_tick(now)
+        except Exception as err:  # noqa: BLE001 -- see docstring
+            self.last_error = f"{type(err).__name__}: {err}"
+            _LOGGER.exception("PoolSmart tick failed")
+            if self.data is not None:
+                # Keep the previous picture rather than blanking everything. The
+                # switches keep the state the last good decision put them in.
+                return self.data
+            raise UpdateFailed(self.last_error) from err
+
+        self.last_error = None
+        return data
+
+    async def _async_tick(self, now: datetime) -> dict:
         config = self.pool_config
 
         if self.store.roll_day(now):
@@ -346,19 +403,22 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         state = state.replace(filtration_done_h=self.store.runtime_hours(now))
 
         self.faults = safety.evaluate(state, config)
-        self.filtration = filt.evaluate(
-            now,
-            config,
-            done_h=state.filtration_done_h,
-            active_block=self._restored_block,
-        )
         self.heat_pump_available, self.heat_pump_gate_reason = safety.heat_pump_available(
             state, config, self.faults
         )
 
         # Plan before deciding, so the ladder knows whether this moment is part
         # of the plan rather than judging price in isolation.
-        state = self._plan(now, config, state)
+        state = self._guard("planning", self._plan, now, config, state) or state
+
+        self.filtration = filt.evaluate(
+            now,
+            config,
+            done_h=state.filtration_done_h,
+            active_block=self._restored_block,
+            price_forecast=self._price_slots,
+            water_temp=state.water_temp.value if state.water_temp.available else None,
+        )
 
         decision = ladder.decide(
             state,
@@ -377,16 +437,33 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if decision.heat_pump is False and state.heat_pump_on:
             self.store.heat_pump_stopped_at = now
 
-        self._track_energy(now, state)
-        self._track_session(now, state, config)
-        self._track_idle(now, state, config)
+        self._guard("energy", self._track_energy, now, state)
+        self._guard("session", self._track_session, now, state, config)
+        self._guard("idle", self._track_idle, now, state, config)
 
         self.decision = decision
         self._last_tick = now
-        await self.store.async_save()
-        await self.notifier.async_process(decision, self.faults, now)
+
+        try:
+            await self.store.async_save()
+        except Exception:  # noqa: BLE001 -- losing a save is better than losing control
+            _LOGGER.exception("Could not persist PoolSmart state")
+
+        try:
+            await self.notifier.async_process(decision, self.faults, now)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Notification handling failed")
 
         return {"decision": decision, "state": state}
+
+    def _guard(self, name: str, func, *args):
+        """Run an optional subsystem without letting it break the tick."""
+        try:
+            return func(*args)
+        except Exception:  # noqa: BLE001 -- see _async_update_data
+            _LOGGER.exception("PoolSmart %s step failed; continuing without it", name)
+            self.subsystem_errors[name] = dt_util.now().isoformat()
+            return None
 
     # -- Planning ----------------------------------------------------------
 

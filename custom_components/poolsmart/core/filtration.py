@@ -187,6 +187,7 @@ def evaluate(
     done_h: float,
     active_block: BlockPlan | None = None,
     price_forecast: tuple[tuple[datetime, datetime, float], ...] = (),
+    water_temp: float | None = None,
 ) -> FiltrationStatus:
     """Assess the filtration situation.
 
@@ -194,7 +195,7 @@ def evaluate(
     circulating during those too. Without that credit the system would filter
     substantially more than needed on heating days.
     """
-    required_h = config.daily_filtration_hours
+    required_h = config.daily_filtration_hours(water_temp)
     remaining_h = max(0.0, required_h - done_h)
     available_h = available_runtime_h(now, config)
 
@@ -224,7 +225,13 @@ def evaluate(
         detail={
             "turnover_factor": config.filtration.turnover_factor,
             "effective_flow_m3h": round(config.pump.effective_flow_m3h, 3),
-            "block_hours": round(config.block_hours, 3),
+            "block_hours": round(config.block_hours(water_temp), 3),
             "blocks_per_day": config.filtration.block_count,
+            # Which of the two rules is setting the requirement. Without this the
+            # daily figure looks arbitrary whenever the minimum wins.
+            "driver": config.filtration_driver(water_temp),
+            "turnover_hours": round(config.turnover_hours, 3),
+            "min_hours": round(config.filtration.min_hours_at(water_temp), 3),
+            "water_temp": water_temp,
         },
     )

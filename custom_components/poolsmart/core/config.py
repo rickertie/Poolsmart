@@ -21,6 +21,23 @@ WATER_HEAT_CAPACITY_KJ_KG_K = 4.186
 KJ_PER_KWH = 3600.0
 
 
+#: Rough share of the rated pump flow that survives each filter medium. These
+#: are starting points for people without a flow meter; anyone with one should
+#: tick "measured" and use the real figure instead.
+#:
+#: Filter balls are the odd one out: they flow more freely than sand when fresh,
+#: but they compress and mat over time, and a compressed bed chokes the flow far
+#: more than sand ever does. A sudden drop is the signal to pull them out, wash
+#: them and fluff them up.
+FILTER_MEDIA_DERATE = {
+    "sand": 0.70,
+    "glass": 0.72,
+    "balls": 0.80,
+    "cartridge": 0.60,
+    "none": 0.95,
+}
+
+
 class NegativePriceBasis:
     """Which price is checked against zero for the FREE_POWER branch.
 
@@ -58,6 +75,7 @@ class PumpSpec:
     #: Electrical power draw in kW.
     power_kw: float
     #: Derating applied to datasheet values to account for filter resistance.
+    #: See FILTER_MEDIA_DERATE for typical figures per medium.
     datasheet_derate: float = 0.7
 
     @property
@@ -98,8 +116,15 @@ class HeatPumpSpec:
     air_temp_min: float = 11.0
     air_temp_max: float = 43.0
 
-    #: Minimum water flow required before the unit may start.
+    #: Minimum water flow the datasheet asks for.
     flow_min_m3h: float = 2.0
+    #: Whether falling below that figure stops heating or merely warns.
+    #:
+    #: Datasheet minima are conservative, and a pool heat pump has its own
+    #: internal flow switch as a hardware backstop. Owners often run below the
+    #: quoted figure without trouble, so the default is to warn and let the
+    #: appliance protect itself rather than to override the owner's judgement.
+    flow_min_blocking: bool = False
 
     def cop_at(self, air_temp: float) -> float:
         """Expected COP at a given outdoor air temperature."""
@@ -120,13 +145,38 @@ class HeatPumpSpec:
 class FiltrationSettings:
     """Daily filtration requirement and how it is spread over the day.
 
-    The daily requirement is derived from pool volume and pump flow rather than
-    entered as a number of hours, so the integration works for a 1000 litre pool
-    and a 10000 litre pool without the user doing arithmetic.
+    Two things decide the daily runtime, and taking only the first is a mistake
+    that shows up badly on pools with an oversized pump.
+
+    **Turnover** is volume-based. Because filtered water mixes back in with
+    unfiltered water, one turnover does not filter the pool once: it filters
+    about 63% of it. Two turnovers reach 86%, three reach 95%, four reach 98%.
+    Three is the point where the gains flatten out, so that is the default.
+
+    **A daily minimum** is time-based, and turnover cannot substitute for it.
+    A skimmer only catches the leaves, pollen and insects that land on the
+    surface while it is actually running, sanitiser needs contact time, and water
+    that sits still for twenty hours grows algae no matter how thoroughly it was
+    filtered in the other four. The industry rule of thumb -- roughly an hour of
+    running per 10 F of temperature -- is really this minimum in disguise, which
+    is why it does not scale down for a fast pump.
+
+    The requirement is the larger of the two.
     """
 
     #: How many times the full pool volume should pass the filter per day.
-    turnover_factor: float = 2.0
+    turnover_factor: float = 3.0
+    #: Time-based floor in hours, by water temperature. Warmer water means faster
+    #: algae growth and more chlorine loss, so the floor rises with it.
+    min_hours_by_temp: tuple[tuple[float, float], ...] = (
+        (15.0, 2.0),
+        (20.0, 3.0),
+        (25.0, 4.0),
+        (30.0, 5.0),
+        (99.0, 6.0),
+    )
+    #: Applied when the water temperature is unknown.
+    min_hours_fallback: float = 4.0
     #: Windows in which the blocks may be scheduled.
     windows: tuple[tuple[time, time], ...] = (
         (time(7, 0), time(11, 0)),
@@ -139,6 +189,15 @@ class FiltrationSettings:
     @property
     def block_count(self) -> int:
         return len(self.windows)
+
+    def min_hours_at(self, water_temp: float | None) -> float:
+        """The time-based floor at a given water temperature."""
+        if water_temp is None:
+            return self.min_hours_fallback
+        for ceiling, hours in self.min_hours_by_temp:
+            if water_temp < ceiling:
+                return hours
+        return self.min_hours_by_temp[-1][1]
 
 
 @dataclass(frozen=True)
@@ -246,21 +305,38 @@ class PoolConfig:
     # -- Derived filtration figures ---------------------------------------
 
     @property
-    def daily_filtration_hours(self) -> float:
-        """Total pump runtime needed per day to meet the turnover target."""
+    def turnover_hours(self) -> float:
+        """Runtime needed to meet the turnover target."""
         litres = self.pool.volume_l * self.filtration.turnover_factor
         litres_per_hour = self.pump.effective_flow_m3h * 1000.0
         if litres_per_hour <= 0:
             return 0.0
         return litres / litres_per_hour
 
-    @property
-    def block_hours(self) -> float:
+    def daily_filtration_hours(self, water_temp: float | None = None) -> float:
+        """Total pump runtime needed per day.
+
+        The larger of the volume-based turnover requirement and the time-based
+        minimum. On a pool with a generously sized pump the minimum usually wins,
+        which is correct: a pump that can turn the water over in an hour still
+        cannot skim the surface in an hour.
+        """
+        return max(self.turnover_hours, self.filtration.min_hours_at(water_temp))
+
+    def filtration_driver(self, water_temp: float | None = None) -> str:
+        """Which of the two rules is setting the requirement, for explanation."""
+        return (
+            "turnover"
+            if self.turnover_hours >= self.filtration.min_hours_at(water_temp)
+            else "daily minimum"
+        )
+
+    def block_hours(self, water_temp: float | None = None) -> float:
         """Runtime per filtration block."""
         count = self.filtration.block_count
         if count <= 0:
             return 0.0
-        return self.daily_filtration_hours / count
+        return self.daily_filtration_hours(water_temp) / count
 
     def is_aliased(self, role_a: str, role_b: str) -> bool:
         """Whether two logical sensor roles are the same physical sensor."""

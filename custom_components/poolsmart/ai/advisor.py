@@ -117,7 +117,7 @@ class Advisor:
 
         return {
             "pool_volume_l": config.pool.volume_l,
-            "daily_filtration_hours": round(config.daily_filtration_hours, 2),
+            "daily_filtration_hours": round(config.daily_filtration_hours(None), 2),
             "turnover_factor": config.filtration.turnover_factor,
             "target_temp": self.coordinator.target_temp,
             "learned": store.learned.as_dict(),
@@ -136,6 +136,19 @@ class Advisor:
             "data": json.dumps(self._payload(), default=str)[:12000],
         }
 
+        self.last_run = dt_util.now()
+
+        if not self.hass.services.has_service("ai_task", "generate_data"):
+            result = AdvisorResult(
+                error=(
+                    "No ai_task.generate_data service is available. Set up an AI task "
+                    "entity first, under Settings, Devices and services, Helpers."
+                )
+            )
+            _LOGGER.info("AI review skipped: %s", result.error)
+            self.last_result = result
+            return result
+
         try:
             response = await self.hass.services.async_call(
                 "ai_task",
@@ -146,13 +159,16 @@ class Advisor:
             )
         except Exception as err:  # noqa: BLE001 -- advisory only, must not propagate
             _LOGGER.info("AI review unavailable: %s", err)
-            result = AdvisorResult(error=str(err))
+            result = AdvisorResult(error=f"{type(err).__name__}: {err}")
             self.last_result = result
             return result
 
         result = self._parse(response)
+        if not result.summary and not result.observations and not result.suggestions:
+            result.error = result.error or (
+                "The model replied, but with nothing usable in it."
+            )
         self.last_result = result
-        self.last_run = dt_util.now()
         return result
 
     def _parse(self, response) -> AdvisorResult:

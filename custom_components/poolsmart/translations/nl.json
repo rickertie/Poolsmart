@@ -26,12 +26,14 @@
         "data": {
           "pump_flow_m3h": "Flow (m³/u)",
           "pump_flow_measured": "Dit is een gemeten waarde, niet uit de brochure",
-          "pump_power_kw": "Elektrisch vermogen (kW)"
+          "pump_power_kw": "Elektrisch vermogen (kW)",
+          "filter_media": "Filtermedium"
         },
         "data_description": {
           "pump_flow_m3h": "Staat op het typeplaatje of in de handleiding, vaak als 'flow rate' in m³/u of liter per uur. Deel L/u door 1000 voor m³/u. Voorbeeld: een kleine cartridgepomp zit rond 2-4 m³/u.",
           "pump_flow_measured": "Vink alleen aan als je het met een debietmeter hebt gemeten. Anders wordt de brochurewaarde met 30% verlaagd vanwege filterweerstand.",
-          "pump_power_kw": "Staat op het plaatje in watt. Deel door 1000. Voorbeeld: 100 W is 0,1 kW."
+          "pump_power_kw": "Staat op het plaatje in watt. Deel door 1000. Voorbeeld: 100 W is 0,1 kW.",
+          "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen."
         }
       },
       "heat_pump": {
@@ -45,7 +47,8 @@
           "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
           "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
-          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)"
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom"
         },
         "data_description": {
           "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
@@ -55,7 +58,8 @@
           "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
           "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
-          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan."
+          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan.",
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt."
         }
       },
       "entities": {
@@ -113,11 +117,40 @@
           "swim_time": "Op temperatuur om (UU:MM)",
           "swim_time_2": "Tweede tijdstip (optioneel)",
           "swim_days": "Dagen"
+        },
+        "data_description": {
+          "swim_time": "De planner rekent hiervandaan terug wanneer het verwarmen moet beginnen. Laat leeg als je geen vast tijdstip hebt; dan houdt hij het bad simpelweg op temperatuur.",
+          "swim_time_2": "Een tweede tijdstip op dezelfde dagen, voor de uitzonderingen. De meeste mensen laten dit leeg.",
+          "swim_days": "Op welke weekdagen bovenstaande tijden gelden."
         }
       },
       "notifications": {
         "title": "Notificaties",
-        "description": "Storingen worden herhaald met een oplopend interval tot ze opgelost zijn; informatieve meldingen komen één keer. Laat een veld leeg om het standaarddoel te gebruiken."
+        "description": "Storingen worden herhaald met een oplopend interval tot ze opgelost zijn; informatieve meldingen komen één keer. Laat een veld leeg om het standaarddoel te gebruiken.",
+        "data_description": {
+          "default": "Waar alles heen gaat wat geen eigen bestemming heeft.",
+          "heating_started": "Wordt verstuurd als een verwarmingssessie begint.",
+          "target_reached": "Wordt verstuurd als het bad de doeltemperatuur haalt.",
+          "flow_fault": "Doorstroomproblemen. Handig om naar degene te sturen die dingen repareert.",
+          "sensor_fault": "Een sensor meldt niets meer of iets onwaarschijnlijks.",
+          "chemistry_alarm": "Meldingen over chemische behandeling.",
+          "high_energy_cost": "Opvallende prijsmomenten, waaronder stroom onder nul.",
+          "heating_postponed": "De verwarming wacht op een goedkoper moment.",
+          "ai_recommendation": "De samenvatting van de wekelijkse analyse, als je die uitvoert.",
+          "filter_service": "De doorstroming is zo ver gezakt dat het filter waarschijnlijk schoongemaakt moet worden."
+        },
+        "data": {
+          "default": "Default",
+          "heating_started": "Heating started",
+          "target_reached": "Target reached",
+          "flow_fault": "Flow fault",
+          "sensor_fault": "Sensor fault",
+          "chemistry_alarm": "Chemistry alarm",
+          "high_energy_cost": "High energy cost",
+          "heating_postponed": "Heating postponed",
+          "ai_recommendation": "Ai recommendation",
+          "filter_service": "Filter service"
+        }
       },
       "general": {
         "title": "PoolSmart-instellingen",
@@ -140,7 +173,30 @@
           "chemistry_cycle_minutes": "Duur chemiecyclus (minuten)",
           "learning_enabled": "Zelflerend actief",
           "stale_warning_seconds": "Waarschuw als een meting ouder is dan (seconden)",
-          "stale_blocking_seconds": "Beschouw een sensor als defect na (seconden)"
+          "stale_blocking_seconds": "Beschouw een sensor als defect na (seconden)",
+          "min_daily_hours": "Minimale filtratie per dag bij zwemtemperatuur (uren)"
+        },
+        "data_description": {
+          "turnover_factor": "Hoe vaak het hele bad per dag door het filter moet. Gefilterd water mengt terug, dus één ronde reinigt ongeveer 63% van het bad, twee 86%, drie 95%. Bij drie vlakt de winst af.",
+          "min_daily_hours": "Een tijdsgebonden bodem, die geldt zodra hij groter is dan het turnover-getal. Skimmen, chloorcontacttijd en het voorkomen van stilstand hangen af van draaiuren, niet van hoe snel de pomp is. Deze waarde geldt rond 25 °C en schaalt van de helft in koud water tot anderhalf keer boven 30 °C.",
+          "min_block_minutes": "Kortere blokken zijn het starten niet waard; het water bereikt het filter nauwelijks.",
+          "night_start": "Begin van de nachtrust. Daarna draait alleen nog veiligheid, de filtratiedeadline, een negatieve prijs of een handmatige boost.",
+          "night_end": "Einde van de nachtrust.",
+          "min_on_minutes": "Wat aangaat blijft minstens zo lang aan. Dit voorkomt dat de pomp gaat klapperen.",
+          "min_off_minutes": "Wat uitgaat blijft minstens zo lang uit.",
+          "pump_rundown_minutes": "De pomp circuleert zo lang door nadat de warmtepomp stopt, om de restwarmte af te voeren.",
+          "temp_hysteresis": "Hoever het water onder het doel moet zakken voordat er weer verwarmd wordt. Stoppen gebeurt precies op het doel.",
+          "min_water_temp": "Daaronder wordt het bad beschermd, ongeacht de modus. Is het buiten te koud voor de warmtepomp, dan circuleert de beveiliging in plaats van te verwarmen.",
+          "frost_air_temp": "Onder deze buitentemperatuur gaat de pomp draaien. Stromend water bevriest niet.",
+          "max_price": "Boven deze prijs wacht de verwarming op een goedkoper moment. Boost negeert dit. Zet hem hoog om prijsoptimalisatie feitelijk uit te schakelen.",
+          "negative_price_basis": "Welke prijs onder nul moet zakken voordat er hoe dan ook verwarmd wordt.",
+          "solar_threshold_w": "Zonoverschot waarboven verwarmen als gratis geldt en de prijslimiet wordt genegeerd.",
+          "solar_hysteresis_w": "Extra marge in ECO, zodat een overtrekkende wolk geen sessie start en stopt.",
+          "eco_price_factor": "ECO vermenigvuldigt de prijslimiet hiermee en wordt daardoor strenger. 0,7 betekent dat ECO alleen verwarmt onder 70% van je normale limiet.",
+          "chemistry_cycle_minutes": "Hoe lang de pomp draait als je op de chemieknop drukt.",
+          "stale_warning_seconds": "Sommige sensoren melden alleen als hun waarde verandert, dus een stabiele temperatuur kan oud lijken. Vanaf hier wordt het gemeld.",
+          "stale_blocking_seconds": "Wanneer de sensor als defect geldt en verwarmen pauzeert. Circulatie en filtratie gaan gewoon door.",
+          "learning_enabled": "Of afgeronde sessies de opwarmsnelheid, het warmteverlies en de COP bijwerken."
         }
       },
       "init": {
@@ -207,7 +263,9 @@
           "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
           "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
-          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)"
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
+          "filter_media": "Filtermedium",
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom"
         },
         "data_description": {
           "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
@@ -225,7 +283,9 @@
           "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
           "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
-          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan."
+          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan.",
+          "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt."
         }
       }
     }
@@ -235,6 +295,15 @@
       "options": {
         "total": "Totaalprijs onder nul (zeldzaam, maar dan verdien je echt geld)",
         "market": "Marktprijs onder nul (vaker, maar je betaalt nog belasting)"
+      }
+    },
+    "filter_media": {
+      "options": {
+        "sand": "Zand",
+        "glass": "Filterglas",
+        "balls": "Filterballen",
+        "cartridge": "Cartridge",
+        "none": "Geen filter in de lijn"
       }
     }
   },

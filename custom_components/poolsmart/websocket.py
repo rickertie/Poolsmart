@@ -65,6 +65,7 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     filtration = coordinator.filtration
     plan = coordinator.plan
     state = coordinator.data.get("state") if coordinator.data else None
+    water = state.water_temp.value if state and state.water_temp.available else None
 
     connection.send_result(
         msg["id"],
@@ -153,13 +154,30 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                 else None
             ),
             "derived": {
-                "daily_filtration_hours": round(config.daily_filtration_hours, 3),
-                "block_hours": round(config.block_hours, 3),
+                "daily_filtration_hours": round(config.daily_filtration_hours(water), 3),
+                "block_hours": round(config.block_hours(water), 3),
+                "turnover_hours": round(config.turnover_hours, 3),
+                "min_hours": round(config.filtration.min_hours_at(water), 3),
+                "filtration_driver": config.filtration_driver(water),
                 "kwh_thermal_per_degree": round(config.pool.kwh_thermal_per_degree, 3),
                 "effective_flow_m3h": round(config.pump.effective_flow_m3h, 3),
                 "turnover_factor": config.filtration.turnover_factor,
                 "volume_l": config.pool.volume_l,
             },
+            "advisor": (
+                {
+                    **coordinator.advisor.last_result.as_dict(),
+                    "last_run": (
+                        coordinator.advisor.last_run.isoformat()
+                        if coordinator.advisor.last_run
+                        else None
+                    ),
+                }
+                if coordinator.advisor.last_result
+                else None
+            ),
+            "last_error": coordinator.last_error,
+            "subsystem_errors": coordinator.subsystem_errors,
             "learned": coordinator.store.learned.as_dict(),
             "energy": {
                 "today_kwh": round(coordinator.store.energy_today_kwh, 3),

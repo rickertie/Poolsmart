@@ -50,6 +50,8 @@ def _status_attributes(c: PoolSmartCoordinator) -> dict:
         "heat_pump_gate_reason": c.heat_pump_gate_reason,
         "faults": c.fault_codes(),
         "disabled_capabilities": sorted(c.disabled_capabilities),
+        "last_error": c.last_error,
+        "subsystem_errors": c.subsystem_errors,
         **{f"detail_{k}": v for k, v in decision.detail.items()},
     }
 
@@ -206,7 +208,12 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
             len(c.advisor.last_result.suggestions) if c.advisor.last_result else 0
         ),
         attributes_fn=lambda c: (
-            c.advisor.last_result.as_dict() if c.advisor.last_result else {}
+            {
+                **c.advisor.last_result.as_dict(),
+                "last_run": c.advisor.last_run.isoformat() if c.advisor.last_run else None,
+            }
+            if c.advisor.last_result
+            else {"status": "not run yet"}
         ),
     ),
     PoolSensorDescription(

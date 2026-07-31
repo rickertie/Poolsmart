@@ -35,6 +35,7 @@ CONF_PUMP_FLOW_M3H = "pump_flow_m3h"
 CONF_PUMP_FLOW_MEASURED = "pump_flow_measured"
 CONF_PUMP_POWER_KW = "pump_power_kw"
 CONF_PUMP_DERATE = "pump_datasheet_derate"
+CONF_FILTER_MEDIA = "filter_media"
 
 # -- Step 3: heat pump -----------------------------------------------------
 CONF_HP_INPUT_KW = "hp_input_kw"
@@ -48,6 +49,7 @@ CONF_HP_COP_CLAMP_MAX = "hp_cop_clamp_max"
 CONF_HP_AIR_TEMP_MIN = "hp_air_temp_min"
 CONF_HP_AIR_TEMP_MAX = "hp_air_temp_max"
 CONF_HP_FLOW_MIN_M3H = "hp_flow_min_m3h"
+CONF_HP_FLOW_MIN_BLOCKING = "hp_flow_min_blocking"
 
 # -- Step 4: required entities --------------------------------------------
 CONF_PUMP_SWITCH = "pump_switch"
@@ -97,6 +99,7 @@ CAPABILITY_BY_ENTITY = {
 
 # -- Options ---------------------------------------------------------------
 CONF_TURNOVER_FACTOR = "turnover_factor"
+CONF_MIN_DAILY_HOURS = "min_daily_hours"
 CONF_BLOCK_WINDOWS = "block_windows"
 CONF_MIN_BLOCK_MINUTES = "min_block_minutes"
 CONF_NIGHT_START = "night_start"
@@ -141,6 +144,7 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_MAX_TEMP: 32.0,
     CONF_PUMP_FLOW_M3H: 3.0,
     CONF_PUMP_FLOW_MEASURED: False,
+    CONF_FILTER_MEDIA: "sand",
     CONF_PUMP_POWER_KW: 0.1,
     CONF_HP_INPUT_KW: 1.0,
     CONF_HP_THERMAL_KW: 4.0,
@@ -149,6 +153,7 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_HP_AIR_TEMP_MIN: 11.0,
     CONF_HP_AIR_TEMP_MAX: 43.0,
     CONF_HP_FLOW_MIN_M3H: 2.0,
+    CONF_HP_FLOW_MIN_BLOCKING: False,
 }
 
 #: Optional file in the configuration directory that overrides SETUP_DEFAULTS.

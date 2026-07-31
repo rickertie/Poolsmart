@@ -1,0 +1,18 @@
+{
+  "volume_l": 3834,
+  "depth_m": 0.66,
+  "target_temp": 28.0,
+  "max_temp": 32.0,
+
+  "pump_flow_m3h": 3.596,
+  "pump_flow_measured": true,
+  "pump_power_kw": 0.10,
+
+  "hp_input_kw": 0.58,
+  "hp_thermal_kw": 3.0,
+  "hp_cop_ref_temp": 26.0,
+  "hp_cop_low_temp": 15.0,
+  "hp_air_temp_min": 11.0,
+  "hp_air_temp_max": 43.0,
+  "hp_flow_min_m3h": 2.0
+}

@@ -16,6 +16,18 @@ from .const import DOMAIN
 from .coordinator import PoolSmartCoordinator
 
 
+def _water(coordinator: PoolSmartCoordinator) -> float | None:
+    """Current water temperature, if known.
+
+    The filtration requirement depends on it, because the time-based daily
+    minimum rises as the water warms up.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None or not state.water_temp.available:
+        return None
+    return state.water_temp.value
+
+
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict:
@@ -23,11 +35,14 @@ async def async_get_config_entry_diagnostics(
     config = coordinator.pool_config
     decision = coordinator.decision
     filtration = coordinator.filtration
+    water = _water(coordinator)
 
     return {
         "derived": {
-            "daily_filtration_hours": round(config.daily_filtration_hours, 3),
-            "block_hours": round(config.block_hours, 3),
+            "daily_filtration_hours": round(config.daily_filtration_hours(water), 3),
+            "block_hours": round(config.block_hours(water), 3),
+            "turnover_hours": round(config.turnover_hours, 3),
+            "filtration_driver": config.filtration_driver(water),
             "kwh_thermal_per_degree": round(config.pool.kwh_thermal_per_degree, 3),
             "effective_flow_m3h": round(config.pump.effective_flow_m3h, 3),
         },
