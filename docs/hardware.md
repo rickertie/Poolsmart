@@ -49,7 +49,7 @@ into a 3.3V-only pin will damage it.
 
 ### Wiring overview
 
-<img src="../brands/esp32c6_wiring_overview.png" width="500">
+<img src="images/esp32c6_wiring_overview.png" width="500">
 
 The controller's 1-Wire bus (GPIO22) feeds all five Dallas sensors, the
 flow meter sits on GPIO19 behind a voltage divider, and the status LED is
