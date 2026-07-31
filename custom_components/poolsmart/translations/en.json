@@ -58,14 +58,28 @@
           "price_sensor": "Electricity price (per kWh)",
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
-          "weather_entity": "Weather"
+          "weather_entity": "Weather",
+          "cover_entity": "Pool cover (optional)"
         }
       }
     }
   },
   "options": {
     "step": {
-      "init": {
+      "swimming": {
+        "title": "Swimming times",
+        "description": "One window per weekday covers nearly every household. The second is there for exceptions and may be left blank.",
+        "data": {
+          "swim_time": "Wanted at temperature by (HH:MM)",
+          "swim_time_2": "Second time (optional)",
+          "swim_days": "Days"
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Faults repeat with a widening interval until they clear; informational messages fire once. Leave a field blank to use the default target."
+      },
+      "general": {
         "title": "PoolSmart settings",
         "data": {
           "turnover_factor": "Turnover factor (times the pool volume per day)",
@@ -86,6 +100,13 @@
           "chemistry_cycle_minutes": "Chemistry cycle length (minutes)",
           "learning_enabled": "Self-learning enabled"
         }
+      },
+      "init": {
+        "menu_options": {
+          "general": "General settings",
+          "swimming": "Swimming times",
+          "notifications": "Notifications"
+        }
       }
     }
   },
@@ -99,29 +120,77 @@
   },
   "entity": {
     "sensor": {
-      "status": { "name": "Status" },
-      "ready_at": { "name": "Ready at" },
-      "heating_time_required": { "name": "Heating time required" },
-      "delta_t": { "name": "Delta-T" },
-      "cop_expected": { "name": "COP expected" },
-      "cop_measured": { "name": "COP measured" },
-      "thermal_power": { "name": "Thermal power" },
-      "flow_rate": { "name": "Flow rate" },
-      "filtration_required_today": { "name": "Filtration required today" },
-      "filtration_completed_today": { "name": "Filtration completed today" },
-      "filtration_remaining_today": { "name": "Filtration remaining today" },
-      "heating_rate": { "name": "Heating rate" },
-      "heat_loss_rate": { "name": "Heat loss rate" },
-      "energy_today": { "name": "Energy today" },
-      "cost_today": { "name": "Cost today" },
-      "cost_saved_today": { "name": "Cost saved today" }
+      "status": {
+        "name": "Status"
+      },
+      "ready_at": {
+        "name": "Ready at"
+      },
+      "heating_time_required": {
+        "name": "Heating time required"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "cop_expected": {
+        "name": "COP expected"
+      },
+      "cop_measured": {
+        "name": "COP measured"
+      },
+      "thermal_power": {
+        "name": "Thermal power"
+      },
+      "flow_rate": {
+        "name": "Flow rate"
+      },
+      "filtration_required_today": {
+        "name": "Filtration required today"
+      },
+      "filtration_completed_today": {
+        "name": "Filtration completed today"
+      },
+      "filtration_remaining_today": {
+        "name": "Filtration remaining today"
+      },
+      "heating_rate": {
+        "name": "Heating rate"
+      },
+      "heat_loss_rate": {
+        "name": "Heat loss rate"
+      },
+      "energy_today": {
+        "name": "Energy today"
+      },
+      "cost_today": {
+        "name": "Cost today"
+      },
+      "cost_saved_today": {
+        "name": "Cost saved today"
+      },
+      "next_action_at": {
+        "name": "Next action at"
+      },
+      "ai_suggestion": {
+        "name": "AI suggestions"
+      }
     },
     "binary_sensor": {
-      "heating": { "name": "Heating" },
-      "circulating": { "name": "Circulating" },
-      "heat_pump_available": { "name": "Heat pump available" },
-      "fault": { "name": "Fault" },
-      "filter_service_needed": { "name": "Filter service needed" }
+      "heating": {
+        "name": "Heating"
+      },
+      "circulating": {
+        "name": "Circulating"
+      },
+      "heat_pump_available": {
+        "name": "Heat pump available"
+      },
+      "fault": {
+        "name": "Fault"
+      },
+      "filter_service_needed": {
+        "name": "Filter service needed"
+      }
     },
     "select": {
       "mode": {
@@ -137,18 +206,40 @@
       }
     },
     "number": {
-      "target_temperature": { "name": "Target temperature" },
-      "max_price": { "name": "Maximum price" }
+      "target_temperature": {
+        "name": "Target temperature"
+      },
+      "max_price": {
+        "name": "Maximum price"
+      }
     },
     "switch": {
-      "manual_override": { "name": "Manual override" },
-      "learning_enabled": { "name": "Self-learning" }
+      "manual_override": {
+        "name": "Manual override"
+      },
+      "learning_enabled": {
+        "name": "Self-learning"
+      }
     },
     "button": {
-      "boost_now": { "name": "Heat now" },
-      "force_filtration": { "name": "Force a full filtration cycle" },
-      "start_chemistry_cycle": { "name": "Start chemistry cycle" },
-      "reset_learning": { "name": "Reset learned values" }
+      "boost_now": {
+        "name": "Heat now"
+      },
+      "force_filtration": {
+        "name": "Force a full filtration cycle"
+      },
+      "start_chemistry_cycle": {
+        "name": "Start chemistry cycle"
+      },
+      "reset_learning": {
+        "name": "Reset learned values"
+      },
+      "run_advisor": {
+        "name": "Ask for a review"
+      },
+      "accept_suggestion": {
+        "name": "Accept suggestion"
+      }
     }
   }
 }

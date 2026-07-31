@@ -7,6 +7,9 @@ from datetime import timedelta
 DOMAIN = "poolsmart"
 DEFAULT_NAME = "Pool"
 
+#: Sidebar panel URL path.
+PANEL_URL = "poolsmart"
+
 #: How often the decision engine runs.
 UPDATE_INTERVAL = timedelta(seconds=30)
 
@@ -16,6 +19,9 @@ STORAGE_VERSION = 1
 
 #: Number of decisions kept in the log.
 DECISION_LOG_SIZE = 100
+
+#: Number of finished heating sessions kept in the log.
+SESSION_LOG_SIZE = 60
 
 # -- Step 1: pool ----------------------------------------------------------
 CONF_VOLUME_L = "volume_l"
@@ -59,6 +65,7 @@ CONF_PRICE_SENSOR = "price_sensor"
 CONF_SOLAR_POWER_SENSOR = "solar_power_sensor"
 CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
 CONF_WEATHER_ENTITY = "weather_entity"
+CONF_COVER_ENTITY = "cover_entity"
 
 OPTIONAL_ENTITY_KEYS = (
     CONF_AIR_TEMP_SENSOR,
@@ -71,6 +78,7 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_SOLAR_POWER_SENSOR,
     CONF_SOLAR_FORECAST_SENSOR,
     CONF_WEATHER_ENTITY,
+    CONF_COVER_ENTITY,
 )
 
 #: Which capability each optional entity unlocks. Used to tell the user exactly
@@ -105,7 +113,9 @@ CONF_SOLAR_THRESHOLD_W = "solar_threshold_w"
 CONF_SOLAR_HYSTERESIS_W = "solar_hysteresis_w"
 CONF_ECO_PRICE_FACTOR = "eco_price_factor"
 CONF_LEARNING_ENABLED = "learning_enabled"
-CONF_SWIM_WINDOWS = "swim_windows"
+CONF_SWIM_TIME = "swim_time"
+CONF_SWIM_TIME_2 = "swim_time_2"
+CONF_SWIM_DAYS = "swim_days"
 CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
 

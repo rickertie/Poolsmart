@@ -18,7 +18,7 @@ from homeassistant.util import dt as dt_util
 
 from . import const as c
 from .core import filtration as filt
-from .core import heating, ladder, safety
+from .core import heating, ladder, learning, optimizer, safety
 from .core.config import (
     ComfortSettings,
     EnergySettings,
@@ -31,6 +31,11 @@ from .core.config import (
     SafetySettings,
 )
 from .core.models import Branch, Decision, Fault, Mode, PoolState, SensorReading, Severity
+from .ai.advisor import Advisor
+from .engine.chemistry import ChemistryModule
+from .engine.cover import CoverModule
+from .notify import NotificationManager
+from .price import average_price, extract_forecast
 from .store import PoolStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,6 +70,11 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.faults: list[Fault] = []
         self.filtration: filt.FiltrationStatus | None = None
         self.estimate: heating.HeatingEstimate | None = None
+        self.plan: optimizer.HeatingPlan | None = None
+        self.notifier = NotificationManager(hass, self)
+        self.advisor = Advisor(hass, self)
+        self.chemistry = ChemistryModule(self)
+        self.cover = CoverModule(self, self._conf(c.CONF_COVER_ENTITY))
         self.heat_pump_available: bool = False
         self.heat_pump_gate_reason: str = ""
         self.disabled_capabilities: set[str] = set()
@@ -74,6 +84,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._manual_pump_request = False
         self._hp_running_since: datetime | None = None
         self._last_tick: datetime | None = None
+        self._session: learning.SessionRecord | None = None
+        self._idle_since: datetime | None = None
+        self._idle_water_temp: float | None = None
+        self._price_slots: tuple = ()
 
     # -- Configuration -----------------------------------------------------
 
@@ -214,6 +228,36 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             energy = None
         return total, energy
 
+    def _read_price_forecast(self) -> tuple:
+        entity_id = self._conf(c.CONF_PRICE_SENSOR)
+        if not entity_id:
+            return ()
+        return extract_forecast(self.hass.states.get(entity_id))
+
+    def _next_swim_deadline(self, now: datetime) -> datetime | None:
+        """When the pool is next wanted at temperature.
+
+        One window per weekday covers nearly every household; a second is
+        supported for the exceptions and costs almost nothing because the planner
+        works from a list either way.
+        """
+        candidates: list[datetime] = []
+        days = self._conf(c.CONF_SWIM_DAYS, [0, 1, 2, 3, 4, 5, 6]) or []
+        for key in (c.CONF_SWIM_TIME, c.CONF_SWIM_TIME_2):
+            raw = self._conf(key)
+            if not raw:
+                continue
+            wanted = _parse_time(raw, time(17, 0))
+            for offset in range(0, 8):
+                day = now.date() + timedelta(days=offset)
+                if days and day.weekday() not in [int(d) for d in days]:
+                    continue
+                moment = datetime.combine(day, wanted).replace(tzinfo=now.tzinfo)
+                if moment > now:
+                    candidates.append(moment)
+                    break
+        return min(candidates) if candidates else None
+
     def _build_state(self, now: datetime, config: PoolConfig) -> PoolState:
         self.disabled_capabilities = set()
         price_total, price_energy = self._read_price()
@@ -300,6 +344,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             state, config, self.faults
         )
 
+        # Plan before deciding, so the ladder knows whether this moment is part
+        # of the plan rather than judging price in isolation.
+        state = self._plan(now, config, state)
+
         decision = ladder.decide(
             state,
             config,
@@ -310,17 +358,6 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             previous=self.decision,
         )
 
-        if state.water_temp.available and state.air_temp.available:
-            hours_available = None
-            self.estimate = heating.estimate(
-                config,
-                water_temp=state.water_temp.value,
-                target_temp=self._target_temp,
-                air_temp=state.air_temp.value,
-                hours_available=hours_available,
-                heat_loss_c_per_h=state.heat_loss_c_per_h,
-            )
-
         await self._async_execute(decision, state)
         self._persist_block(decision)
         self._log(decision, state)
@@ -328,11 +365,196 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if decision.heat_pump is False and state.heat_pump_on:
             self.store.heat_pump_stopped_at = now
 
+        self._track_energy(now, state)
+        self._track_session(now, state, config)
+        self._track_idle(now, state, config)
+
         self.decision = decision
         self._last_tick = now
         await self.store.async_save()
+        await self.notifier.async_process(decision, self.faults, now)
 
         return {"decision": decision, "state": state}
+
+    # -- Planning ----------------------------------------------------------
+
+    def _plan(self, now: datetime, config: PoolConfig, state: PoolState) -> PoolState:
+        """Work out when to heat and fold the answer back into the state."""
+        if not (state.water_temp.available and state.air_temp.available):
+            self.estimate = None
+            self.plan = None
+            return state
+
+        deadline = self._next_swim_deadline(now)
+        hours_available = (
+            (deadline - now).total_seconds() / 3600.0 if deadline else None
+        )
+
+        self.estimate = heating.estimate(
+            config,
+            water_temp=state.water_temp.value,
+            target_temp=self._target_temp,
+            air_temp=state.air_temp.value,
+            hours_available=hours_available,
+            heat_loss_c_per_h=state.heat_loss_c_per_h,
+        )
+
+        self._price_slots = self._read_price_forecast()
+        self.plan = optimizer.plan(
+            now,
+            config,
+            self.estimate,
+            slots=self._price_slots,
+            deadline=deadline,
+            heat_loss_c_per_h=state.heat_loss_c_per_h,
+            boost=self._mode is Mode.BOOST,
+        )
+
+        return state.replace(
+            swim_time=deadline,
+            heating_session_active=self.plan.is_active(now),
+            heating_session_planned_start=self.plan.next_start,
+        )
+
+    # -- Energy and cost ---------------------------------------------------
+
+    def _track_energy(self, now: datetime, state: PoolState) -> None:
+        """Accumulate consumption and cost, plus the baseline for savings.
+
+        The baseline is what the same energy would have cost at the average price
+        of the forecast. The difference is the value of having chosen the moment,
+        which is the only savings figure that means anything here.
+        """
+        if self._last_tick is None:
+            return
+        hours = (now - self._last_tick).total_seconds() / 3600.0
+        if hours <= 0 or hours > 0.5:
+            return
+
+        watts = 0.0
+        if state.pump_power_w.available:
+            watts += state.pump_power_w.value
+        if state.hp_power_w.available:
+            watts += state.hp_power_w.value
+        if watts <= 0:
+            return
+
+        kwh = watts / 1000.0 * hours
+        self.store.energy_today_kwh += kwh
+
+        if state.price_total is not None:
+            self.store.cost_today += kwh * state.price_total
+            baseline = average_price(self._price_slots) or state.price_total
+            self.store.cost_baseline_today += kwh * baseline
+
+    # -- Session recording -------------------------------------------------
+
+    def _track_session(self, now: datetime, state: PoolState, config: PoolConfig) -> None:
+        """Record heating sessions and learn from the clean ones."""
+        heating_now = state.heat_pump_on
+
+        if heating_now and self._session is None:
+            self._session = learning.SessionRecord(
+                start=now,
+                water_start=state.water_temp.value if state.water_temp.available else None,
+            )
+
+        if heating_now and self._session is not None:
+            self._session.sample_air(
+                state.air_temp.value if state.air_temp.available else None
+            )
+            if self._last_tick is not None:
+                hours = (now - self._last_tick).total_seconds() / 3600.0
+                if 0 < hours <= 0.5:
+                    if state.hp_power_w.available:
+                        self._session.energy_kwh += state.hp_power_w.value / 1000.0 * hours
+                    thermal = self._thermal_kw(state, config)
+                    if thermal is not None:
+                        self._session.thermal_kwh += thermal * hours
+            for fault in self.faults:
+                if fault.code not in self._session.faults:
+                    self._session.faults.append(fault.code)
+
+        if not heating_now and self._session is not None:
+            record = self._session
+            record.end = now
+            record.water_end = (
+                state.water_temp.value if state.water_temp.available else None
+            )
+            self._session = None
+            self._finish_session(record, config)
+
+    def _thermal_kw(self, state: PoolState, config: PoolConfig) -> float | None:
+        delta = state.delta_t
+        flow = state.effective_flow_m3h
+        if delta is None or flow is None:
+            return None
+        if config.is_aliased("hp_inlet", "hp_outlet"):
+            return None
+        return flow * delta * 1.163
+
+    def _finish_session(self, record: learning.SessionRecord, config: PoolConfig) -> None:
+        verdict = learning.assess(record, config)
+        payload = record.as_dict()
+        payload["usable"] = verdict.usable
+        payload["verdict"] = verdict.reason
+        self.store.log_session(payload)
+
+        if not verdict.usable or not config.learning.enabled:
+            _LOGGER.debug("Session not used for learning: %s", verdict.reason)
+            return
+
+        ratio = config.learning.max_step_ratio
+        if record.heating_rate is not None:
+            self.store.learned.heating_rate_c_per_h = round(
+                learning.capped_update(
+                    self.store.learned.heating_rate_c_per_h, record.heating_rate, ratio
+                ),
+                4,
+            )
+        self.store.learned.cop_by_air_bucket = learning.update_cop_curve(
+            self.store.learned.cop_by_air_bucket, record, config
+        )
+        self.store.learned.session_count += 1
+
+    # -- Idle observation, for heat loss -----------------------------------
+
+    def _track_idle(self, now: datetime, state: PoolState, config: PoolConfig) -> None:
+        """Measure heat loss while nothing is running."""
+        idle = not state.heat_pump_on
+        if not idle or not state.water_temp.available:
+            self._idle_since = None
+            self._idle_water_temp = None
+            return
+
+        if self._idle_since is None:
+            self._idle_since = now
+            self._idle_water_temp = state.water_temp.value
+            return
+
+        hours = (now - self._idle_since).total_seconds() / 3600.0
+        if hours < 6:
+            return
+
+        rate = learning.heat_loss_from_idle(
+            self._idle_water_temp,
+            state.water_temp.value,
+            hours,
+            covered=bool(self.cover.state().covered),
+        )
+        self._idle_since = now
+        self._idle_water_temp = state.water_temp.value
+
+        if rate is None or not config.learning.enabled:
+            return
+        self.store.learned.heat_loss_c_per_h = round(
+            learning.capped_update(
+                self.store.learned.heat_loss_c_per_h,
+                rate,
+                config.learning.max_step_ratio,
+            ),
+            4,
+        )
 
     # -- Execution ---------------------------------------------------------
 
@@ -402,8 +624,21 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     async def async_start_chemistry(self, minutes: int | None = None) -> None:
         duration = minutes or int(self._conf(c.CONF_CHEMISTRY_MINUTES, 30))
-        self.store.chemistry_until = dt_util.now() + timedelta(minutes=duration)
+        request = self.chemistry.manual_cycle(dt_util.now(), duration)
+        self.store.chemistry_until = request.until
+        await self.notifier.async_send_chemistry(request.reason)
         await self.async_request_refresh()
+
+    async def async_run_advisor(self) -> None:
+        """Ask the advisory layer for a review. Never blocks control."""
+        result = await self.advisor.async_review()
+        if result.summary and not result.error:
+            await self.notifier.async_send_recommendation(result.summary)
+        self.async_update_listeners()
+
+    async def async_accept_suggestion(self, index: int = 0) -> None:
+        await self.advisor.async_accept(index)
+        self.async_update_listeners()
 
     async def async_force_filtration(self) -> None:
         """Clear today's credited runtime so a full cycle runs again."""

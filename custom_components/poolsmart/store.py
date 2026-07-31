@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import DECISION_LOG_SIZE, STORAGE_KEY, STORAGE_VERSION
+from .const import DECISION_LOG_SIZE, SESSION_LOG_SIZE, STORAGE_KEY, STORAGE_VERSION
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,6 +92,7 @@ class PoolStore:
         self.mode: str | None = None
         self.target_temp: float | None = None
         self.decision_log: list[dict] = []
+        self.session_log: list[dict] = []
         self.energy_today_kwh: float = 0.0
         self.cost_today: float = 0.0
         self.cost_baseline_today: float = 0.0
@@ -115,6 +116,7 @@ class PoolStore:
             self.mode = raw.get("mode")
             self.target_temp = raw.get("target_temp")
             self.decision_log = raw.get("decision_log", [])
+            self.session_log = raw.get("session_log", [])
             self.energy_today_kwh = raw.get("energy_today_kwh", 0.0)
             self.cost_today = raw.get("cost_today", 0.0)
             self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
@@ -154,6 +156,7 @@ class PoolStore:
                 "mode": self.mode,
                 "target_temp": self.target_temp,
                 "decision_log": self.decision_log[-DECISION_LOG_SIZE:],
+                "session_log": self.session_log[-SESSION_LOG_SIZE:],
                 "energy_today_kwh": self.energy_today_kwh,
                 "cost_today": self.cost_today,
                 "cost_baseline_today": self.cost_baseline_today,
@@ -205,6 +208,16 @@ class PoolStore:
         self.decision_log.append(payload)
         if len(self.decision_log) > DECISION_LOG_SIZE:
             self.decision_log = self.decision_log[-DECISION_LOG_SIZE:]
+
+    def log_session(self, payload: dict) -> None:
+        """Record a finished heating session, usable or not.
+
+        Rejected sessions are kept deliberately: when the model stops improving,
+        the reasons things were rejected are the first place to look.
+        """
+        self.session_log.append(payload)
+        if len(self.session_log) > SESSION_LOG_SIZE:
+            self.session_log = self.session_log[-SESSION_LOG_SIZE:]
 
     # -- Learned values ----------------------------------------------------
 

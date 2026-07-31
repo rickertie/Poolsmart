@@ -6,7 +6,11 @@
   "issue_tracker": "https://github.com/rick/ha_poolsmart/issues",
   "codeowners": [],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": [
+    "http",
+    "websocket_api",
+    "panel_custom"
+  ],
   "integration_type": "device",
   "iot_class": "local_polling",
   "requirements": []

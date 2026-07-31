@@ -101,10 +101,9 @@ imports, so it runs and is tested standalone:
 cd tests && python run_tests.py
 ```
 
-The suite covers the twelve acceptance cases from the design documents, including
-regression tests for the two bugs that prompted this rewrite: the pump sitting
-idle while the filtration window closed, and the pump oscillating once the daily
-quota was met.
+The suite covers twenty-two acceptance cases, including regression tests for the
+two bugs that prompted this rewrite: the pump sitting idle while the filtration
+window closed, and the pump oscillating once the daily quota was met.
 
 ## Status
 
@@ -112,10 +111,65 @@ quota was met.
 |---|---|
 | WP1 Foundation: config flow, storage, models | done |
 | WP2 Control core: coordinator, ladder, filtration, safety, entities | done |
-| WP3 Planning and learning: optimizer, session recorder, COP curve | heating estimate done, optimizer and learning pending |
-| WP4 Notifications and Lovelace | example page included, notification routing pending |
-| WP5 Sidebar management panel | pending |
-| WP6 AI advisor, chemistry and cover modules | placeholders in place |
+| WP3 Planning and learning: optimizer, session recorder, COP curve | done |
+| WP4 Notifications and Lovelace page | done |
+| WP5 Sidebar management panel | done |
+| WP6 AI advisor, chemistry and cover modules | done |
+
+## Planning
+
+Heating is planned in one of two ways, and the difference is visible in the
+interface.
+
+**Maintenance** compensates a day's heat loss. The optimizer picks the cheapest
+intervals before the next swimming time and reports a time.
+
+**Seasonal** brings a cold pool up to temperature. That can be ten to fifteen
+hours of running, which does not fit in one day of cheap hours, so the optimizer
+projects across days and reports a **date**. If the pool loses heat as fast as
+the heat pump can add it, it says so instead of producing a date it cannot meet.
+
+Price forecasts are read from whatever integration you use. Several attribute
+shapes are recognised; if none is, planning falls back to heating on demand.
+
+## Self-learning
+
+Learned after each session: heating rate, heat loss, and a COP value per five
+degree band of outdoor temperature. Because the heat pump does not modulate, one
+value per band is sufficient.
+
+Three rules keep the model honest:
+
+1. Only cleanly closed sessions are used. Interrupted ones, ones with faults, and
+   ones too short to measure are recorded and marked, not learned from.
+2. Every update is capped at a fraction of the current value, so one strange
+   session can nudge the model but never replace it.
+3. Outliers are rejected on physical grounds -- a COP outside the appliance's own
+   clamps, water that did not warm up while heating -- rather than statistically.
+
+Rejected sessions stay in the log with the reason. When the model stops
+improving, that is the first place to look.
+
+## The management panel
+
+A sidebar panel at `/poolsmart` with six tabs: overview, planning, sessions,
+learning, settings and diagnostics. It is written as a plain custom element with
+no build step and no external imports, so it keeps working without internet.
+
+The panel is for whoever maintains the system. The Lovelace page in
+`docs/lovelace/` is for everyone else, and the two are deliberately not the same
+thing.
+
+## The AI layer
+
+Optional and advisory. It reads the session history, produces a summary and at
+most a handful of suggested settings changes, and waits. Nothing is applied
+without pressing accept.
+
+Suggestions are validated against a fixed list of adjustable settings with hard
+ranges; anything outside it is discarded. A safety limit cannot be suggested away.
+If the AI is unavailable the pool behaves exactly as it otherwise would, because
+this layer sits outside the control tick entirely.
 
 ## Licence
 

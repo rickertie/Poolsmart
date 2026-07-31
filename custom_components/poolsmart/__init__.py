@@ -12,7 +12,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from . import websocket as poolsmart_ws
+from .const import DOMAIN, PANEL_URL
 from .coordinator import PoolSmartCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,6 +28,30 @@ PLATFORMS: list[Platform] = [
 ]
 
 
+async def _async_register_panel(hass: HomeAssistant) -> None:
+    """Register the sidebar panel once, no matter how many pools exist."""
+    if hass.data.get(f"{DOMAIN}_panel"):
+        return
+
+    from homeassistant.components import panel_custom
+    from homeassistant.components.http import StaticPathConfig
+
+    module_path = hass.config.path(f"custom_components/{DOMAIN}/www")
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(f"/{DOMAIN}_panel", module_path, True)]
+    )
+    await panel_custom.async_register_panel(
+        hass,
+        webcomponent_name="poolsmart-panel",
+        frontend_url_path=PANEL_URL,
+        module_url=f"/{DOMAIN}_panel/poolsmart-panel.js",
+        sidebar_title="Pool",
+        sidebar_icon="mdi:pool",
+        require_admin=False,
+    )
+    hass.data[f"{DOMAIN}_panel"] = True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PoolSmart from a config entry."""
     coordinator = PoolSmartCoordinator(hass, entry)
@@ -34,6 +59,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    if not hass.data.get(f"{DOMAIN}_ws"):
+        poolsmart_ws.async_register(hass)
+        hass.data[f"{DOMAIN}_ws"] = True
+
+    try:
+        await _async_register_panel(hass)
+    except Exception:  # noqa: BLE001 -- the panel is a convenience, not a dependency
+        _LOGGER.warning("Could not register the PoolSmart panel; control is unaffected")
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True

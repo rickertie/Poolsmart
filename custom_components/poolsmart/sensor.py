@@ -64,7 +64,27 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
     PoolSensorDescription(
         key="ready_at",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=lambda c: None,
+        value_fn=lambda c: c.plan.ready_at if c.plan else None,
+        attributes_fn=lambda c: (
+            {
+                "plan_mode": c.plan.mode.value,
+                "reason": c.plan.reason,
+                "hours_needed": round(c.plan.hours_needed, 2),
+                "hours_planned": round(c.plan.hours_planned, 2),
+                "expected_cost": c.plan.expected_cost,
+                # In seasonal mode this is a date several days out. Showing an
+                # honest date beats showing a time that cannot be met.
+                "is_multi_day": c.plan.mode.value == "seasonal",
+                **{f"detail_{k}": v for k, v in c.plan.detail.items()},
+            }
+            if c.plan
+            else {}
+        ),
+    ),
+    PoolSensorDescription(
+        key="next_action_at",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda c: _next_action(c),
     ),
     PoolSensorDescription(
         key="heating_time_required",
@@ -192,6 +212,16 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         value_fn=lambda c: round(c.store.cost_today, 3),
     ),
     PoolSensorDescription(
+        key="ai_suggestion",
+        icon="mdi:lightbulb-on-outline",
+        value_fn=lambda c: (
+            len(c.advisor.last_result.suggestions) if c.advisor.last_result else 0
+        ),
+        attributes_fn=lambda c: (
+            c.advisor.last_result.as_dict() if c.advisor.last_result else {}
+        ),
+    ),
+    PoolSensorDescription(
         key="cost_saved_today",
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
@@ -199,6 +229,16 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         value_fn=lambda c: round(c.store.cost_baseline_today - c.store.cost_today, 3),
     ),
 )
+
+
+def _next_action(coordinator: PoolSmartCoordinator) -> object | None:
+    """The soonest thing that is going to happen, heating or filtration."""
+    candidates = []
+    if coordinator.plan and coordinator.plan.next_start:
+        candidates.append(coordinator.plan.next_start)
+    if coordinator.filtration and coordinator.filtration.next_block:
+        candidates.append(coordinator.filtration.next_block.start)
+    return min(candidates) if candidates else None
 
 
 def _measured_cop(coordinator: PoolSmartCoordinator) -> float | None:

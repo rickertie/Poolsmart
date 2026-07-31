@@ -95,6 +95,9 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
+        vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["cover", "binary_sensor", "input_boolean"])
+        ),
     }
 )
 
@@ -180,12 +183,88 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         return PoolSmartOptionsFlow()
 
 
+WEEKDAYS = [
+    {"value": "0", "label": "Monday"},
+    {"value": "1", "label": "Tuesday"},
+    {"value": "2", "label": "Wednesday"},
+    {"value": "3", "label": "Thursday"},
+    {"value": "4", "label": "Friday"},
+    {"value": "5", "label": "Saturday"},
+    {"value": "6", "label": "Sunday"},
+]
+
+
 class PoolSmartOptionsFlow(OptionsFlow):
     """Everything that is not needed to get started lives here."""
 
+    def __init__(self) -> None:
+        self._pending: dict[str, Any] = {}
+
     async def async_step_init(self, user_input: dict | None = None) -> ConfigFlowResult:
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["general", "swimming", "notifications"],
+        )
+
+    async def async_step_swimming(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """When the pool should be at temperature.
+
+        One window per weekday covers nearly every household. A second is offered
+        for the exceptions and costs almost nothing, because the planner works
+        from a list of deadlines either way.
+        """
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            options = {**self.config_entry.options, **user_input}
+            return self.async_create_entry(data=options)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    c.CONF_SWIM_TIME, default=current.get(c.CONF_SWIM_TIME, "17:00")
+                ): str,
+                vol.Optional(
+                    c.CONF_SWIM_TIME_2, default=current.get(c.CONF_SWIM_TIME_2, "")
+                ): str,
+                vol.Optional(
+                    c.CONF_SWIM_DAYS,
+                    default=current.get(c.CONF_SWIM_DAYS, ["0", "1", "2", "3", "4", "5", "6"]),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=WEEKDAYS, multiple=True, mode=selector.SelectSelectorMode.LIST
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="swimming", data_schema=schema)
+
+    async def async_step_notifications(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Route each kind of message to its own destination.
+
+        Faults can go to one phone and "the pool is warm" to everyone.
+        """
+        if user_input is not None:
+            targets = {k: v for k, v in user_input.items() if v}
+            options = {**self.config_entry.options, c.CONF_NOTIFY_TARGETS: targets}
+            return self.async_create_entry(data=options)
+
+        current = (self.config_entry.options.get(c.CONF_NOTIFY_TARGETS) or {})
+        notify_selector = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="notify")
+        )
+        fields = {vol.Optional("default", default=current.get("default", "")): notify_selector}
+        for event in c.NOTIFY_EVENTS:
+            fields[vol.Optional(event, default=current.get(event, ""))] = notify_selector
+        return self.async_show_form(
+            step_id="notifications", data_schema=vol.Schema(fields)
+        )
+
+    async def async_step_general(self, user_input: dict | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            options = {**self.config_entry.options, **user_input}
+            return self.async_create_entry(data=options)
 
         current = {**self.config_entry.data, **self.config_entry.options}
 
@@ -263,4 +342,4 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 ): bool,
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="general", data_schema=schema)

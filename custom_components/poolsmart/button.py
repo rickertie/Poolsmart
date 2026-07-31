@@ -23,6 +23,8 @@ async def async_setup_entry(
             PoolSmartForceFiltration(coordinator),
             PoolSmartStartChemistry(coordinator),
             PoolSmartResetLearning(coordinator),
+            PoolSmartRunAdvisor(coordinator),
+            PoolSmartAcceptSuggestion(coordinator),
         ]
     )
 
@@ -71,3 +73,36 @@ class PoolSmartResetLearning(PoolSmartEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         await self.coordinator.async_reset_learning()
+
+
+class PoolSmartRunAdvisor(PoolSmartEntity, ButtonEntity):
+    """Ask the advisory layer to review the past week.
+
+    This never changes anything by itself. It produces suggestions that sit
+    waiting for a human to accept them.
+    """
+
+    _attr_icon = "mdi:lightbulb-on-outline"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "run_advisor")
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_run_advisor()
+
+
+class PoolSmartAcceptSuggestion(PoolSmartEntity, ButtonEntity):
+    """Apply the topmost pending suggestion."""
+
+    _attr_icon = "mdi:check-decagram"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "accept_suggestion")
+
+    @property
+    def available(self) -> bool:
+        result = self.coordinator.advisor.last_result
+        return bool(result and result.suggestions)
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_accept_suggestion(0)

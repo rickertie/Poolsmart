@@ -58,14 +58,28 @@
           "price_sensor": "Stroomprijs (per kWh)",
           "solar_power_sensor": "Actuele zonneopbrengst",
           "solar_forecast_sensor": "Zonneverwachting",
-          "weather_entity": "Weer"
+          "weather_entity": "Weer",
+          "cover_entity": "Afdekhoes (optioneel)"
         }
       }
     }
   },
   "options": {
     "step": {
-      "init": {
+      "swimming": {
+        "title": "Zwemtijden",
+        "description": "Eén venster per weekdag dekt vrijwel elk huishouden. Het tweede is er voor uitzonderingen en mag leeg blijven.",
+        "data": {
+          "swim_time": "Op temperatuur om (UU:MM)",
+          "swim_time_2": "Tweede tijdstip (optioneel)",
+          "swim_days": "Dagen"
+        }
+      },
+      "notifications": {
+        "title": "Notificaties",
+        "description": "Storingen worden herhaald met een oplopend interval tot ze opgelost zijn; informatieve meldingen komen één keer. Laat een veld leeg om het standaarddoel te gebruiken."
+      },
+      "general": {
         "title": "PoolSmart-instellingen",
         "data": {
           "turnover_factor": "Turnover-factor (keer de zwembadinhoud per dag)",
@@ -86,6 +100,13 @@
           "chemistry_cycle_minutes": "Duur chemiecyclus (minuten)",
           "learning_enabled": "Zelflerend actief"
         }
+      },
+      "init": {
+        "menu_options": {
+          "general": "Algemene instellingen",
+          "swimming": "Zwemtijden",
+          "notifications": "Notificaties"
+        }
       }
     }
   },
@@ -99,29 +120,77 @@
   },
   "entity": {
     "sensor": {
-      "status": { "name": "Status" },
-      "ready_at": { "name": "Klaar om" },
-      "heating_time_required": { "name": "Benodigde opwarmtijd" },
-      "delta_t": { "name": "Delta-T" },
-      "cop_expected": { "name": "COP verwacht" },
-      "cop_measured": { "name": "COP gemeten" },
-      "thermal_power": { "name": "Thermisch vermogen" },
-      "flow_rate": { "name": "Debiet" },
-      "filtration_required_today": { "name": "Filtratie nodig vandaag" },
-      "filtration_completed_today": { "name": "Filtratie gedaan vandaag" },
-      "filtration_remaining_today": { "name": "Filtratie resterend vandaag" },
-      "heating_rate": { "name": "Opwarmsnelheid" },
-      "heat_loss_rate": { "name": "Warmteverlies" },
-      "energy_today": { "name": "Energie vandaag" },
-      "cost_today": { "name": "Kosten vandaag" },
-      "cost_saved_today": { "name": "Besparing vandaag" }
+      "status": {
+        "name": "Status"
+      },
+      "ready_at": {
+        "name": "Klaar om"
+      },
+      "heating_time_required": {
+        "name": "Benodigde opwarmtijd"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "cop_expected": {
+        "name": "COP verwacht"
+      },
+      "cop_measured": {
+        "name": "COP gemeten"
+      },
+      "thermal_power": {
+        "name": "Thermisch vermogen"
+      },
+      "flow_rate": {
+        "name": "Debiet"
+      },
+      "filtration_required_today": {
+        "name": "Filtratie nodig vandaag"
+      },
+      "filtration_completed_today": {
+        "name": "Filtratie gedaan vandaag"
+      },
+      "filtration_remaining_today": {
+        "name": "Filtratie resterend vandaag"
+      },
+      "heating_rate": {
+        "name": "Opwarmsnelheid"
+      },
+      "heat_loss_rate": {
+        "name": "Warmteverlies"
+      },
+      "energy_today": {
+        "name": "Energie vandaag"
+      },
+      "cost_today": {
+        "name": "Kosten vandaag"
+      },
+      "cost_saved_today": {
+        "name": "Besparing vandaag"
+      },
+      "next_action_at": {
+        "name": "Volgende actie om"
+      },
+      "ai_suggestion": {
+        "name": "AI-aanbevelingen"
+      }
     },
     "binary_sensor": {
-      "heating": { "name": "Verwarmt" },
-      "circulating": { "name": "Circuleert" },
-      "heat_pump_available": { "name": "Warmtepomp beschikbaar" },
-      "fault": { "name": "Storing" },
-      "filter_service_needed": { "name": "Filter moet schoongemaakt" }
+      "heating": {
+        "name": "Verwarmt"
+      },
+      "circulating": {
+        "name": "Circuleert"
+      },
+      "heat_pump_available": {
+        "name": "Warmtepomp beschikbaar"
+      },
+      "fault": {
+        "name": "Storing"
+      },
+      "filter_service_needed": {
+        "name": "Filter moet schoongemaakt"
+      }
     },
     "select": {
       "mode": {
@@ -137,18 +206,40 @@
       }
     },
     "number": {
-      "target_temperature": { "name": "Doeltemperatuur" },
-      "max_price": { "name": "Maximale prijs" }
+      "target_temperature": {
+        "name": "Doeltemperatuur"
+      },
+      "max_price": {
+        "name": "Maximale prijs"
+      }
     },
     "switch": {
-      "manual_override": { "name": "Handmatige overname" },
-      "learning_enabled": { "name": "Zelflerend" }
+      "manual_override": {
+        "name": "Handmatige overname"
+      },
+      "learning_enabled": {
+        "name": "Zelflerend"
+      }
     },
     "button": {
-      "boost_now": { "name": "Nu verwarmen" },
-      "force_filtration": { "name": "Volledige filtratiecyclus forceren" },
-      "start_chemistry_cycle": { "name": "Chemiecyclus starten" },
-      "reset_learning": { "name": "Leerwaarden wissen" }
+      "boost_now": {
+        "name": "Nu verwarmen"
+      },
+      "force_filtration": {
+        "name": "Volledige filtratiecyclus forceren"
+      },
+      "start_chemistry_cycle": {
+        "name": "Chemiecyclus starten"
+      },
+      "reset_learning": {
+        "name": "Leerwaarden wissen"
+      },
+      "run_advisor": {
+        "name": "Vraag een analyse"
+      },
+      "accept_suggestion": {
+        "name": "Aanbeveling overnemen"
+      }
     }
   }
 }
