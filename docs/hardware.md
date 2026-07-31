@@ -26,13 +26,13 @@ calibration steps), see [`docs/esphome.md`](esphome.md).
 | Flow meter pulse input | GPIO19 |
 | Status LED | GPIO23 |
 
-All five Dallas sensors share the same 1-Wire bus on GPIO22 — they're
+All five Dallas sensors share the same 1-Wire bus on GPIO22 they're
 distinguished in software by their unique hardware address (see
 [`docs/esphome.md`](esphome.md) for the address list and how to find yours
 with a Dallas scan).
 
 The flow meter outputs 5V pulses, so it needs a voltage divider (or a
-5V-tolerant pin) before it reaches the ESP32's GPIO — feeding 5V directly
+5V-tolerant pin) before it reaches the ESP32's GPIO feeding 5V directly
 into a 3.3V-only pin will damage it.
 
 > 🔌 *A wiring diagram will go here.*
@@ -55,9 +55,7 @@ The controller's 1-Wire bus (GPIO22) feeds all five Dallas sensors, the
 flow meter sits on GPIO19 behind a voltage divider, and the status LED is
 on GPIO23.
 
-> 📸 *Add your own installation photos here too — the enclosure in place,
-> the sensors clamped onto the pipework, and the overall setup next to the
-> pool.*
+> 📸 *need to add photo :-)
 
 ## Calibration
 
