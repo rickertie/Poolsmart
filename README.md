@@ -83,19 +83,20 @@ entities, pool and equipment specs, prices, and swimming times.
 
 ## 🔧 Example setup
 
-My own pool, for my Kids and me ;-) : 
- 
-**Intex Metal Frame pool (3,834 L)** Pool
-**Bestway Flowclear** filter pump
-**W'eau Mini** heat pump
+My own pool, for my kids and me 😄
 
-**Seeed XIAO ESP32C6** running ESPHome
-	five Dallas temperature sensors (pool, pump in/out, heat pump in/out, outdoor) and a pulse-based
-	flow meter to the Heatpump. 
+| | |
+|---|---|
+| 🏊 Pool | Intex Metal Frame (3,834 L) |
+| 🔄 Filter pump | Bestway Flowclear |
+| 🔥 Heat pump | W'eau Mini |
+| 📟 Controller | Seeed XIAO ESP32C6 running [ESPHome](https://esphome.io/) |
+| 🌡️ Sensors | 5x Dallas temperature (pool, pump in/out, heat pump in/out, outdoor) |
+| 💧 Flow | Pulse-based flow meter on the heat pump loop |
 
-The ESP32 does the light, fast local math delta-T, measured
-and predicted COP, heating rate and hands numbers to Home Assistant,
-where this intergration takes it from there.
+The ESP32 does the light, fast local math — delta-T, measured and predicted
+COP, heating rate — and hands clean numbers to Home Assistant, where this
+integration takes it from there.
 
 📖 The full ESPHome configuration, wiring notes and calibration steps live in
 [`docs/esphome.md`](docs/esphome.md).
