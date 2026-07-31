@@ -1,10 +1,12 @@
 {
   "domain": "poolsmart",
   "name": "PoolSmart",
-  "version": "0.2.1",
-  "documentation": "https://github.com/rick/ha_poolsmart",
-  "issue_tracker": "https://github.com/rick/ha_poolsmart/issues",
-  "codeowners": [],
+  "version": "0.3.0",
+  "documentation": "https://github.com/rickertie/Poolsmart",
+  "issue_tracker": "https://github.com/rickertie/Poolsmart/issues",
+  "codeowners": [
+    "@rickertie"
+  ],
   "config_flow": true,
   "dependencies": [
     "http",

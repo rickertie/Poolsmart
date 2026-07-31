@@ -11,6 +11,9 @@ off and reported, because inventing a value would be worse than not having one.
 
 from __future__ import annotations
 
+import json
+import logging
+import os
 from typing import Any
 
 import voluptuous as vol
@@ -21,6 +24,8 @@ from homeassistant.helpers import selector
 
 from . import const as c
 from .const import DEFAULT_NAME, DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 TEMP_SENSOR = selector.EntitySelector(
     selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
@@ -43,16 +48,103 @@ def _positive(minimum: float, maximum: float, step: float = 0.01):
     )
 
 
-STEP_POOL = vol.Schema(
-    {
-        vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
-        vol.Required(c.CONF_VOLUME_L): _positive(100, 500000, 1),
-        vol.Optional(c.CONF_DEPTH_M, default=1.2): _positive(0.1, 5, 0.01),
-        vol.Optional(c.CONF_SURFACE_M2): _positive(1, 500, 0.1),
-        vol.Required(c.CONF_TARGET_TEMP, default=28.0): _positive(10, 40, 0.5),
-        vol.Required(c.CONF_MAX_TEMP, default=32.0): _positive(10, 40, 0.5),
-    }
-)
+async def async_load_defaults(hass) -> dict:
+    """Starting values for the wizard.
+
+    Built-in defaults describe a generic mid-sized pool. If a
+    `poolsmart_defaults.json` file exists in the configuration directory, its
+    keys override them -- which is how you stop retyping your own figures every
+    time you reinstall, without baking one particular pool into the integration
+    and spoiling it for everyone else.
+    """
+    defaults = dict(c.SETUP_DEFAULTS)
+    path = hass.config.path(c.DEFAULTS_FILE)
+
+    def _read() -> dict | None:
+        if not os.path.isfile(path):
+            return None
+        with open(path, encoding="utf-8") as handle:
+            return json.load(handle)
+
+    try:
+        override = await hass.async_add_executor_job(_read)
+    except (OSError, ValueError) as err:
+        _LOGGER.warning("Ignoring %s because it could not be read: %s", c.DEFAULTS_FILE, err)
+        return defaults
+
+    if override:
+        unknown = set(override) - set(defaults)
+        if unknown:
+            _LOGGER.debug("Ignoring unknown keys in %s: %s", c.DEFAULTS_FILE, unknown)
+        defaults.update({k: v for k, v in override.items() if k in defaults})
+        _LOGGER.info("Loaded setup defaults from %s", c.DEFAULTS_FILE)
+    return defaults
+
+
+def _pool_schema(d: dict) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
+            vol.Required(c.CONF_VOLUME_L, default=d[c.CONF_VOLUME_L]): _positive(
+                100, 500000, 1
+            ),
+            vol.Optional(c.CONF_DEPTH_M, default=d[c.CONF_DEPTH_M]): _positive(
+                0.1, 5, 0.01
+            ),
+            vol.Optional(c.CONF_SURFACE_M2): _positive(1, 500, 0.1),
+            vol.Required(c.CONF_TARGET_TEMP, default=d[c.CONF_TARGET_TEMP]): _positive(
+                10, 40, 0.5
+            ),
+            vol.Required(c.CONF_MAX_TEMP, default=d[c.CONF_MAX_TEMP]): _positive(
+                10, 40, 0.5
+            ),
+        }
+    )
+
+
+def _pump_schema(d: dict) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(
+                c.CONF_PUMP_FLOW_M3H, default=d[c.CONF_PUMP_FLOW_M3H]
+            ): _positive(0.1, 100, 0.001),
+            vol.Required(
+                c.CONF_PUMP_FLOW_MEASURED, default=d[c.CONF_PUMP_FLOW_MEASURED]
+            ): bool,
+            vol.Required(
+                c.CONF_PUMP_POWER_KW, default=d[c.CONF_PUMP_POWER_KW]
+            ): _positive(0.01, 10, 0.01),
+        }
+    )
+
+
+def _heat_pump_schema(d: dict) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(c.CONF_HP_INPUT_KW, default=d[c.CONF_HP_INPUT_KW]): _positive(
+                0.05, 50, 0.01
+            ),
+            vol.Required(
+                c.CONF_HP_THERMAL_KW, default=d[c.CONF_HP_THERMAL_KW]
+            ): _positive(0.1, 200, 0.1),
+            vol.Required(
+                c.CONF_HP_COP_REF_TEMP, default=d[c.CONF_HP_COP_REF_TEMP]
+            ): _positive(-10, 45, 0.5),
+            vol.Optional(c.CONF_HP_COP_LOW): _positive(1, 15, 0.01),
+            vol.Optional(
+                c.CONF_HP_COP_LOW_TEMP, default=d[c.CONF_HP_COP_LOW_TEMP]
+            ): _positive(-10, 45, 0.5),
+            vol.Required(
+                c.CONF_HP_AIR_TEMP_MIN, default=d[c.CONF_HP_AIR_TEMP_MIN]
+            ): _positive(-20, 30, 0.5),
+            vol.Required(
+                c.CONF_HP_AIR_TEMP_MAX, default=d[c.CONF_HP_AIR_TEMP_MAX]
+            ): _positive(20, 60, 0.5),
+            vol.Required(
+                c.CONF_HP_FLOW_MIN_M3H, default=d[c.CONF_HP_FLOW_MIN_M3H]
+            ): _positive(0, 50, 0.1),
+        }
+    )
 
 
 def derive_pool_shape(data: dict) -> dict:
@@ -70,26 +162,6 @@ def derive_pool_shape(data: dict) -> dict:
     data[c.CONF_DEPTH_M] = depth
     return data
 
-STEP_PUMP = vol.Schema(
-    {
-        vol.Required(c.CONF_PUMP_FLOW_M3H): _positive(0.1, 100, 0.001),
-        vol.Required(c.CONF_PUMP_FLOW_MEASURED, default=False): bool,
-        vol.Required(c.CONF_PUMP_POWER_KW, default=0.1): _positive(0.01, 10, 0.01),
-    }
-)
-
-STEP_HEAT_PUMP = vol.Schema(
-    {
-        vol.Required(c.CONF_HP_INPUT_KW): _positive(0.05, 50, 0.01),
-        vol.Required(c.CONF_HP_THERMAL_KW): _positive(0.1, 200, 0.1),
-        vol.Required(c.CONF_HP_COP_REF_TEMP, default=26.0): _positive(-10, 45, 0.5),
-        vol.Optional(c.CONF_HP_COP_LOW): _positive(1, 15, 0.01),
-        vol.Optional(c.CONF_HP_COP_LOW_TEMP, default=15.0): _positive(-10, 45, 0.5),
-        vol.Required(c.CONF_HP_AIR_TEMP_MIN, default=11.0): _positive(-20, 30, 0.5),
-        vol.Required(c.CONF_HP_AIR_TEMP_MAX, default=43.0): _positive(20, 60, 0.5),
-        vol.Required(c.CONF_HP_FLOW_MIN_M3H, default=2.0): _positive(0, 50, 0.1),
-    }
-)
 
 STEP_REQUIRED_ENTITIES = vol.Schema(
     {
@@ -125,12 +197,17 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
+        self._defaults: dict[str, Any] = {}
 
     async def async_step_user(self, user_input: dict | None = None) -> ConfigFlowResult:
+        if not self._defaults:
+            self._defaults = await async_load_defaults(self.hass)
         if user_input is not None:
             self._data.update(derive_pool_shape(dict(user_input)))
             return await self.async_step_pump()
-        return self.async_show_form(step_id="user", data_schema=STEP_POOL)
+        return self.async_show_form(
+            step_id="user", data_schema=_pool_schema(self._defaults)
+        )
 
     async def async_step_pump(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
@@ -139,7 +216,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="pump",
-            data_schema=STEP_PUMP,
+            data_schema=_pump_schema(self._defaults),
             description_placeholders={
                 "derate": f"{int(100 * 0.7)}",
             },
@@ -162,7 +239,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         recommended = float(self._data.get(c.CONF_MAX_TEMP, 32.0)) + 2.0
         return self.async_show_form(
             step_id="heat_pump",
-            data_schema=STEP_HEAT_PUMP,
+            data_schema=_heat_pump_schema(self._defaults),
             description_placeholders={"recommended_setpoint": f"{recommended:.0f}"},
         )
 

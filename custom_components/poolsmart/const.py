@@ -123,6 +123,37 @@ CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
 
 DEFAULT_CHEMISTRY_MINUTES = 30
 
+#: Starting values for the setup wizard, so no field is ever blank.
+#:
+#: These describe a mid-sized above-ground pool with a typical cartridge pump and
+#: a small heat pump. They are deliberately generic: baking one particular pool
+#: into the integration would make it useless to anyone else. Anybody whose setup
+#: differs overwrites them while working through the wizard, and the numbers that
+#: matter most are explained in the help text underneath each field.
+#:
+#: To pre-fill your own values instead, drop a `poolsmart_defaults.json` file in
+#: the Home Assistant configuration directory containing any of these keys. See
+#: docs/DEFAULTS.md.
+SETUP_DEFAULTS: dict[str, object] = {
+    CONF_VOLUME_L: 10000,
+    CONF_DEPTH_M: 1.2,
+    CONF_TARGET_TEMP: 28.0,
+    CONF_MAX_TEMP: 32.0,
+    CONF_PUMP_FLOW_M3H: 3.0,
+    CONF_PUMP_FLOW_MEASURED: False,
+    CONF_PUMP_POWER_KW: 0.1,
+    CONF_HP_INPUT_KW: 1.0,
+    CONF_HP_THERMAL_KW: 4.0,
+    CONF_HP_COP_REF_TEMP: 26.0,
+    CONF_HP_COP_LOW_TEMP: 15.0,
+    CONF_HP_AIR_TEMP_MIN: 11.0,
+    CONF_HP_AIR_TEMP_MAX: 43.0,
+    CONF_HP_FLOW_MIN_M3H: 2.0,
+}
+
+#: Optional file in the configuration directory that overrides SETUP_DEFAULTS.
+DEFAULTS_FILE = "poolsmart_defaults.json"
+
 #: Attribute names published by the tibber_prices integration. The all-in price
 #: is the sensor state; the raw spot price and the tax component are attributes.
 ATTR_ENERGY_PRICE = "energy_price"
