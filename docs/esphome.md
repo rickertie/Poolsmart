@@ -39,11 +39,23 @@ Assistant, because they need to react to every new sample:
 - A **delta-T alarm** that only ever fires while the heat pump is
   actually active, to catch a stuck valve or a flow problem early
 
-Everything hardware-specific — pump flow, heat pump electrical input, COP
+Everything hardware-specific  pump flow, heat pump electrical input, COP
 clamps, pool volume, GPIO pins, sensor addresses lives in one
 `substitutions:` block at the top of the file. Change your pump, your heat
 pump, or your pool, and that's the only section you touch; every
 calculation below it follows automatically.
+
+
+### Why the ESPHome-side calculations matter
+
+A couple of design choices worth calling out, because they're easy to overlook:
+
+Clamping the measured COP to the heat pump's own realistic range means a single noisy reading can't feed a wildly wrong value into PoolSmart's learning model in Home Assistant.
+The delta-T alarm only arms while the heat pump is confirmed active (via its own delta-T threshold), so it doesn't false-alarm during startup or while the pump is simply circulating without heating.
+The predictive COP curve means PoolSmart can reason about "is heating worth it right now" using outdoor temperature alone, before it has any live heat pump data for the day.
+
+None of this is required to use PoolSmart  a much simpler ESPHome config with just a pool temperature sensor works fine, with fewer features available. This example shows what's
+
 
 ### Full example configuration
 

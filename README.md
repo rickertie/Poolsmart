@@ -138,10 +138,12 @@ For the technical thingie dingies:
   works and stays honest
 - [`docs/esphome.md`](docs/esphome.md) — a real ESPHome hardware example, sensors
   and calibration steps
-  
+- [`docs/hardware.md`](docs/hardware.md) — parts list, wiring and installation
+  photos
 ## Status
 
 - [x] Foundation: config flow, storage, models
+- [-] Documentation Create and update
 - [ ] Control core: coordinator, ladder, filtration, safety, entities
 - [ ] Planning and learning: optimizer, session recorder, COP curve
 - [ ] Notifications and Lovelace page
