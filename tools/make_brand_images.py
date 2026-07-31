@@ -1,15 +1,16 @@
-"""Generate the brand images for home-assistant/brands.
+"""Generate the brand images shipped inside the integration.
 
-The brands repository is where Home Assistant and HACS fetch the picture shown
-next to an integration. Without an entry there, both display the "icon not
-available" placeholder -- which is cosmetic, but it is also the first thing
-anyone sees when browsing HACS.
+Since Home Assistant 2026.3 a custom integration carries its own brand images in
+a `brand/` directory next to manifest.json, and Home Assistant serves them from
+`/api/brands/integration/{domain}/{image}`. Local images take priority over the
+CDN, and the brands repository no longer accepts submissions for custom
+integrations.
 
-Requirements from that repository:
+Files produced:
   icon.png     256x256, square, transparent background, no padding
   icon@2x.png  512x512
-  logo.png     up to 512x512, transparent background
-  logo@2x.png  up to 1024x1024
+  logo.png     wordmark, transparent background
+  logo@2x.png  double resolution
 
 Run:  python3 tools/make_brand_images.py
 """
@@ -21,7 +22,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = Path(__file__).resolve().parents[1] / "brands" / "custom_integrations" / "poolsmart"
+OUT = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart" / "brand"
 
 WATER_TOP = (56, 178, 232)
 WATER_BOTTOM = (14, 96, 168)
@@ -125,12 +126,33 @@ def _trim(image: Image.Image) -> Image.Image:
     return image.crop(bbox) if bbox else image
 
 
+def build_logo_dark(width: int, height: int) -> Image.Image:
+    """Wordmark in a light tone, for dark themes."""
+    canvas = build_logo(width, height)
+    # Repaint the text area: the icon keeps its colours, the words go pale.
+    pixels = canvas.load()
+    dark_text = WATER_BOTTOM
+    for x in range(height, width):
+        for y in range(height):
+            r, g, b, a = pixels[x, y]
+            if a > 0 and abs(r - dark_text[0]) < 40 and abs(b - dark_text[2]) < 40:
+                pixels[x, y] = (226, 240, 252, a)
+    return canvas
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     build_icon(256).save(OUT / "icon.png")
     build_icon(512).save(OUT / "icon@2x.png")
     _trim(build_logo(1024, 256)).save(OUT / "logo.png")
     _trim(build_logo(2048, 512)).save(OUT / "logo@2x.png")
+    # Dark-theme variants. The palette already reads well on dark backgrounds,
+    # so these are copies rather than a separate design; having them present
+    # stops Home Assistant falling back across themes.
+    build_icon(256).save(OUT / "dark_icon.png")
+    build_icon(512).save(OUT / "dark_icon@2x.png")
+    _trim(build_logo_dark(1024, 256)).save(OUT / "dark_logo.png")
+    _trim(build_logo_dark(2048, 512)).save(OUT / "dark_logo@2x.png")
     for path in sorted(OUT.iterdir()):
         with Image.open(path) as img:
             print(f"{path.name}: {img.size[0]}x{img.size[1]} {img.mode}")

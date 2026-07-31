@@ -24,7 +24,14 @@ from core.config import (  # noqa: E402
     PoolSpec,
     PumpSpec,
 )
-from core.models import Branch, Decision, Mode, PoolState, SensorReading  # noqa: E402
+from core.models import (  # noqa: E402
+    Branch,
+    Decision,
+    Mode,
+    PoolState,
+    SensorReading,
+    Severity,
+)
 
 TZ = timezone(timedelta(hours=2))
 
@@ -358,3 +365,74 @@ def test_derived_filtration_figures():
 def test_datasheet_flow_is_derated():
     spec = PumpSpec(flow_m3h=3.596, flow_is_measured=False, power_kw=0.1)
     assert abs(spec.effective_flow_m3h - 2.517) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# T23 - a steady sensor is not mistaken for a dead one
+# ---------------------------------------------------------------------------
+
+def test_t23_steady_reading_does_not_stop_the_pool():
+    """Regression: a stable temperature used to trigger an emergency stop.
+
+    Home Assistant's last_updated only moves when the value changes, so a pool
+    holding 27.0 C looked frozen. The age now comes from last_reported, and even
+    a genuinely old reading must not cut circulation.
+    """
+    config = make_config()
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+    # 742 seconds is the age from the reported symptom.
+    state = make_state(now, water_temp=SensorReading(27.0, 742, "water"))
+
+    faults = safety.evaluate(state, config)
+    assert not any(f.severity is Severity.CRITICAL for f in faults), [
+        f.code for f in faults
+    ]
+
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.branch is not Branch.EMERGENCY_STOP, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T24 - a genuinely dead sensor blocks heating but keeps filtering
+# ---------------------------------------------------------------------------
+
+def test_t24_dead_sensor_blocks_heating_not_circulation():
+    config = make_config()
+    now = datetime(2026, 7, 30, 9, 30, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(None, None, "water"),
+        price_total=0.05,
+    )
+
+    faults = safety.evaluate(state, config)
+    codes = {f.code: f.severity for f in faults}
+    assert codes.get("water_temp_unavailable") is Severity.HEATING_BLOCKED
+    assert not any(s is Severity.CRITICAL for s in codes.values())
+
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.heat_pump is False
+    assert decision.branch is not Branch.EMERGENCY_STOP
+    # Filtration still has to happen.
+    assert decision.pump is True, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T25 - staleness escalates from warning to blocking
+# ---------------------------------------------------------------------------
+
+def test_t25_staleness_escalates():
+    config = make_config()
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+
+    fresh = make_state(now, water_temp=SensorReading(27.0, 300, "water"))
+    assert not safety.evaluate(fresh, config)
+
+    warning = make_state(now, water_temp=SensorReading(27.0, 1200, "water"))
+    severities = {f.severity for f in safety.evaluate(warning, config)}
+    assert severities == {Severity.WARNING}
+
+    blocking = make_state(now, water_temp=SensorReading(27.0, 5000, "water"))
+    severities = {f.severity for f in safety.evaluate(blocking, config)}
+    assert Severity.HEATING_BLOCKED in severities
+    assert Severity.CRITICAL not in severities

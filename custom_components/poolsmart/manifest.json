@@ -1,7 +1,7 @@
 {
   "domain": "poolsmart",
   "name": "PoolSmart",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "documentation": "https://github.com/rick/ha_poolsmart",
   "issue_tracker": "https://github.com/rick/ha_poolsmart/issues",
   "codeowners": [],

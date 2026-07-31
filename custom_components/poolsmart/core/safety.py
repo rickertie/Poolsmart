@@ -18,15 +18,25 @@ from .models import Fault, PoolState, Severity
 
 
 def _reading_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
+    """Judge the temperature readings.
+
+    None of these produce an emergency stop. A failed temperature sensor means
+    heating cannot be controlled safely, so heating is blocked -- but circulation
+    is never the unsafe option, and the pool still has to be filtered. Cutting
+    everything because a thermometer went quiet would trade a small problem for
+    a bigger one.
+    """
     faults: list[Fault] = []
-    max_age = config.safety.max_data_age_seconds
+    warn_after = config.safety.stale_warning_seconds
+    block_after = config.safety.stale_blocking_seconds
 
     if not state.water_temp.available:
         faults.append(
             Fault(
                 "water_temp_unavailable",
-                Severity.CRITICAL,
-                "Pool water temperature is unavailable; no safe decision can be made.",
+                Severity.HEATING_BLOCKED,
+                "The pool water temperature is unavailable, so heating is paused. "
+                "Circulation and filtration continue as normal.",
             )
         )
     else:
@@ -35,28 +45,46 @@ def _reading_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
             faults.append(
                 Fault(
                     "water_temp_implausible",
-                    Severity.CRITICAL,
-                    f"Pool water temperature of {value:.1f} C is outside the plausible range.",
+                    Severity.HEATING_BLOCKED,
+                    f"The pool water temperature of {value:.1f} C is outside the "
+                    "plausible range, so heating is paused.",
                     {"value": value},
                 )
             )
 
     for reading, label in (
-        (state.water_temp, "water temperature"),
+        (state.water_temp, "pool water temperature"),
         (state.air_temp, "outdoor temperature"),
         (state.hp_inlet, "heat pump inlet"),
         (state.hp_outlet, "heat pump outlet"),
     ):
-        if reading.available and reading.age_seconds is not None and reading.age_seconds > max_age:
-            severity = (
-                Severity.CRITICAL if reading is state.water_temp else Severity.HEATING_BLOCKED
-            )
+        if not reading.available or reading.age_seconds is None:
+            continue
+        age = reading.age_seconds
+        if age <= warn_after:
+            continue
+
+        code = f"stale_{reading.role or label.replace(' ', '_')}"
+        minutes = age / 60
+        if age > block_after:
             faults.append(
                 Fault(
-                    f"stale_{reading.role or label.replace(' ', '_')}",
-                    severity,
-                    f"The {label} reading is {reading.age_seconds:.0f} seconds old.",
-                    {"age_seconds": reading.age_seconds},
+                    code,
+                    Severity.HEATING_BLOCKED,
+                    f"The {label} has not been reported for {minutes:.0f} minutes. "
+                    "Heating is paused until it returns.",
+                    {"age_seconds": age},
+                )
+            )
+        else:
+            faults.append(
+                Fault(
+                    code,
+                    Severity.WARNING,
+                    f"The {label} has not been reported for {minutes:.0f} minutes. "
+                    "Some sensors only report when the value changes, so this is "
+                    "often harmless.",
+                    {"age_seconds": age},
                 )
             )
     return faults

@@ -138,7 +138,9 @@
           "solar_hysteresis_w": "Solar hysteresis (W)",
           "eco_price_factor": "ECO strictness factor",
           "chemistry_cycle_minutes": "Chemistry cycle length (minutes)",
-          "learning_enabled": "Self-learning enabled"
+          "learning_enabled": "Self-learning enabled",
+          "stale_warning_seconds": "Warn when a reading is older than (seconds)",
+          "stale_blocking_seconds": "Treat a sensor as dead after (seconds)"
         }
       },
       "init": {

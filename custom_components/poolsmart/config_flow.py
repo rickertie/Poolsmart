@@ -448,6 +448,14 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     default=current.get(c.CONF_CHEMISTRY_MINUTES, 30),
                 ): _positive(5, 240, 5),
                 vol.Optional(
+                    c.CONF_STALE_WARNING_SECONDS,
+                    default=current.get(c.CONF_STALE_WARNING_SECONDS, 900),
+                ): _positive(60, 7200, 30),
+                vol.Optional(
+                    c.CONF_STALE_BLOCKING_SECONDS,
+                    default=current.get(c.CONF_STALE_BLOCKING_SECONDS, 3600),
+                ): _positive(300, 86400, 60),
+                vol.Optional(
                     c.CONF_LEARNING_ENABLED,
                     default=current.get(c.CONF_LEARNING_ENABLED, True),
                 ): bool,

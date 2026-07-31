@@ -1,170 +1,209 @@
-# 🏊 PoolSmart
+# PoolSmart
 
-![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)
-![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integration-41BDF5.svg)
+An intelligent swimming pool controller for Home Assistant. ESPHome measures,
+Home Assistant decides, and every decision comes from a single priority ladder.
 
-> Smart swimming pool for Home Assistant.
-> Smarter filtration, cheaper heating, and a lot less manual tinkering.
+Works with any pool: volume, pump flow and heat pump specification are entered at
+setup, and filtration duration, heating time and the energy budget are derived
+from them. A 1000 litre inflatable and a 30000 litre in-ground pool both work
+without touching code.
 
-PoolSmart is a Home Assistant integration that runs your swimming pool for
-you. It continuously balances filtration, heating, electricity prices,
-weather and how often you actually swim — so the pool is ready when you want
-it, using as little energy as possible.
+## Why it is built this way
 
-Whether you have a small inflatable pool or a 30,000 litre in-ground pool
-with a heat pump, PoolSmart adapts to your setup instead of making you edit
-YAML every time something changes.
+The design solves four problems that YAML automations cannot:
 
----
+| Problem | How PoolSmart handles it |
+|---|---|
+| A running timer is lost on restart | Filtration runtime is stored as closed intervals, not a counter |
+| Learned values get corrupted by odd sessions | Updates are capped per step and outliers are skipped |
+| Threshold comparisons oscillate | Blocks are states with an end time, not thresholds |
+| "Why is it doing that?" | The reason is recorded at the moment of deciding, not reconstructed |
 
-> ⚠️ **AI Notice**
->
-> PoolSmart was developed with significant assistance from AI.(I Know :-)) The
-> architecture, algorithms and safety logic have been reviewed and
-> tested by me, but bugs may still be around.
->
+## The decision ladder
 
-## ✨ Features
+Every 30 seconds the ladder is walked from the top. The first branch that matches
+wins, and lower branches are not evaluated.
 
-✔ Intelligent filtration scheduling
-✔ Heat pump optimisation
-✔ Dynamic electricity price optimisation
-✔ Weather-aware heating
-✔ Self-learning heating model
-✔ Automatic runtime calculation
-✔ Frost protection
-✔ Safety-first decision engine
-✔ Optional AI recommendations
-✔ Zero YAML automations
+| # | Branch | Ignores night quiet |
+|---|---|---|
+| 0 | Emergency stop | yes |
+| 1 | Frost and minimum-temperature protection | yes |
+| 2 | Manual control | yes |
+| 3 | Chemistry cycle | yes |
+| 4 | Filtration deadline | yes |
+| 5 | Free electricity (price below zero) | yes |
+| 6 | Heating session | no |
+| 7 | Scheduled filtration block | no |
+| 8 | Pump rundown | no |
+| 9 | Idle | — |
 
-## Why PoolSmart?
+Modes do not carry their own logic; they enable or disable branches. Branches 1
+and 4 stay active in every mode including OFF, because an off switch must not be
+able to cause damage.
 
-My first pool automations was built from dozens of separate YAML automations.
-
-That works... until Home Assistant restarts.
-...until a timer gets lost.
-...until heating and filtration start fighting each other.
-...until you find yourself wondering:
-> "Why did the pump suddenly turn on?"
-
-I would try to have PoolSmart solves that by replacing the automations with a decision engine that always knows **why** it made a decision and
-can most important tell me/you what the hell happend.
-
-## How it works
-
-Every 30 seconds, PoolSmart checks a fixed priority ladder — from emergency
-stop and frost protection at the top, down to scheduled filtration and idle
-at the bottom. The first rule that applies wins, and nothing below it runs.
-
-A gate in front of the heating branches also checks the heat pump's
-operating envelope: below its minimum air temperature, nothing can heat the
-pool, not a negative price, not even frost protection, which falls back to
-simple circulation instead. Moving water.
-
-Filtration time, heating sessions and the energy budget are all calculated
-from your pool's own volume, pump flow and heat pump specs not hardcoded,
-so a small inflatable pool and a large in-ground pool both just work.
-
-📖 Full details on the decision ladder, filtration formula and configuration
-options live in [`docs/architecture.md`](docs/architecture.md).
+In front of branches 5 and 6 sits a gate: the heat pump's operating envelope.
+Below its minimum air temperature nothing can heat the pool, not even a negative
+price and not even the minimum-temperature protection. That protection can only
+circulate, which is enough, because moving water does not freeze.
 
 ## Installation
 
 1. Add this repository to HACS as a custom repository and install PoolSmart.
 2. Restart Home Assistant.
 3. Settings → Devices & Services → Add Integration → PoolSmart.
-4. Work through the five setup steps. Only the last two ask for entities,
-   and only three of those are actually required.
+4. Work through the five steps. Only the last two ask for entities, and only
+   three of those are required.
 
-Every field has a help line with a worked example. Nothing is locked in
-afterwards everything can be changed later under **Configure**, including
-entities, pool and equipment specs, prices, and swimming times.
+Every field has a help line underneath it explaining where to find the number and
+giving a worked example. Water surface may be left blank; it is calculated from
+volume and depth.
 
-## 🔧 Example setup
+### Changing things afterwards
 
-My own pool, for my kids and me 😄
+Nothing is locked in. Settings → Devices & Services → PoolSmart → **Configure**
+gives five sections:
 
-| | |
+| Section | Contains |
 |---|---|
-| 🏊 Pool | Intex Metal Frame (3,834 L) |
-| 🔄 Filter pump | Bestway Flowclear |
-| 🔥 Heat pump | W'eau Mini |
-| 📟 Controller | Seeed XIAO ESP32C6 running [ESPHome](https://esphome.io/) |
-| 🌡️ Sensors | 5x Dallas temperature (pool, pump in/out, heat pump in/out, outdoor) |
-| 💧 Flow | Pulse-based flow meter on the heat pump loop |
+| Entities | Every switch and sensor, including the required ones |
+| Pool and equipment | Volume, depth, pump flow, heat pump figures |
+| General settings | Turnover, hysteresis, prices, night quiet |
+| Swimming times | When the pool should be at temperature |
+| Notifications | Which message goes to which device |
 
-The ESP32 does the light, fast local math — delta-T, measured and predicted
-COP, heating rate — and hands clean numbers to Home Assistant, where this
-integration takes it from there.
+Picking the wrong temperature sensor during setup is easy to do, so the entity
+choices live in options where they can be corrected rather than in the entry data
+where they could not.
 
-📖 The full ESPHome configuration, wiring notes and calibration steps live in
-[`docs/esphome.md`](docs/esphome.md).
+Every optional entity may be left blank. The matching capability is switched off
+and listed in diagnostics rather than failing.
 
-## 📸 Dashboard
+| Left blank | What stops working |
+|---|---|
+| Outdoor temperature | Operating envelope check; falls back to the weather entity |
+| Heat pump inlet or outlet | Delta-T and COP learning |
+| Flow meter | Flow protection and self-correcting block duration |
+| Power sensors | Energy, cost and measured COP |
+| Price sensor | Price optimisation, including the free-electricity branch |
+| Solar sensors | Solar optimisation |
 
-![Dashboard](docs/images/dashboard.png)
+### A recommendation about the heat pump thermostat
 
-The dashboard shows:
+Set the heat pump's own thermostat to the highest temperature you would ever want
+plus about two degrees. If your maximum is 32 °C, set it to 34 °C. Below that you
+keep full software control over any target, and above it the hardware intervenes
+if the software ever fails to switch off. The setup wizard shows this suggestion
+with your own numbers filled in.
 
-- Current operating mode
-- Today's filtration progress
-- Planned heating sessions
-- Energy usage
-- AI recommendations
-- Diagnostics
+## Filtration
 
-A sidebar panel at `/poolsmart` gives you six tabs — overview, planning,
-sessions, learning, settings and diagnostics — for anyone who wants to dig
-deeper than the dashboard shows.
+The daily requirement is calculated, not entered:
 
-## Designed for
+```
+daily runtime = pool volume x turnover factor / effective pump flow
+block duration = daily runtime / number of blocks
+```
 
-🏡 Home Assistant
-⚡ Dynamic energy prices
-🌞 Solar owners
-❄️ Cold climates
-🏊 Heat pump pools
-❤️ ESPHome Sensors
+Manufacturers specify pump flow without a filter installed; with one in line
+roughly 60-75% remains and it drops as the filter fouls. If you tick "measured"
+the figure is used as it is; otherwise it is derated. With a flow meter connected
+the block duration corrects itself as the filter ages, and a sustained decline
+raises a service notification.
 
-## 📚 Documentation
+Heating sessions run the pump too, so that runtime counts towards the quota.
+Without that credit the system would filter far more than needed on heating days.
 
-For the technical thingie dingies:
+## Development
 
-- [`docs/architecture.md`](docs/architecture.md) — the decision ladder, filtration
-  formula, entities and configuration options, and developer/test setup
-- [`docs/planning.md`](docs/planning.md) — how maintenance vs. seasonal heating
-  planning works
-- [`docs/learning.md`](docs/learning.md) — how the self-learning heating model
-  works and stays honest
-- [`docs/esphome.md`](docs/esphome.md) — a real ESPHome hardware example, sensors
-  and calibration steps
-- [`docs/hardware.md`](docs/hardware.md) — parts list, wiring and installation
-  photos
+The decision core in `custom_components/poolsmart/core/` has no Home Assistant
+imports, so it runs and is tested standalone:
+
+```bash
+cd tests && python run_tests.py
+```
+
+The suite covers twenty-two acceptance cases, including regression tests for the
+two bugs that prompted this rewrite: the pump sitting idle while the filtration
+window closed, and the pump oscillating once the daily quota was met.
+
 ## Status
 
-- [x] Foundation: config flow, storage, models
-- [-] Documentation Create and update
-- [ ] Control core: coordinator, ladder, filtration, safety, entities
-- [ ] Planning and learning: optimizer, session recorder, COP curve
-- [ ] Notifications and Lovelace page
-- [ ] Sidebar management panel
-- [ ] AI advisor
-- [ ] chemistry and cover modules
+| Work package | State |
+|---|---|
+| WP1 Foundation: config flow, storage, models | done |
+| WP2 Control core: coordinator, ladder, filtration, safety, entities | done |
+| WP3 Planning and learning: optimizer, session recorder, COP curve | done |
+| WP4 Notifications and Lovelace page | done |
+| WP5 Sidebar management panel | done |
+| WP6 AI advisor, chemistry and cover modules | done |
 
-## Contributing :tada:
+## Planning
 
-/
+Heating is planned in one of two ways, and the difference is visible in the
+interface.
 
-## FAQ
+**Maintenance** compensates a day's heat loss. The optimizer picks the cheapest
+intervals before the next swimming time and reports a time.
 
-**Do I need a flow meter, power sensors, or a price sensor?**
-No: every optional entity can be left blank. The matching feature just
-switches itself off and shows up clearly in diagnostics instead of failing.
+**Seasonal** brings a cold pool up to temperature. That can be ten to fifteen
+hours of running, which does not fit in one day of cheap hours, so the optimizer
+projects across days and reports a **date**. If the pool loses heat as fast as
+the heat pump can add it, it says so instead of producing a date it cannot meet.
+
+Price forecasts are read from whatever integration you use. Several attribute
+shapes are recognised; if none is, planning falls back to heating on demand.
+
+## Self-learning
+
+Learned after each session: heating rate, heat loss, and a COP value per five
+degree band of outdoor temperature. Because the heat pump does not modulate, one
+value per band is sufficient.
+
+Three rules keep the model honest:
+
+1. Only cleanly closed sessions are used. Interrupted ones, ones with faults, and
+   ones too short to measure are recorded and marked, not learned from.
+2. Every update is capped at a fraction of the current value, so one strange
+   session can nudge the model but never replace it.
+3. Outliers are rejected on physical grounds -- a COP outside the appliance's own
+   clamps, water that did not warm up while heating -- rather than statistically.
+
+Rejected sessions stay in the log with the reason. When the model stops
+improving, that is the first place to look.
+
+## The management panel
+
+A sidebar panel at `/poolsmart` with six tabs: overview, planning, sessions,
+learning, settings and diagnostics. It is written as a plain custom element with
+no build step and no external imports, so it keeps working without internet.
+
+The panel is for whoever maintains the system. The Lovelace page in
+`docs/lovelace/` is for everyone else, and the two are deliberately not the same
+thing.
+
+## The AI layer
+
+Optional and advisory. It reads the session history, produces a summary and at
+most a handful of suggested settings changes, and waits. Nothing is applied
+without pressing accept.
+
+Suggestions are validated against a fixed list of adjustable settings with hard
+ranges; anything outside it is discarded. A safety limit cannot be suggested away.
+If the AI is unavailable the pool behaves exactly as it otherwise would, because
+this layer sits outside the control tick entirely.
+
+## Brand images
+
+The integration ships its own icon and logo in `custom_components/poolsmart/brand/`,
+which is the mechanism Home Assistant 2026.3 introduced for custom integrations.
+Nothing has to be submitted anywhere.
+
+The icon appears under Settings → Devices & services. HACS still shows "icon not
+available" because its frontend bundle predates this feature and asks the public
+CDN instead of Home Assistant; that is
+[a known HACS bug](https://github.com/hacs/integration/issues/5223) and resolves
+itself when HACS ships a rebuilt frontend. See `docs/BRAND_IMAGES.md`.
 
 ## Licence
 
 AGPL-3.0-or-later.
-
----
-*Built for the Home Assistant community ❤️*

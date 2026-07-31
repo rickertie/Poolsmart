@@ -170,7 +170,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 solar_hysteresis_w=float(self._conf(c.CONF_SOLAR_HYSTERESIS_W, 300.0)),
                 eco_price_factor=float(self._conf(c.CONF_ECO_PRICE_FACTOR, 0.7)),
             ),
-            safety=SafetySettings(),
+            safety=SafetySettings(
+                stale_warning_seconds=int(
+                    self._conf(c.CONF_STALE_WARNING_SECONDS, 900)
+                ),
+                stale_blocking_seconds=int(
+                    self._conf(c.CONF_STALE_BLOCKING_SECONDS, 3600)
+                ),
+            ),
             learning=LearningSettings(
                 enabled=bool(self._conf(c.CONF_LEARNING_ENABLED, True))
             ),
@@ -193,7 +200,12 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         except (TypeError, ValueError):
             return SensorReading(None, None, role)
 
-        age = (dt_util.utcnow() - state.last_updated).total_seconds()
+        # last_updated only moves when the value or an attribute changes, so a
+        # steady temperature looks frozen even though the sensor is reporting
+        # normally. last_reported moves on every report and is the honest
+        # measure of liveness; it falls back for older Home Assistant versions.
+        reported = getattr(state, "last_reported", None) or state.last_updated
+        age = (dt_util.utcnow() - reported).total_seconds()
         return SensorReading(value, age, role)
 
     def _switch_is_on(self, key: str) -> bool:

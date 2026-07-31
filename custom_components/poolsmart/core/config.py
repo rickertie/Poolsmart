@@ -189,8 +189,14 @@ class EnergySettings:
 class SafetySettings:
     """Fault detection thresholds."""
 
-    #: Sensor readings older than this are considered stale.
-    max_data_age_seconds: int = 300
+    #: A reading older than this is worth mentioning, but nothing more. Many
+    #: integrations only push a state when the value changes, so a stable
+    #: temperature legitimately looks old.
+    stale_warning_seconds: int = 900
+    #: A reading older than this is treated as a dead sensor and heating is
+    #: blocked. Circulation continues: the pool still needs filtering, and
+    #: moving water is never the unsafe option.
+    stale_blocking_seconds: int = 3600
     #: Plausible water temperature range.
     water_temp_min: float = -5.0
     water_temp_max: float = 45.0
