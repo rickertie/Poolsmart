@@ -30,7 +30,6 @@ async def async_setup_entry(
 
 
 class PoolSmartBoostNow(PoolSmartEntity, ButtonEntity):
-    _attr_icon = "mdi:rocket-launch"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "boost_now")
@@ -40,7 +39,6 @@ class PoolSmartBoostNow(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartForceFiltration(PoolSmartEntity, ButtonEntity):
-    _attr_icon = "mdi:filter-plus"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "force_filtration")
@@ -56,8 +54,6 @@ class PoolSmartStartChemistry(PoolSmartEntity, ButtonEntity):
     branch useful in the meantime.
     """
 
-    _attr_icon = "mdi:flask"
-
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "start_chemistry_cycle")
 
@@ -66,7 +62,6 @@ class PoolSmartStartChemistry(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartResetLearning(PoolSmartEntity, ButtonEntity):
-    _attr_icon = "mdi:restore"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "reset_learning")
@@ -82,8 +77,6 @@ class PoolSmartRunAdvisor(PoolSmartEntity, ButtonEntity):
     waiting for a human to accept them.
     """
 
-    _attr_icon = "mdi:lightbulb-on-outline"
-
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "run_advisor")
 
@@ -93,8 +86,6 @@ class PoolSmartRunAdvisor(PoolSmartEntity, ButtonEntity):
 
 class PoolSmartAcceptSuggestion(PoolSmartEntity, ButtonEntity):
     """Apply the topmost pending suggestion."""
-
-    _attr_icon = "mdi:check-decagram"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "accept_suggestion")

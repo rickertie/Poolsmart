@@ -1,0 +1,629 @@
+###############################################################
+# 🏊 Zwembad AI Controller — ESPHome
+# Hardware: Seeed XIAO ESP32C6
+#
+# Entity ID formaat: sensor.zwembad_controller_NAAM
+# Namen zijn zonder "Zwembad" prefix — device heet al "Zwembad Controller"
+#
+# ✅ HARDWARE WIJZIGT? Pas ALLEEN de substitutions hieronder aan.
+# Nieuwe pomp, nieuwe WP, ander zwembad → hier aanpassen, opnieuw flashen.
+# Alle lambda-berekeningen (COP, vermogen, opwarmtijd, interlocks) volgen
+# automatisch. Er is geen aparte HA hardware_config.yaml package meer nodig.
+###############################################################
+
+substitutions:
+  device_name: zwembad-controller
+  friendly_name: "Zwembad Controller"
+
+  # ── Pomp ──────────────────────────────────────────────────
+  pomp_flow_m3h: "3.596"        # Bestway Flowclear, gemeten
+  pomp_vermogen_kw: "0.10"      # 100W elektrisch
+  pomp_aansluiting_mm: "32"
+
+  # ── Warmtepomp — elektrisch/COP ──────────────────────────
+  wp_input_kw: "0.58"           # W'eau Mini Power nominaal elektrisch
+  wp_cop_max: "6.0"             # Clamp: sanity-bovengrens gemeten COP
+  wp_cop_min: "3.0"             # Clamp: sanity-ondergrens gemeten COP
+  wp_vermogen_kw: "3.0"         # Thermisch vermogen bij 26°C lucht (nominaal)
+
+  # ── Warmtepomp — voorspellende COP-curve (voor planning) ──
+  # Lineaire interpolatie tussen deze twee referentiepunten
+  wp_cop_referentie: "5.17"     # COP bij 26°C lucht
+  wp_cop_laag: "4.18"           # COP bij 15°C lucht
+  wp_cop_t_hoog: "26.0"         # °C hoort bij wp_cop_referentie
+  wp_cop_t_laag: "15.0"         # °C hoort bij wp_cop_laag
+
+  # ── Warmtepomp — bedrijfsgrenzen ──────────────────────────
+  wp_min_lucht_temp: "11.0"     # Onder deze buitentemp: WP mag niet draaien
+  wp_max_lucht_temp: "43.0"     # Boven deze buitentemp: WP mag niet draaien
+  wp_min_flow_m3h: "2.0"        # Minimale doorstroom vereist voor WP
+  wp_geluid_db: "53"            # Informatief, niet gebruikt in lambda's
+  wp_setpoint_min: "15.0"       # Instelbereik fysieke WP-thermostaat
+  wp_setpoint_max: "40.0"
+
+  # ── Zwembad specificaties ─────────────────────────────────
+  volume_l: "3834"              # Intex Metal Frame 300x200x75cm, waterstand 66cm
+  oppervlak_m2: "6.0"            # Wateroppervlak (verdamping/warmteverlies)
+  waterdiepte_m: "0.66"
+
+  onewire_pin: "GPIO22"
+  status_led_pin: "GPIO23"    # D5 = GPIO23 — vrij, geen strapping pin
+
+  # ── Debietmeter ───────────────────────────────────────────
+  # D8 = GPIO19 — vrij, geen strapping pin
+  flow_pin: "GPIO19"
+  # Formule datasheet: Hz = 0.5 × Q (L/min)
+  # pulse_counter geeft pulsen/min → Q = pulsen/min ÷ 30
+  # Pas aan als kalibratie afwijkt
+  flow_deler: "12.0"
+
+  addr_pool:    "0x1400000047ec8c28"  # Zwembadwater
+  addr_pmp_in:  "0x5100000048d31b28"  # Pomp aanvoer (IN naar WP)
+  addr_pmp_uit: "0x1f0000004840be28"  # Pomp retour (UIT van WP)
+  addr_wp_in:   "0x5100000048d31b28"  # WP inlaat — GERESERVEERD, sensor nog niet geplaatst
+                                       # (tijdelijk zelfde adres als pmp_in; niet wijzigen)
+  addr_wp_uit:  "0x7d00000048da8928"  # WP uitlaat
+  addr_buiten:  "0xd8000000490c1a28"  # Buitentemperatuur — tijdelijk buiten gehangen sensor
+
+  opwarm_interval: "300"
+  delta_t_min_alarm: "1.0"   # Alleen alarm bij bijna geen flow
+  delta_t_max_alarm: "4.0"  # Ruimer voor opstarten
+  delta_t_alarm_delay: "300s"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: bereken_cop
+esp32:
+  board: seeed_xiao_esp32c6
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret wifi_password
+
+captive_portal:
+web_server:
+  port: 80
+  version: "3"
+bluetooth_proxy:
+  active: true
+
+one_wire:
+  - platform: gpio
+    pin: ${onewire_pin}
+
+sensor:
+
+  # Resultaat: sensor.zwembad_controller_temperatuur
+  - platform: dallas_temp
+    address: ${addr_pool}
+    name: "Temperatuur"
+    id: temp_pool
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+          send_first_at: 1
+      - lambda: "return x + id(offset_pool).state;"
+    on_value:
+      then:
+        - script.execute: bereken_cop
+        - script.execute: bereken_opwarm_snelheid
+    icon: "mdi:temperature-celsius"
+
+  # Resultaat: sensor.zwembad_controller_aanvoer
+  - platform: dallas_temp
+    address: ${addr_pmp_in}
+    name: "Aanvoer"
+    id: temp_in
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+          send_first_at: 1
+      - lambda: "return x + id(offset_pmp_in).state;"
+    on_value:
+      then:
+        - script.execute: bereken_delta_t
+    icon: "mdi:temperature-celsius"
+
+  # Resultaat: sensor.zwembad_controller_retour
+  - platform: dallas_temp
+    address: ${addr_pmp_uit}
+    name: "Retour"
+    id: temp_uit
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+          send_first_at: 1
+      - lambda: "return x + id(offset_pmp_uit).state;"
+    on_value:
+      then:
+        - script.execute: bereken_delta_t
+    icon: "mdi:temperature-celsius"
+
+  # Resultaat: sensor.zwembad_controller_wp_in
+  - platform: dallas_temp
+    address: ${addr_wp_in}
+    name: "WP In"
+    id: temp_wp_in
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+          send_first_at: 1
+      - lambda: "return x + id(offset_wp_in).state;"
+    on_value:
+      then:
+        - script.execute: bereken_wp_delta_t
+    icon: "mdi:temperature-celsius"
+
+  # Resultaat: sensor.zwembad_controller_wp_uit
+  - platform: dallas_temp
+    address: ${addr_wp_uit}
+    name: "WP Uit"
+    id: temp_wp_uit
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+          send_first_at: 1
+      - lambda: "return x + id(offset_wp_uit).state;"
+    on_value:
+      then:
+        - script.execute: bereken_wp_delta_t
+    icon: "mdi:temperature-celsius"
+
+  # Resultaat: sensor.zwembad_controller_buiten
+  # Tijdelijk buiten gehangen sensor. Wordt gebruikt voor de voorspellende
+  # COP-curve en de WP-temperatuurbereik-interlock. Kan in de toekomst
+  # vervangen worden door de addr_wp_in sensor zodra die geplaatst is —
+  # verwijder dan gewoon dit sensor-blok en de bijbehorende substitution.
+  - platform: dallas_temp
+    address: ${addr_buiten}
+    name: "Buiten"
+    id: temp_buiten
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    update_interval: 30s
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+          send_first_at: 1
+    on_value:
+      then:
+        - script.execute: bereken_verwachte_cop
+    icon: "mdi:temperature-celsius"
+
+  # Resultaat: sensor.zwembad_controller_wp_delta_t
+  - platform: template
+    name: "WP Delta-T"
+    id: wp_delta_t
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    icon: mdi:heat-pump
+    lambda: |-
+      if (id(temp_wp_uit).has_state() && id(temp_wp_in).has_state()) {
+        return id(temp_wp_uit).state - id(temp_wp_in).state;
+      }
+      return {};
+    update_interval: 30s
+
+  # Resultaat: sensor.zwembad_controller_delta_t
+  - platform: template
+    name: "Delta-T"
+    id: delta_t
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    icon: mdi:thermometer-lines
+    lambda: |-
+      if (id(temp_uit).has_state() && id(temp_in).has_state()) {
+        return id(temp_uit).state - id(temp_in).state;
+      }
+      return {};
+    update_interval: 30s
+
+  # Resultaat: sensor.zwembad_controller_warmtevermogen
+  # Werkelijk gemeten warmtevermogen (op basis van gemeten delta-T + flow)
+  - platform: template
+    name: "Warmtevermogen"
+    id: warmte_vermogen
+    unit_of_measurement: "kW"
+    accuracy_decimals: 3
+    icon: mdi:fire
+    lambda: |-
+      if (!id(temp_uit).has_state() || !id(temp_in).has_state()) return {};
+      float dt = id(temp_uit).state - id(temp_in).state;
+      // Gebruik gemeten flow als beschikbaar, anders vaste waarde uit substitution
+      float flow_val = ${pomp_flow_m3h}f;
+      if (id(flow_m3h).has_state() && id(flow_m3h).state > 0.1f) {
+        flow_val = id(flow_m3h).state;
+      }
+      float flow_kgs = flow_val / 3.6f;
+      float kw = flow_kgs * 4.186f * dt;
+      return kw < 0.0f ? 0.0f : kw;
+    update_interval: 30s
+
+  # Resultaat: sensor.zwembad_controller_cop
+  # Werkelijk gemeten COP (op basis van gemeten warmtevermogen / elektrisch input)
+  - platform: template
+    name: "COP"
+    id: actuele_cop
+    unit_of_measurement: ""
+    accuracy_decimals: 2
+    icon: mdi:lightning-bolt-circle
+    lambda: |-
+      if (!id(warmte_vermogen).has_state() || id(warmte_vermogen).state < 0.1f) return {};
+      float cop = id(warmte_vermogen).state / ${wp_input_kw}f;
+      if (cop > ${wp_cop_max}f) cop = ${wp_cop_max}f;
+      if (cop < ${wp_cop_min}f) cop = ${wp_cop_min}f;
+      return cop;
+    update_interval: 30s
+
+  # Resultaat: sensor.zwembad_controller_verwachte_cop
+  # Voorspellende COP op basis van buitentemperatuur (lineaire interpolatie
+  # tussen wp_cop_laag@15°C en wp_cop_referentie@26°C). Gebruikt vóórdat de
+  # WP draait — bv. door de HA-blueprint om te plannen of verwarmen nu
+  # zinvol is, zonder dat er al gemeten data is.
+  - platform: template
+    name: "Verwachte COP"
+    id: verwachte_cop
+    unit_of_measurement: ""
+    accuracy_decimals: 2
+    icon: mdi:chart-line
+    lambda: |-
+      if (!id(temp_buiten).has_state()) return {};
+      float t = id(temp_buiten).state;
+      float cop_hoog = ${wp_cop_referentie}f;
+      float cop_laag = ${wp_cop_laag}f;
+      float t_hoog = ${wp_cop_t_hoog}f;
+      float t_laag = ${wp_cop_t_laag}f;
+      if (t >= t_hoog) return cop_hoog;
+      if (t <= t_laag) return cop_laag;
+      float interp = cop_laag + (cop_hoog - cop_laag) * (t - t_laag) / (t_hoog - t_laag);
+      return interp;
+    update_interval: 30s
+
+  # Resultaat: sensor.zwembad_controller_opwarm_snelheid
+  - platform: template
+    name: "Opwarm Snelheid"
+    id: opwarm_snelheid
+    unit_of_measurement: "°C/h"
+    accuracy_decimals: 2
+    icon: mdi:trending-up
+    lambda: |-
+      static float last_temp = -999.0f;
+      static unsigned long last_time_ms = 0;
+      if (!id(temp_pool).has_state()) return {};
+      unsigned long now_ms = millis();
+      float current = id(temp_pool).state;
+      if (last_temp < -990.0f) {
+        last_temp = current;
+        last_time_ms = now_ms;
+        return {};
+      }
+      float elapsed_h = (now_ms - last_time_ms) / 3600000.0f;
+      if (elapsed_h < 0.05f) return {};
+      float rate = (current - last_temp) / elapsed_h;
+      last_temp = current;
+      last_time_ms = now_ms;
+      if (rate > 5.0f || rate < -5.0f) return {};
+      return rate;
+    update_interval: ${opwarm_interval}s
+
+
+  # ── Debietmeter (Yanmis DN50 puls) ─────────────────────────
+  #
+  # KALIBRATIE — doe dit één keer na installatie:
+  # 1. Sluit emmer van exacte inhoud aan op uitgang (bijv. 10L)
+  # 2. Zet pomp aan, vang precies 10L op
+  # 3. Lees sensor.zwembad_controller_flow_pulsen_totaal af
+  # 4. Bereken: pulsen_per_liter = totaal_pulsen / 10
+  # 5. Vul dat getal in bij flow_pulsen_per_liter bovenaan
+  #
+  # Uitgang: DC 5V pulsen → gebruik voltage divider naar 3.3V!
+  # 5V → 10kΩ → GPIO → 20kΩ → GND  (of gebruik 5V tolerante pin)
+
+  # Rauwe puls teller (pulsen/minuut)
+  # Datasheet formule: Hz = 0.5 × Q (L/min)
+  # → pulsen/min = 0.5 × 60 × Q = 30 × Q
+  # → Q (L/min) = pulsen/min ÷ 30
+  # Resultaat: sensor.zwembad_controller_flow_pulsen_min
+  - platform: pulse_counter
+    pin:
+      number: ${flow_pin}
+      mode:
+        input: true
+        pullup: false   # Meter geeft 5V output via Hall sensor, geen pullup
+    name: "Flow Pulsen Min"
+    id: flow_pulsen_raw
+    unit_of_measurement: "pulsen/min"
+    accuracy_decimals: 0
+    icon: mdi:counter
+    update_interval: 10s
+    internal: true   # Verborgen in HA, alleen flow_lmin zichtbaar
+
+  # Flow in L/min — direct uit datasheet formule
+  # Resultaat: sensor.zwembad_controller_flow_lmin
+  - platform: template
+    name: "Flow Lmin"
+    id: flow_lmin
+    unit_of_measurement: L/min
+    accuracy_decimals: 2
+    icon: mdi:water-pump
+    lambda: |-
+      if (!id(flow_pulsen_raw).has_state()) return {};
+      // Formule: Q = pulsen_per_min / 30
+      // (uit datasheet: Hz = 0.5 × Q → pulsen/min = 30 × Q)
+      float lmin = id(flow_pulsen_raw).state / ${flow_deler}f;
+      return lmin < 0.0f ? 0.0f : lmin;
+    update_interval: 10s
+    on_value:
+      then:
+        - script.execute: bereken_delta_t
+    device_class: volume_flow_rate
+
+  # Flow in m³/h — gebruikt in warmtevermogen berekening
+  # Resultaat: sensor.zwembad_controller_flow_m3h
+  - platform: template
+    name: "Flow m3h"
+    id: flow_m3h
+    unit_of_measurement: "m³/h"
+    accuracy_decimals: 3
+    icon: mdi:waves-arrow-right
+    lambda: |-
+      if (!id(flow_lmin).has_state()) return {};
+      return id(flow_lmin).state * 0.06f;
+    update_interval: 10s
+    device_class: volume_flow_rate
+
+  # ── Dallas scan sensor — toont alle adressen in logs ────────
+  # Tijdelijk: verwijder adres om alle sensoren te zien
+  # Permanent: laat staan, logt onbekende adressen als WARNING
+  - platform: dallas_temp
+    name: "Dallas Scan Sensor"
+    id: dallas_scan
+    update_interval: 10s
+    filters:
+      - filter_out: nan
+
+  # Resultaat: sensor.zwembad_controller_uptime
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s
+
+  # Resultaat: sensor.zwembad_controller_wifi_rssi
+  - platform: wifi_signal
+    name: "WiFi RSSI"
+    update_interval: 60s
+    icon: "mdi:wifi"
+
+binary_sensor:
+
+# Resultaat: binary_sensor.zwembad_controller_delta_t_alarm
+  # Slaat ALLEEN alarm als de WP actief is én de Delta-T buiten de grenzen valt
+  - platform: template
+    name: "Delta-T Alarm"
+    id: delta_t_alarm
+    device_class: problem
+    icon: mdi:alert-circle
+    lambda: |-
+      // 1. Als de WP niet actief is, is er sowieso geen Delta-T alarm mogelijk
+      if (!id(wp_actief).state) return false;
+      
+      // 2. Als de WP wel actief is, controleren we de temperatuurwaarden
+      if (!id(delta_t).has_state()) return false;
+      
+      float dt = id(delta_t).state;
+      return (dt < ${delta_t_min_alarm}f || dt > ${delta_t_max_alarm}f);
+    filters:
+      - delayed_on: ${delta_t_alarm_delay}
+      - delayed_off: 30s
+
+  # Resultaat: binary_sensor.zwembad_controller_wp_actief
+  - platform: template
+    name: "WP Actief"
+    id: wp_actief
+    icon: mdi:heat-pump
+    lambda: |-
+      if (!id(delta_t).has_state()) return false;
+      return id(delta_t).state > 1.0f;
+    device_class: running
+
+  # Resultaat: binary_sensor.zwembad_controller_wp_temp_bereik_ok
+  # Vervangt de HA-template-versie uit hardware_config.yaml. Geeft aan of
+  # de buitentemperatuur binnen het bedrijfsbereik van de WP valt.
+  # HA/blueprint gebruikt dit als voorwaarde om de WP aan te mogen zetten.
+  - platform: template
+    name: "WP Temp Bereik OK"
+    id: wp_temp_bereik_ok
+    icon: mdi:thermometer-check
+    lambda: |-
+      if (!id(temp_buiten).has_state()) return false;
+      float t = id(temp_buiten).state;
+      return (t >= ${wp_min_lucht_temp}f && t <= ${wp_max_lucht_temp}f);
+
+# Resultaat: binary_sensor.zwembad_controller_pomp_flow_ok_voor_wp
+  # Controleert of de driewegklep goed is afgesteld (tussen de 17.0 en 20.0 L/min)
+  - platform: template
+    name: "Pomp Flow OK voor WP"
+    id: pomp_flow_ok_voor_wp
+    icon: mdi:water-check
+    lambda: |-
+      if (!id(flow_lmin).has_state()) return false;
+      float lmin = id(flow_lmin).state;
+      // Geeft 'True' (OK) als de flow tussen de 17 en 20 liter per minuut ligt
+      return (lmin >= 17.0f && lmin <= 20.0f);
+    filters:
+      - delayed_on: 5s   # Voorkomt valse meldingen bij het opstarten
+      - delayed_off: 5s  # Vangt kleine schommelingen op
+    
+script:
+  - id: bereken_delta_t
+    then:
+      - component.update: delta_t
+      - component.update: warmte_vermogen
+      - component.update: actuele_cop
+
+  - id: bereken_wp_delta_t
+    then:
+      - component.update: wp_delta_t
+
+  - id: bereken_cop
+    then:
+      - component.update: actuele_cop
+
+  - id: bereken_verwachte_cop
+    then:
+      - component.update: verwachte_cop
+
+  - id: bereken_opwarm_snelheid
+    then:
+      - component.update: opwarm_snelheid
+
+light:
+  - platform: status_led
+    name: "Status LED"
+    pin:
+      number: ${status_led_pin}
+      inverted: true
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Adres"
+    ssid:
+      name: "WiFi SSID"
+    mac_address:
+      name: "MAC Adres"
+  - platform: version
+    name: "ESPHome Versie"
+
+
+number:
+  # ── Sensor kalibratie offsets — instelbaar via HA ─────────
+  # Positief = sensor leest te laag (telt op), negatief = te hoog (trekt af)
+  - platform: template
+    name: "Offset Pool"
+    id: offset_pool
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-lines
+    min_value: -2.0
+    max_value: 2.0
+    step: 0.01
+    initial_value: 0.04
+    restore_value: true
+    optimistic: true
+    mode: BOX
+
+  - platform: template
+    name: "Offset Pomp In"
+    id: offset_pmp_in
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-lines
+    min_value: -2.0
+    max_value: 2.0
+    step: 0.01
+    initial_value: 0.10
+    restore_value: true
+    optimistic: true
+    mode: BOX
+
+  - platform: template
+    name: "Offset Pomp Uit"
+    id: offset_pmp_uit
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-lines
+    min_value: -2.0
+    max_value: 2.0
+    step: 0.01
+    initial_value: 0.41
+    restore_value: true
+    optimistic: true
+    mode: BOX
+
+  - platform: template
+    name: "Offset WP In"
+    id: offset_wp_in
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-lines
+    min_value: -2.0
+    max_value: 2.0
+    step: 0.01
+    initial_value: 0.35
+    restore_value: true
+    optimistic: true
+    mode: BOX
+
+  - platform: template
+    name: "Offset WP Uit"
+    id: offset_wp_uit
+    unit_of_measurement: "°C"
+    icon: mdi:thermometer-lines
+    min_value: -2.0
+    max_value: 2.0
+    step: 0.01
+    initial_value: 0.22
+    restore_value: true
+    optimistic: true
+    mode: BOX
+
+button:
+  - platform: restart
+    name: "Herstart"
+    id: restart_button
+
+  - platform: template
+    name: "Dallas Scan"
+    icon: mdi:thermometer-probe
+    on_press:
+      then:
+        - logger.log:
+            level: INFO
+            format: "=== Dallas scan — open ESPHome logs na herstart ==="
+        - delay: 1s
+        - button.press: restart_button

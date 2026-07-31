@@ -28,17 +28,14 @@ class PoolBinaryDescription(BinarySensorEntityDescription):
 BINARY_SENSORS: tuple[PoolBinaryDescription, ...] = (
     PoolBinaryDescription(
         key="heating",
-        icon="mdi:fire",
         value_fn=lambda c: c.decision.heat_pump if c.decision else None,
     ),
     PoolBinaryDescription(
         key="circulating",
-        icon="mdi:autorenew",
         value_fn=lambda c: c.decision.pump if c.decision else None,
     ),
     PoolBinaryDescription(
         key="heat_pump_available",
-        icon="mdi:heat-pump",
         value_fn=lambda c: c.heat_pump_available,
         attributes_fn=lambda c: {"reason": c.heat_pump_gate_reason},
     ),
@@ -54,7 +51,6 @@ BINARY_SENSORS: tuple[PoolBinaryDescription, ...] = (
     PoolBinaryDescription(
         key="filter_service_needed",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        icon="mdi:air-filter",
         value_fn=lambda c: any(f.code == "filter_service_needed" for f in c.faults),
     ),
 )

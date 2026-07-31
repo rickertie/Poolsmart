@@ -25,7 +25,6 @@ async def async_setup_entry(
 
 
 class PoolSmartModeSelect(PoolSmartEntity, SelectEntity):
-    _attr_icon = "mdi:tune-variant"
     _attr_options = [m.value for m in Mode]
 
     def __init__(self, coordinator: PoolSmartCoordinator) -> None:

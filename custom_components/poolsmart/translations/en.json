@@ -11,6 +11,13 @@
           "depth_m": "Water depth (m)",
           "target_temp": "Desired temperature (°C)",
           "max_temp": "Maximum temperature (°C)"
+        },
+        "data_description": {
+          "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
+          "depth_m": "Actual water depth, not the wall height. Most pools are filled to about 80-90% of the wall.",
+          "surface_m2": "Leave blank and it is calculated from volume and depth. Only used for the initial heat-loss guess, which is replaced by a measured value within days.",
+          "target_temp": "28 °C is comfortable for most people. 26 is brisk, 30 is bath-like and noticeably more expensive.",
+          "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat."
         }
       },
       "pump": {
@@ -20,6 +27,11 @@
           "pump_flow_m3h": "Flow (m³/h)",
           "pump_flow_measured": "This is a measured value, not from the datasheet",
           "pump_power_kw": "Electrical power (kW)"
+        },
+        "data_description": {
+          "pump_flow_m3h": "On the pump label or in the manual, often written as 'flow rate' in m³/h or litres per hour. Divide L/h by 1000 for m³/h. Example: a small cartridge pump is around 2-4 m³/h.",
+          "pump_flow_measured": "Tick only if you measured it with a flow meter. Otherwise the datasheet figure is reduced by 30% to account for filter resistance.",
+          "pump_power_kw": "On the label, in watts. Divide by 1000. Example: 100 W is 0.1 kW."
         }
       },
       "heat_pump": {
@@ -34,6 +46,16 @@
           "hp_air_temp_min": "Minimum air temperature (°C)",
           "hp_air_temp_max": "Maximum air temperature (°C)",
           "hp_flow_min_m3h": "Minimum flow required (m³/h)"
+        },
+        "data_description": {
+          "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
+          "hp_thermal_kw": "The heat it delivers, usually the headline figure such as '3 kW'. Normally 4 to 5 times the input power.",
+          "hp_cop_ref_temp": "The air temperature the heat output was measured at. Datasheets usually say 26 °C or 24 °C. If unsure, leave at 26.",
+          "hp_cop_low": "Optional. The COP at a colder air temperature, if the datasheet lists a second figure. Leave blank for a flat curve.",
+          "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
+          "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
+          "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
+          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default."
         }
       },
       "entities": {
@@ -43,6 +65,11 @@
           "pump_switch": "Circulation pump switch",
           "heat_pump_switch": "Heat pump switch",
           "water_temp_sensor": "Pool water temperature"
+        },
+        "data_description": {
+          "pump_switch": "The switch or smart plug that powers the circulation pump.",
+          "heat_pump_switch": "The switch or smart plug that powers the heat pump.",
+          "water_temp_sensor": "The sensor measuring the pool water itself. Take care to pick the right one; it can be changed later under Configure."
         }
       },
       "optional": {
@@ -60,6 +87,19 @@
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
           "cover_entity": "Pool cover (optional)"
+        },
+        "data_description": {
+          "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
+          "hp_inlet_sensor": "Water going into the heat pump. If your plumbing runs pool → pump → heat pump, the pump outlet sensor is the right choice.",
+          "hp_outlet_sensor": "Water coming out of the heat pump. Together with the inlet this gives delta-T and COP.",
+          "flow_sensor": "A flow meter in m³/h. Enables flow protection and makes the filtration blocks correct themselves as the filter fouls.",
+          "pump_power_sensor": "Power draw of the pump, if your plug measures it.",
+          "hp_power_sensor": "Power draw of the heat pump, if your plug measures it. Needed for cost and measured COP.",
+          "price_sensor": "A sensor whose state is the price per kWh. Dynamic tariff integrations provide this.",
+          "solar_power_sensor": "Current solar production in watts.",
+          "solar_forecast_sensor": "A solar forecast, if you have one.",
+          "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
+          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none."
         }
       }
     }
@@ -103,9 +143,87 @@
       },
       "init": {
         "menu_options": {
+          "entities": "Entities",
+          "hardware": "Pool and equipment",
           "general": "General settings",
           "swimming": "Swimming times",
           "notifications": "Notifications"
+        }
+      },
+      "entities": {
+        "title": "Entities",
+        "description": "Change which entities the integration uses. Picking the wrong sensor at setup is easy; this is where you correct it. Clearing an optional field switches that feature off again.",
+        "data": {
+          "pump_switch": "Circulation pump switch",
+          "heat_pump_switch": "Heat pump switch",
+          "water_temp_sensor": "Pool water temperature",
+          "air_temp_sensor": "Outdoor temperature",
+          "hp_inlet_sensor": "Heat pump inlet temperature",
+          "hp_outlet_sensor": "Heat pump outlet temperature",
+          "flow_sensor": "Flow meter (m³/h)",
+          "pump_power_sensor": "Pump power",
+          "hp_power_sensor": "Heat pump power",
+          "price_sensor": "Electricity price (per kWh)",
+          "solar_power_sensor": "Current solar production",
+          "solar_forecast_sensor": "Solar forecast",
+          "weather_entity": "Weather",
+          "cover_entity": "Pool cover (optional)"
+        },
+        "data_description": {
+          "pump_switch": "The switch or smart plug that powers the circulation pump.",
+          "heat_pump_switch": "The switch or smart plug that powers the heat pump.",
+          "water_temp_sensor": "The sensor measuring the pool water itself. Take care to pick the right one; it can be changed later under Configure.",
+          "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
+          "hp_inlet_sensor": "Water going into the heat pump. If your plumbing runs pool → pump → heat pump, the pump outlet sensor is the right choice.",
+          "hp_outlet_sensor": "Water coming out of the heat pump. Together with the inlet this gives delta-T and COP.",
+          "flow_sensor": "A flow meter in m³/h. Enables flow protection and makes the filtration blocks correct themselves as the filter fouls.",
+          "pump_power_sensor": "Power draw of the pump, if your plug measures it.",
+          "hp_power_sensor": "Power draw of the heat pump, if your plug measures it. Needed for cost and measured COP.",
+          "price_sensor": "A sensor whose state is the price per kWh. Dynamic tariff integrations provide this.",
+          "solar_power_sensor": "Current solar production in watts.",
+          "solar_forecast_sensor": "A solar forecast, if you have one.",
+          "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
+          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none."
+        }
+      },
+      "hardware": {
+        "title": "Pool and equipment",
+        "description": "Correct the figures entered during setup. Filtration duration and heating time are recalculated immediately.",
+        "data": {
+          "volume_l": "Water volume (litres)",
+          "surface_m2": "Water surface (m²)",
+          "depth_m": "Water depth (m)",
+          "target_temp": "Desired temperature (°C)",
+          "max_temp": "Maximum temperature (°C)",
+          "pump_flow_m3h": "Flow (m³/h)",
+          "pump_flow_measured": "This is a measured value, not from the datasheet",
+          "pump_power_kw": "Electrical power (kW)",
+          "hp_input_kw": "Electrical input power (kW)",
+          "hp_thermal_kw": "Thermal output (kW)",
+          "hp_cop_ref_temp": "Air temperature for that output (°C)",
+          "hp_cop_low": "COP at a second, lower air temperature",
+          "hp_cop_low_temp": "That second air temperature (°C)",
+          "hp_air_temp_min": "Minimum air temperature (°C)",
+          "hp_air_temp_max": "Maximum air temperature (°C)",
+          "hp_flow_min_m3h": "Minimum flow required (m³/h)"
+        },
+        "data_description": {
+          "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
+          "depth_m": "Actual water depth, not the wall height. Most pools are filled to about 80-90% of the wall.",
+          "surface_m2": "Leave blank and it is calculated from volume and depth. Only used for the initial heat-loss guess, which is replaced by a measured value within days.",
+          "target_temp": "28 °C is comfortable for most people. 26 is brisk, 30 is bath-like and noticeably more expensive.",
+          "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat.",
+          "pump_flow_m3h": "On the pump label or in the manual, often written as 'flow rate' in m³/h or litres per hour. Divide L/h by 1000 for m³/h. Example: a small cartridge pump is around 2-4 m³/h.",
+          "pump_flow_measured": "Tick only if you measured it with a flow meter. Otherwise the datasheet figure is reduced by 30% to account for filter resistance.",
+          "pump_power_kw": "On the label, in watts. Divide by 1000. Example: 100 W is 0.1 kW.",
+          "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
+          "hp_thermal_kw": "The heat it delivers, usually the headline figure such as '3 kW'. Normally 4 to 5 times the input power.",
+          "hp_cop_ref_temp": "The air temperature the heat output was measured at. Datasheets usually say 26 °C or 24 °C. If unsure, leave at 26.",
+          "hp_cop_low": "Optional. The COP at a colder air temperature, if the datasheet lists a second figure. Leave blank for a flat curve.",
+          "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
+          "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
+          "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
+          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default."
         }
       }
     }

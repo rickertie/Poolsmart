@@ -11,6 +11,13 @@
           "depth_m": "Waterdiepte (m)",
           "target_temp": "Gewenste temperatuur (°C)",
           "max_temp": "Maximale temperatuur (°C)"
+        },
+        "data_description": {
+          "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
+          "depth_m": "De werkelijke waterdiepte, niet de wandhoogte. De meeste baden staan tot ongeveer 80-90% van de wand.",
+          "surface_m2": "Laat leeg, dan wordt het uit inhoud en diepte berekend. Wordt alleen gebruikt voor de eerste schatting van warmteverlies, die binnen enkele dagen door een gemeten waarde wordt vervangen.",
+          "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder.",
+          "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen."
         }
       },
       "pump": {
@@ -20,6 +27,11 @@
           "pump_flow_m3h": "Flow (m³/u)",
           "pump_flow_measured": "Dit is een gemeten waarde, niet uit de brochure",
           "pump_power_kw": "Elektrisch vermogen (kW)"
+        },
+        "data_description": {
+          "pump_flow_m3h": "Staat op het typeplaatje of in de handleiding, vaak als 'flow rate' in m³/u of liter per uur. Deel L/u door 1000 voor m³/u. Voorbeeld: een kleine cartridgepomp zit rond 2-4 m³/u.",
+          "pump_flow_measured": "Vink alleen aan als je het met een debietmeter hebt gemeten. Anders wordt de brochurewaarde met 30% verlaagd vanwege filterweerstand.",
+          "pump_power_kw": "Staat op het plaatje in watt. Deel door 1000. Voorbeeld: 100 W is 0,1 kW."
         }
       },
       "heat_pump": {
@@ -34,6 +46,16 @@
           "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)"
+        },
+        "data_description": {
+          "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
+          "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
+          "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
+          "hp_cop_low": "Optioneel. De COP bij een koudere luchttemperatuur, als de brochure een tweede waarde noemt. Leeg laten geeft een vlakke curve.",
+          "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
+          "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
+          "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
+          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan."
         }
       },
       "entities": {
@@ -43,6 +65,11 @@
           "pump_switch": "Schakelaar circulatiepomp",
           "heat_pump_switch": "Schakelaar warmtepomp",
           "water_temp_sensor": "Zwembadwatertemperatuur"
+        },
+        "data_description": {
+          "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
+          "heat_pump_switch": "De schakelaar of slimme stekker die de warmtepomp voedt.",
+          "water_temp_sensor": "De sensor die het zwembadwater zelf meet. Kies zorgvuldig; je kunt dit later aanpassen onder Configureren."
         }
       },
       "optional": {
@@ -60,6 +87,19 @@
           "solar_forecast_sensor": "Zonneverwachting",
           "weather_entity": "Weer",
           "cover_entity": "Afdekhoes (optioneel)"
+        },
+        "data_description": {
+          "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
+          "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Loopt je leiding bad → pomp → warmtepomp, dan is de sensor op de pompuitlaat de juiste keuze.",
+          "hp_outlet_sensor": "Water dat de warmtepomp uit komt. Samen met de inlaat geeft dit delta-T en COP.",
+          "flow_sensor": "Een debietmeter in m³/u. Maakt flowbeveiliging mogelijk en laat de filtratieblokken zichzelf corrigeren als het filter vervuilt.",
+          "pump_power_sensor": "Opgenomen vermogen van de pomp, als je stekker dat meet.",
+          "hp_power_sensor": "Opgenomen vermogen van de warmtepomp, als je stekker dat meet. Nodig voor kosten en gemeten COP.",
+          "price_sensor": "Een sensor waarvan de waarde de prijs per kWh is. Integraties voor dynamische tarieven leveren die.",
+          "solar_power_sensor": "Actuele zonneopbrengst in watt.",
+          "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
+          "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
+          "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt."
         }
       }
     }
@@ -103,9 +143,87 @@
       },
       "init": {
         "menu_options": {
+          "entities": "Entiteiten",
+          "hardware": "Zwembad en apparatuur",
           "general": "Algemene instellingen",
           "swimming": "Zwemtijden",
           "notifications": "Notificaties"
+        }
+      },
+      "entities": {
+        "title": "Entiteiten",
+        "description": "Wijzig welke entiteiten de integratie gebruikt. Bij de installatie de verkeerde sensor kiezen is zo gebeurd; hier herstel je dat. Een optioneel veld leegmaken schakelt die functie weer uit.",
+        "data": {
+          "pump_switch": "Schakelaar circulatiepomp",
+          "heat_pump_switch": "Schakelaar warmtepomp",
+          "water_temp_sensor": "Zwembadwatertemperatuur",
+          "air_temp_sensor": "Buitentemperatuur",
+          "hp_inlet_sensor": "Inlaattemperatuur warmtepomp",
+          "hp_outlet_sensor": "Uitlaattemperatuur warmtepomp",
+          "flow_sensor": "Debietmeter (m³/u)",
+          "pump_power_sensor": "Vermogen pomp",
+          "hp_power_sensor": "Vermogen warmtepomp",
+          "price_sensor": "Stroomprijs (per kWh)",
+          "solar_power_sensor": "Actuele zonneopbrengst",
+          "solar_forecast_sensor": "Zonneverwachting",
+          "weather_entity": "Weer",
+          "cover_entity": "Afdekhoes (optioneel)"
+        },
+        "data_description": {
+          "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
+          "heat_pump_switch": "De schakelaar of slimme stekker die de warmtepomp voedt.",
+          "water_temp_sensor": "De sensor die het zwembadwater zelf meet. Kies zorgvuldig; je kunt dit later aanpassen onder Configureren.",
+          "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
+          "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Loopt je leiding bad → pomp → warmtepomp, dan is de sensor op de pompuitlaat de juiste keuze.",
+          "hp_outlet_sensor": "Water dat de warmtepomp uit komt. Samen met de inlaat geeft dit delta-T en COP.",
+          "flow_sensor": "Een debietmeter in m³/u. Maakt flowbeveiliging mogelijk en laat de filtratieblokken zichzelf corrigeren als het filter vervuilt.",
+          "pump_power_sensor": "Opgenomen vermogen van de pomp, als je stekker dat meet.",
+          "hp_power_sensor": "Opgenomen vermogen van de warmtepomp, als je stekker dat meet. Nodig voor kosten en gemeten COP.",
+          "price_sensor": "Een sensor waarvan de waarde de prijs per kWh is. Integraties voor dynamische tarieven leveren die.",
+          "solar_power_sensor": "Actuele zonneopbrengst in watt.",
+          "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
+          "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
+          "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt."
+        }
+      },
+      "hardware": {
+        "title": "Zwembad en apparatuur",
+        "description": "Corrigeer de waarden die je bij de installatie hebt ingevuld. Filtratieduur en opwarmtijd worden meteen opnieuw berekend.",
+        "data": {
+          "volume_l": "Waterinhoud (liter)",
+          "surface_m2": "Wateroppervlak (m²)",
+          "depth_m": "Waterdiepte (m)",
+          "target_temp": "Gewenste temperatuur (°C)",
+          "max_temp": "Maximale temperatuur (°C)",
+          "pump_flow_m3h": "Flow (m³/u)",
+          "pump_flow_measured": "Dit is een gemeten waarde, niet uit de brochure",
+          "pump_power_kw": "Elektrisch vermogen (kW)",
+          "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
+          "hp_thermal_kw": "Thermisch vermogen (kW)",
+          "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
+          "hp_cop_low": "COP bij een tweede, lagere luchttemperatuur",
+          "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
+          "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
+          "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)"
+        },
+        "data_description": {
+          "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
+          "depth_m": "De werkelijke waterdiepte, niet de wandhoogte. De meeste baden staan tot ongeveer 80-90% van de wand.",
+          "surface_m2": "Laat leeg, dan wordt het uit inhoud en diepte berekend. Wordt alleen gebruikt voor de eerste schatting van warmteverlies, die binnen enkele dagen door een gemeten waarde wordt vervangen.",
+          "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder.",
+          "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
+          "pump_flow_m3h": "Staat op het typeplaatje of in de handleiding, vaak als 'flow rate' in m³/u of liter per uur. Deel L/u door 1000 voor m³/u. Voorbeeld: een kleine cartridgepomp zit rond 2-4 m³/u.",
+          "pump_flow_measured": "Vink alleen aan als je het met een debietmeter hebt gemeten. Anders wordt de brochurewaarde met 30% verlaagd vanwege filterweerstand.",
+          "pump_power_kw": "Staat op het plaatje in watt. Deel door 1000. Voorbeeld: 100 W is 0,1 kW.",
+          "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
+          "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
+          "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
+          "hp_cop_low": "Optioneel. De COP bij een koudere luchttemperatuur, als de brochure een tweede waarde noemt. Leeg laten geeft een vlakke curve.",
+          "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
+          "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
+          "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
+          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan."
         }
       }
     }

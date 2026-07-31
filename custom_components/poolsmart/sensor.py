@@ -57,7 +57,6 @@ def _status_attributes(c: PoolSmartCoordinator) -> dict:
 SENSORS: tuple[PoolSensorDescription, ...] = (
     PoolSensorDescription(
         key="status",
-        icon="mdi:information-outline",
         value_fn=lambda c: c.decision.branch.name.lower() if c.decision else None,
         attributes_fn=_status_attributes,
     ),
@@ -90,7 +89,6 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="heating_time_required",
         native_unit_of_measurement=UnitOfTime.HOURS,
         suggested_display_precision=1,
-        icon="mdi:timer-sand",
         value_fn=lambda c: (
             round(c.estimate.hours_needed, 2)
             if c.estimate and c.estimate.hours_needed != float("inf")
@@ -120,13 +118,11 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
     PoolSensorDescription(
         key="cop_expected",
         suggested_display_precision=2,
-        icon="mdi:chart-line",
         value_fn=lambda c: round(c.estimate.cop, 2) if c.estimate else None,
     ),
     PoolSensorDescription(
         key="cop_measured",
         suggested_display_precision=2,
-        icon="mdi:chart-line-variant",
         value_fn=lambda c: _measured_cop(c),
     ),
     PoolSensorDescription(
@@ -140,7 +136,6 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="flow_rate",
         native_unit_of_measurement="m³/h",
         suggested_display_precision=2,
-        icon="mdi:waves-arrow-right",
         value_fn=lambda c: (
             round(c.data["state"].effective_flow_m3h, 2)
             if c.data and c.data["state"].effective_flow_m3h is not None
@@ -151,7 +146,6 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="filtration_required_today",
         native_unit_of_measurement=UnitOfTime.HOURS,
         suggested_display_precision=2,
-        icon="mdi:filter",
         value_fn=lambda c: round(c.filtration.required_h, 2) if c.filtration else None,
         attributes_fn=lambda c: dict(c.filtration.detail) if c.filtration else {},
     ),
@@ -159,14 +153,12 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="filtration_completed_today",
         native_unit_of_measurement=UnitOfTime.HOURS,
         suggested_display_precision=2,
-        icon="mdi:filter-check",
         value_fn=lambda c: round(c.filtration.done_h, 2) if c.filtration else None,
     ),
     PoolSensorDescription(
         key="filtration_remaining_today",
         native_unit_of_measurement=UnitOfTime.HOURS,
         suggested_display_precision=2,
-        icon="mdi:filter-outline",
         value_fn=lambda c: round(c.filtration.remaining_h, 2) if c.filtration else None,
         attributes_fn=lambda c: (
             {
@@ -186,14 +178,12 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="heating_rate",
         native_unit_of_measurement="°C/h",
         suggested_display_precision=3,
-        icon="mdi:trending-up",
         value_fn=lambda c: c.store.learned.heating_rate_c_per_h,
     ),
     PoolSensorDescription(
         key="heat_loss_rate",
         native_unit_of_measurement="°C/h",
         suggested_display_precision=3,
-        icon="mdi:trending-down",
         value_fn=lambda c: c.store.learned.heat_loss_c_per_h,
     ),
     PoolSensorDescription(
@@ -208,12 +198,10 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="cost_today",
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
-        icon="mdi:cash",
         value_fn=lambda c: round(c.store.cost_today, 3),
     ),
     PoolSensorDescription(
         key="ai_suggestion",
-        icon="mdi:lightbulb-on-outline",
         value_fn=lambda c: (
             len(c.advisor.last_result.suggestions) if c.advisor.last_result else 0
         ),
@@ -225,7 +213,6 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="cost_saved_today",
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
-        icon="mdi:piggy-bank",
         value_fn=lambda c: round(c.store.cost_baseline_today - c.store.cost_today, 3),
     ),
 )

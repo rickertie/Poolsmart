@@ -47,12 +47,28 @@ STEP_POOL = vol.Schema(
     {
         vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
         vol.Required(c.CONF_VOLUME_L): _positive(100, 500000, 1),
-        vol.Required(c.CONF_SURFACE_M2): _positive(1, 500, 0.1),
-        vol.Required(c.CONF_DEPTH_M): _positive(0.1, 5, 0.01),
+        vol.Optional(c.CONF_DEPTH_M, default=1.2): _positive(0.1, 5, 0.01),
+        vol.Optional(c.CONF_SURFACE_M2): _positive(1, 500, 0.1),
         vol.Required(c.CONF_TARGET_TEMP, default=28.0): _positive(10, 40, 0.5),
         vol.Required(c.CONF_MAX_TEMP, default=32.0): _positive(10, 40, 0.5),
     }
 )
+
+
+def derive_pool_shape(data: dict) -> dict:
+    """Fill in the pool dimensions that were left blank.
+
+    Surface area only affects the heat-loss estimate, and that estimate is
+    replaced by a measured one within a few days. Asking for a number people
+    would have to go and measure, in order to seed a value that gets overwritten
+    anyway, is a poor trade.
+    """
+    volume = float(data.get(c.CONF_VOLUME_L, 0) or 0)
+    depth = float(data.get(c.CONF_DEPTH_M) or 1.2)
+    if not data.get(c.CONF_SURFACE_M2) and volume and depth:
+        data[c.CONF_SURFACE_M2] = round(volume / 1000.0 / depth, 2)
+    data[c.CONF_DEPTH_M] = depth
+    return data
 
 STEP_PUMP = vol.Schema(
     {
@@ -112,7 +128,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            self._data.update(user_input)
+            self._data.update(derive_pool_shape(dict(user_input)))
             return await self.async_step_pump()
         return self.async_show_form(step_id="user", data_schema=STEP_POOL)
 
@@ -203,8 +219,103 @@ class PoolSmartOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict | None = None) -> ConfigFlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["general", "swimming", "notifications"],
+            menu_options=["entities", "hardware", "general", "swimming", "notifications"],
         )
+
+    async def async_step_entities(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """Change which entities the integration uses.
+
+        Picking the wrong temperature sensor during setup is easy to do and used
+        to be permanent, which was a design error: entity choices belong in
+        options, where they can be corrected, not locked into the entry data.
+        """
+        if user_input is not None:
+            cleaned = {k: v for k, v in user_input.items() if v}
+            # Explicitly clear anything the user emptied, so an optional entity
+            # can be removed again and not merely replaced.
+            for key in c.OPTIONAL_ENTITY_KEYS:
+                if key not in cleaned:
+                    cleaned[key] = ""
+            options = {**self.config_entry.options, **cleaned}
+            return self.async_create_entry(data=options)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+
+        def field(key, required=False):
+            marker = vol.Required if required else vol.Optional
+            return marker(key, description={"suggested_value": current.get(key) or None})
+
+        schema = vol.Schema(
+            {
+                field(c.CONF_PUMP_SWITCH, True): SWITCH,
+                field(c.CONF_HP_SWITCH, True): SWITCH,
+                field(c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
+                field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
+                field(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
+                field(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
+                field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
+                field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
+                field(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
+                field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+                field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
+                field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
+                field(c.CONF_WEATHER_ENTITY): WEATHER,
+                field(c.CONF_COVER_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=["cover", "binary_sensor", "input_boolean"]
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="entities", data_schema=schema)
+
+    async def async_step_hardware(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """Correct the pool, pump and heat pump figures after setup."""
+        if user_input is not None:
+            data = derive_pool_shape(dict(user_input))
+            input_kw = float(data.get(c.CONF_HP_INPUT_KW) or 0)
+            thermal_kw = float(data.get(c.CONF_HP_THERMAL_KW) or 0)
+            if input_kw:
+                data[c.CONF_HP_COP_REF] = round(thermal_kw / input_kw, 3)
+                if not data.get(c.CONF_HP_COP_LOW):
+                    data[c.CONF_HP_COP_LOW] = data[c.CONF_HP_COP_REF]
+                    data[c.CONF_HP_COP_LOW_TEMP] = data.get(c.CONF_HP_COP_REF_TEMP, 26.0)
+            options = {**self.config_entry.options, **data}
+            return self.async_create_entry(data=options)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+
+        def num(key, default, low, high, step=0.01):
+            return vol.Optional(key, default=current.get(key, default)), _positive(
+                low, high, step
+            )
+
+        pairs = [
+            num(c.CONF_VOLUME_L, 10000, 100, 500000, 1),
+            num(c.CONF_DEPTH_M, 1.2, 0.1, 5, 0.01),
+            num(c.CONF_SURFACE_M2, 10.0, 1, 500, 0.1),
+            num(c.CONF_MAX_TEMP, 32.0, 10, 40, 0.5),
+            num(c.CONF_PUMP_FLOW_M3H, 3.0, 0.1, 100, 0.001),
+            num(c.CONF_PUMP_POWER_KW, 0.1, 0.01, 10, 0.01),
+            num(c.CONF_HP_INPUT_KW, 1.0, 0.05, 50, 0.01),
+            num(c.CONF_HP_THERMAL_KW, 4.0, 0.1, 200, 0.1),
+            num(c.CONF_HP_COP_REF_TEMP, 26.0, -10, 45, 0.5),
+            num(c.CONF_HP_COP_LOW, 4.0, 1, 15, 0.01),
+            num(c.CONF_HP_COP_LOW_TEMP, 15.0, -10, 45, 0.5),
+            num(c.CONF_HP_AIR_TEMP_MIN, 11.0, -20, 30, 0.5),
+            num(c.CONF_HP_AIR_TEMP_MAX, 43.0, 20, 60, 0.5),
+            num(c.CONF_HP_FLOW_MIN_M3H, 2.0, 0, 50, 0.1),
+        ]
+        schema = vol.Schema(dict(pairs))
+        schema = schema.extend(
+            {
+                vol.Optional(
+                    c.CONF_PUMP_FLOW_MEASURED,
+                    default=current.get(c.CONF_PUMP_FLOW_MEASURED, False),
+                ): bool
+            }
+        )
+        return self.async_show_form(step_id="hardware", data_schema=schema)
 
     async def async_step_swimming(self, user_input: dict | None = None) -> ConfigFlowResult:
         """When the pool should be at temperature.

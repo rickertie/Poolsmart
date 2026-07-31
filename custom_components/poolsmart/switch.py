@@ -23,8 +23,6 @@ async def async_setup_entry(
 class PoolSmartManualOverride(PoolSmartEntity, SwitchEntity):
     """Force circulation, overriding everything except safety."""
 
-    _attr_icon = "mdi:hand-back-right"
-
     def __init__(self, coordinator: PoolSmartCoordinator) -> None:
         super().__init__(coordinator, "manual_override")
 
@@ -41,8 +39,6 @@ class PoolSmartManualOverride(PoolSmartEntity, SwitchEntity):
 
 class PoolSmartLearning(PoolSmartEntity, SwitchEntity):
     """Enable or disable self-learning."""
-
-    _attr_icon = "mdi:school"
 
     def __init__(self, coordinator: PoolSmartCoordinator) -> None:
         super().__init__(coordinator, "learning_enabled")

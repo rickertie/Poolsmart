@@ -55,7 +55,6 @@ class PoolSmartMaxPrice(PoolSmartEntity, NumberEntity):
     _attr_native_min_value = 0.0
     _attr_native_max_value = 2.0
     _attr_mode = NumberMode.BOX
-    _attr_icon = "mdi:cash-lock"
 
     def __init__(self, coordinator: PoolSmartCoordinator) -> None:
         super().__init__(coordinator, "max_price")
