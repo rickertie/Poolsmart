@@ -9,7 +9,7 @@
 
 PoolSmart is a Home Assistant integration that runs your swimming pool for
 you. It continuously balances filtration, heating, electricity prices,
-weather and how often you actually swim — so the pool is ready when you want
+weather and how often you actually swim so the pool is ready when you want
 it, using as little energy as possible.
 
 Whether you have a small inflatable pool or a 30,000 litre in-ground pool
@@ -25,7 +25,7 @@ YAML every time something changes.
 > tested by the project maintainer, but bugs may still exist.
 >
 > If you find an issue or have an improvement in mind, please open an Issue
-> or Pull Request — it's genuinely welcome.
+> or Pull Request it's genuinely welcome.
 
 ## ✨ Features
 
@@ -52,23 +52,23 @@ That works... until Home Assistant restarts.
 > "Why did the pump suddenly turn on?"
 
 PoolSmart solves that by replacing dozens of independent automations with a
-single decision engine that always knows **why** it made a decision — and
+single decision engine that always knows **why** it made a decision and
 can tell you.
 
 ## How it works
 
-Every 30 seconds, PoolSmart checks a fixed priority ladder — from emergency
+Every 30 seconds, PoolSmart checks a fixed priority ladder from emergency
 stop and frost protection at the top, down to scheduled filtration and idle
 at the bottom. The first rule that applies wins, and nothing below it runs.
 No fighting automations, no race conditions, no mysterious pump starts.
 
 A gate in front of the heating branches also checks the heat pump's
 operating envelope: below its minimum air temperature, nothing can heat the
-pool — not a negative price, not even frost protection, which falls back to
+pool not a negative price, not even frost protection, which falls back to
 simple circulation instead. Moving water doesn't freeze.
 
 Filtration time, heating sessions and the energy budget are all calculated
-from your pool's own volume, pump flow and heat pump specs — not hardcoded,
+from your pool's own volume, pump flow and heat pump specs not hardcoded,
 so a small inflatable pool and a large in-ground pool both just work.
 
 📖 Full details on the decision ladder, filtration formula and configuration
@@ -89,15 +89,15 @@ entities, pool and equipment specs, prices, and swimming times.
 ## 🔧 Example setup
 
 PoolSmart doesn't care what's measuring your pool, as long as the entities
-exist in Home Assistant — but here's a real one, so you have something
+exist in Home Assistant but here's a real one, so you have something
 concrete to start from.
 
 The author runs it on an **Intex Metal Frame pool (3,834 L)** with a
 **Bestway Flowclear** filter pump and a **W'eau Mini** heat pump, all fed by
 a single **Seeed XIAO ESP32C6** running ESPHome: five Dallas temperature
 sensors (pool, pump in/out, heat pump in/out, outdoor) and a pulse-based
-flow meter. The ESP32 does the light, fast local math — delta-T, measured
-and predicted COP, heating rate — and hands clean numbers to Home Assistant,
+flow meter. The ESP32 does the light, fast local math delta-T, measured
+and predicted COP, heating rate and hands clean numbers to Home Assistant,
 where PoolSmart takes it from there.
 
 📖 The full ESPHome configuration, wiring notes and calibration steps live in
@@ -117,8 +117,8 @@ The dashboard shows:
 - AI recommendations
 - Diagnostics
 
-A sidebar panel at `/poolsmart` gives you six tabs — overview, planning,
-sessions, learning, settings and diagnostics — for anyone who wants to dig
+A sidebar panel at `/poolsmart` gives you six tabs overview, planning,
+sessions, learning, settings and diagnostics for anyone who wants to dig
 deeper than the dashboard shows.
 
 ## Designed for
