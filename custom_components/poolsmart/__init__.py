@@ -11,9 +11,11 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import slugify
 
 from . import websocket as poolsmart_ws
-from .const import DOMAIN, PANEL_URL
+from .const import DOMAIN, MIGRATION_FLAG, PANEL_URL
 from .coordinator import PoolSmartCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -52,8 +54,59 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
     hass.data[f"{DOMAIN}_panel"] = True
 
 
+async def _async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Rename entities created before the ids were fixed in code.
+
+    Home Assistant builds an entity id from the entity's displayed name, and that
+    name is translated, so a Dutch install ended up with sensor.pool_klaar_om
+    where an English one got sensor.pool_ready_at. The registry records whatever
+    id was assigned first and never revisits it, so simply shipping the fix does
+    nothing for anyone who already installed the integration.
+
+    This runs once per config entry. It will not touch an id that is already
+    correct, and it will not steal an id that something else is using. Anything
+    referring to the old ids -- automations, dashboards, scripts -- needs
+    updating, which is why the renames are logged individually.
+    """
+    if entry.data.get(MIGRATION_FLAG):
+        return
+
+    registry = er.async_get(hass)
+    prefix = slugify(entry.title)
+    renamed: list[tuple[str, str]] = []
+
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        key = reg_entry.unique_id.removeprefix(f"{entry.entry_id}_")
+        wanted = f"{reg_entry.domain}.{prefix}_{key}"
+        if reg_entry.entity_id == wanted:
+            continue
+        if registry.async_get(wanted) is not None:
+            _LOGGER.warning(
+                "Not renaming %s to %s because that id is already in use",
+                reg_entry.entity_id,
+                wanted,
+            )
+            continue
+        registry.async_update_entity(reg_entry.entity_id, new_entity_id=wanted)
+        renamed.append((reg_entry.entity_id, wanted))
+
+    if renamed:
+        _LOGGER.warning(
+            "PoolSmart renamed %d entities to language-independent ids. Update any "
+            "automations or dashboards that use the old ones: %s",
+            len(renamed),
+            ", ".join(f"{old} -> {new}" for old, new in renamed),
+        )
+
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, MIGRATION_FLAG: True}
+    )
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PoolSmart from a config entry."""
+    await _async_migrate_entity_ids(hass, entry)
+
     coordinator = PoolSmartCoordinator(hass, entry)
     await coordinator.async_restore()
     await coordinator.async_config_entry_first_refresh()

@@ -58,7 +58,7 @@
           "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
           "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
-          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default.",
+          "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped."
         }
       },
@@ -90,7 +90,8 @@
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
-          "cover_entity": "Pool cover (optional)"
+          "cover_entity": "Pool cover (optional)",
+          "flow_unit": "Flow meter unit"
         },
         "data_description": {
           "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
@@ -103,7 +104,8 @@
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
-          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none."
+          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
+          "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min."
         }
       }
     }
@@ -225,7 +227,8 @@
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
-          "cover_entity": "Pool cover (optional)"
+          "cover_entity": "Pool cover (optional)",
+          "flow_unit": "Flow meter unit"
         },
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",
@@ -241,7 +244,8 @@
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
-          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none."
+          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
+          "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min."
         }
       },
       "hardware": {
@@ -283,7 +287,7 @@
           "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
           "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
-          "hp_flow_min_m3h": "The minimum water flow the unit needs. Often around 2 m³/h. If unsure, leave the default.",
+          "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
           "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped."
         }
@@ -304,6 +308,15 @@
         "balls": "Filter balls",
         "cartridge": "Cartridge",
         "none": "No filter in line"
+      }
+    },
+    "flow_unit": {
+      "options": {
+        "L/min": "L/min",
+        "L/h": "L/h",
+        "m³/h": "m³/h",
+        "L/s": "L/s",
+        "GPM": "GPM"
       }
     }
   },

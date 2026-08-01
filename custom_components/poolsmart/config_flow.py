@@ -189,6 +189,12 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
+        vol.Optional(c.CONF_FLOW_UNIT, default="L/min"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["L/min", "L/h", "m³/h", "L/s", "GPM"],
+                        translation_key="flow_unit",
+                    )
+                ),
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
@@ -346,6 +352,15 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
+                vol.Optional(
+                    c.CONF_FLOW_UNIT,
+                    default=current.get(c.CONF_FLOW_UNIT, "L/min"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["L/min", "L/h", "m³/h", "L/s", "GPM"],
+                        translation_key="flow_unit",
+                    )
+                ),
                 field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_PRICE_SENSOR): ANY_SENSOR,

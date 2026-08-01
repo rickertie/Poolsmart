@@ -1,0 +1,622 @@
+# ===========================================================================
+# PoolSmart dashboard
+#
+# PASTE THIS WHOLE FILE into the raw configuration editor:
+#   open the dashboard -> pencil (top right) -> three dots -> Raw configuration
+#   editor -> select everything -> paste -> save.
+#
+# It starts at "views:" on purpose. A fragment starting at "title:" is a single
+# view, and pasting that into the raw editor is what produces a parse error.
+#
+# ENTITY NAMES
+#   Everything below assumes the integration was named "Zwembad", giving ids
+#   like sensor.pool_status. If you named it something else, find and replace
+#   "zwembad_" with your own slug.
+#
+#   These ids are fixed and do not follow the Home Assistant language setting,
+#   so this file works the same on a Dutch and an English install.
+#
+# CUSTOM CARDS USED (all from HACS)
+#   mushroom, button-card, card-mod, apexcharts-card, mini-graph-card
+#
+# WHAT IS DELIBERATELY NOT HERE
+#   Sensor readings, delta-T, COP, learned values, session history and the
+#   decision log all live in the PoolSmart panel in the sidebar. Repeating them
+#   here would mean maintaining the same thing twice.
+# ===========================================================================
+
+views:
+
+  # =========================================================================
+  # 1. ZWEMMEN - de pagina die iedereen moet kunnen lezen
+  # =========================================================================
+  - title: Zwemmen
+    path: zwemmen
+    icon: mdi:pool
+    badges:
+      - type: custom:mushroom-chips-card
+        alignment: center
+        chips:
+          - type: template
+            icon: mdi:thermometer
+            content: "{{ states('number.pool_target_temperature') | int }}°C doel"
+            icon_color: blue
+            tap_action:
+              action: more-info
+              entity: number.pool_target_temperature
+          - type: template
+            icon: mdi:filter
+            content: >-
+              {{ states('sensor.pool_filtration_completed_today') | float(0) | round(1) }}/{{
+                 states('sensor.pool_filtration_required_today') | float(0) | round(1) }} u
+            icon_color: >-
+              {% set done = states('sensor.pool_filtration_completed_today') | float(0) %}
+              {% set need = states('sensor.pool_filtration_required_today') | float(1) %}
+              {% if done >= need %}green{% elif done > need * 0.5 %}orange{% else %}grey{% endif %}
+            tap_action:
+              action: none
+          - type: template
+            icon: mdi:cash
+            content: "€{{ states('sensor.pool_cost_today') | float(0) | round(2) }}"
+            icon_color: grey
+            tap_action:
+              action: none
+
+    cards:
+
+      # ---- Grote status: temperatuur, reden, klaar-om ----------------------
+      - type: custom:mushroom-template-card
+        primary: >-
+          {% set t = state_attr('sensor.pool_status','water_temperature') %}
+          {{ '%.1f'|format(t) if t is not none else '--' }}°C
+        secondary: "{{ state_attr('sensor.pool_status', 'reason') }}"
+        multiline_secondary: true
+        icon: >-
+          {% if is_state('binary_sensor.pool_fault', 'on') %}mdi:alert-circle
+          {% elif is_state('binary_sensor.pool_heating', 'on') %}mdi:fire
+          {% elif is_state('binary_sensor.pool_circulating', 'on') %}mdi:autorenew
+          {% else %}mdi:pool{% endif %}
+        icon_color: >-
+          {% if is_state('binary_sensor.pool_fault', 'on') %}red
+          {% elif is_state('binary_sensor.pool_heating', 'on') %}orange
+          {% elif is_state('binary_sensor.pool_circulating', 'on') %}blue
+          {% else %}grey{% endif %}
+        tap_action:
+          action: more-info
+          entity: sensor.pool_status
+        card_mod:
+          style: |
+            ha-card {
+              --card-primary-font-size: 34px;
+              --card-primary-font-weight: 300;
+              padding: 18px 16px;
+            }
+
+      # ---- Klaar om / klaar op (alleen tijdens verwarmen) ------------------
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.pool_heating
+            state: "on"
+        card:
+          type: custom:mushroom-template-card
+          primary: >-
+            {% set r = states('sensor.pool_ready_at') %}
+            {% if r in ['unknown','unavailable'] %}
+              Bezig met verwarmen
+            {% elif state_attr('sensor.pool_ready_at','is_multi_day') %}
+              Klaar op {{ (r | as_datetime | as_local).strftime('%A %d %B') }}
+            {% else %}
+              Klaar om {{ (r | as_datetime | as_local).strftime('%H:%M') }}
+            {% endif %}
+          secondary: >-
+            Nog {{ states('sensor.pool_heating_time_required') | float(0) | round(1) }} uur
+            verwarmen
+            {%- if state_attr('sensor.pool_ready_at','expected_cost') %}
+              · ongeveer €{{ state_attr('sensor.pool_ready_at','expected_cost') | round(2) }}
+            {%- endif %}
+          icon: mdi:clock-outline
+          icon_color: orange
+          multiline_secondary: true
+
+      # ---- Waarschuwing bij storing ---------------------------------------
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.pool_fault
+            state: "on"
+        card:
+          type: markdown
+          content: >-
+            ### ⚠️ Let op
+
+            {% for m in state_attr('binary_sensor.pool_fault','messages') %}
+            - {{ m }}
+            {% endfor %}
+
+      # ---- Warmtepomp kan niet draaien ------------------------------------
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.pool_heat_pump_available
+            state: "off"
+        card:
+          type: custom:mushroom-template-card
+          primary: Verwarmen kan nu niet
+          secondary: "{{ state_attr('binary_sensor.pool_heat_pump_available','reason') }}"
+          icon: mdi:heat-pump-outline
+          icon_color: grey
+          multiline_secondary: true
+
+      # ---- Hardware ------------------------------------------------------
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.pool_heating
+            name: Warmtepomp
+            icon: mdi:heat-pump
+            tap_action:
+              action: more-info
+            card_mod:
+              style: |
+                @keyframes gloed-rood {
+                  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.45); }
+                  70%  { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+                  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+                }
+                ha-card {
+                  border-radius: 12px;
+                  transition: all .3s ease;
+                  {% if is_state('binary_sensor.pool_heating','on') %}
+                  animation: gloed-rood 1.8s ease-in-out infinite;
+                  border: 2px solid #ef4444 !important;
+                  {% else %}
+                  border: 1px solid var(--divider-color) !important;
+                  {% endif %}
+                }
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.pool_circulating
+            name: Filterpomp
+            icon: mdi:pump
+            tap_action:
+              action: more-info
+            card_mod:
+              style: |
+                @keyframes roteer { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @keyframes gloed-blauw {
+                  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+                  70%  { box-shadow: 0 0 0 10px rgba(59,130,246,0); }
+                  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+                }
+                ha-card {
+                  border-radius: 12px;
+                  transition: all .3s ease;
+                  {% if is_state('binary_sensor.pool_circulating','on') %}
+                  animation: gloed-blauw 2.5s ease-in-out infinite;
+                  border: 2px solid #3b82f6 !important;
+                  {% else %}
+                  border: 1px solid var(--divider-color) !important;
+                  {% endif %}
+                }
+                ha-card mushroom-shape-icon ha-icon {
+                  {% if is_state('binary_sensor.pool_circulating','on') %}
+                  animation: roteer 2s linear infinite;
+                  display: block;
+                  {% endif %}
+                }
+
+      # ---- Modusknoppen met uitleg ernaast --------------------------------
+      - type: horizontal-stack
+        cards:
+          - type: vertical-stack
+            cards:
+              - type: custom:button-card
+                name: 🧠  AUTO
+                entity: select.pool_mode
+                state_display: ""
+                tap_action:
+                  action: perform-action
+                  perform_action: select.select_option
+                  target:
+                    entity_id: select.pool_mode
+                  data:
+                    option: auto
+                state:
+                  - value: auto
+                    styles:
+                      card:
+                        - background: "#3b82f620"
+                        - border: "2px solid #3b82f6"
+                      name:
+                        - color: "#1d4ed8"
+                        - font-weight: "800"
+                styles: &modus_stijl
+                  card:
+                    - border: "1px solid var(--divider-color)"
+                    - border-radius: 10px
+                    - padding: 12px 14px
+                    - text-align: left
+                    - height: 48px
+                    - margin-bottom: 6px
+                  name:
+                    - font-size: 14px
+                    - font-weight: "600"
+                    - color: "#94a3b8"
+                    - justify-self: start
+                  icon:
+                    - display: none
+
+              - type: custom:button-card
+                name: 🔥  BOOST
+                entity: select.pool_mode
+                state_display: ""
+                tap_action:
+                  action: perform-action
+                  perform_action: select.select_option
+                  target:
+                    entity_id: select.pool_mode
+                  data:
+                    option: boost
+                state:
+                  - value: boost
+                    styles:
+                      card:
+                        - background: "#ef444420"
+                        - border: "2px solid #ef4444"
+                      name:
+                        - color: "#991b1b"
+                        - font-weight: "800"
+                styles: *modus_stijl
+
+              - type: custom:button-card
+                name: ☀️  ECO
+                entity: select.pool_mode
+                state_display: ""
+                tap_action:
+                  action: perform-action
+                  perform_action: select.select_option
+                  target:
+                    entity_id: select.pool_mode
+                  data:
+                    option: eco
+                state:
+                  - value: eco
+                    styles:
+                      card:
+                        - background: "#10b98120"
+                        - border: "2px solid #10b981"
+                      name:
+                        - color: "#065f46"
+                        - font-weight: "800"
+                styles: *modus_stijl
+
+              - type: custom:button-card
+                name: 💤  STAND-BY
+                entity: select.pool_mode
+                state_display: ""
+                tap_action:
+                  action: perform-action
+                  perform_action: select.select_option
+                  target:
+                    entity_id: select.pool_mode
+                  data:
+                    option: standby
+                state:
+                  - value: standby
+                    styles:
+                      card:
+                        - background: "#64748b20"
+                        - border: "2px solid #64748b"
+                      name:
+                        - color: "#1e293b"
+                        - font-weight: "800"
+                styles: *modus_stijl
+
+              - type: custom:button-card
+                name: 🔄  POMP
+                entity: select.pool_mode
+                state_display: ""
+                tap_action:
+                  action: perform-action
+                  perform_action: select.select_option
+                  target:
+                    entity_id: select.pool_mode
+                  data:
+                    option: pump
+                state:
+                  - value: pump
+                    styles:
+                      card:
+                        - background: "#8b5cf620"
+                        - border: "2px solid #8b5cf6"
+                      name:
+                        - color: "#4c1d95"
+                        - font-weight: "800"
+                styles: *modus_stijl
+
+              - type: custom:button-card
+                name: ⏹  UIT
+                entity: select.pool_mode
+                state_display: ""
+                tap_action:
+                  action: perform-action
+                  perform_action: select.select_option
+                  target:
+                    entity_id: select.pool_mode
+                  data:
+                    option: "off"
+                state:
+                  - value: "off"
+                    styles:
+                      card:
+                        - background: "#4a556820"
+                        - border: "2px solid #4a5568"
+                      name:
+                        - color: "#1e293b"
+                        - font-weight: "800"
+                styles: *modus_stijl
+
+          - type: markdown
+            content: >
+              {% set m = states('select.pool_mode') %}
+
+              {% if m == 'auto' %}
+              ### 🧠 Automatisch
+
+              Het systeem regelt alles zelf en verwarmt op het goedkoopste moment
+              of bij zon, zodat het bad op tijd klaar is.
+
+              ---
+              **Aanbevolen** voor dagelijks gebruik.
+
+              {% elif m == 'boost' %}
+              ### 🔥 Snel opwarmen
+
+              De warmtepomp gaat direct aan, ongeacht prijs, zon of nachtrust.
+
+              ---
+              Gebruik dit als je **snel** wil zwemmen.
+
+              {% elif m == 'eco' %}
+              ### ☀️ Zuinig
+
+              Verwarmt alleen bij ruim zonoverschot of een duidelijk lage prijs.
+              Duurt langer, kost bijna niets.
+
+              ---
+              Werkt het best op zonnige dagen.
+
+              {% elif m == 'standby' %}
+              ### 💤 Stand-by
+
+              De filterpomp draait door, dus het water blijft schoon. Er wordt
+              niet gepland verwarmd.
+
+              ---
+              Voor als je **een week niet zwemt**. Bij een negatieve stroomprijs
+              wordt er toch bijverwarmd.
+
+              {% elif m == 'pump' %}
+              ### 🔄 Alleen filteren
+
+              Alleen de filterpomp, geen verwarming.
+
+              ---
+              Handig na het doseren van chloor of pH-middel.
+
+              {% elif m == 'off' %}
+              ### ⏹ Alles uit
+
+              Pomp en warmtepomp staan stil.
+
+              ---
+              Vorstbeveiliging blijft altijd actief, ook in deze stand.
+              {% endif %}
+
+      # ---- Snelle acties ---------------------------------------------------
+      - type: custom:mushroom-chips-card
+        alignment: justify
+        chips:
+          - type: template
+            icon: mdi:rocket-launch
+            content: Nu verwarmen
+            icon_color: red
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.pool_boost_now
+          - type: template
+            icon: mdi:flask
+            content: Chemie
+            icon_color: teal
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.pool_start_chemistry_cycle
+          - type: template
+            icon: mdi:filter-plus
+            content: Extra filteren
+            icon_color: blue
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.pool_force_filtration
+          - type: entity
+            entity: switch.pool_manual_override
+            icon: mdi:hand-back-right
+            icon_color: purple
+
+      # ---- Doeltemperatuur -------------------------------------------------
+      - type: entities
+        title: 🌡 Instellen
+        entities:
+          - entity: number.pool_target_temperature
+            name: Gewenste temperatuur
+          - entity: number.pool_max_price
+            name: Maximale stroomprijs
+            secondary_info: Boven deze prijs wacht de verwarming
+          - entity: sensor.pool_next_action_at
+            name: Volgende actie
+
+      # ---- Wat is er gebeurd ----------------------------------------------
+      - type: logbook
+        title: 🕒 Laatste acties
+        target:
+          entity_id:
+            - sensor.pool_status
+            - binary_sensor.pool_heating
+            - binary_sensor.pool_circulating
+        hours_to_show: 48
+
+  # =========================================================================
+  # 2. ENERGIE
+  # =========================================================================
+  - title: Energie
+    path: energie
+    icon: mdi:lightning-bolt
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-template-card
+            primary: "{{ states('sensor.pool_energy_today') | float(0) | round(2) }} kWh"
+            secondary: Verbruik vandaag
+            icon: mdi:lightning-bolt
+            icon_color: amber
+            tap_action:
+              action: none
+          - type: custom:mushroom-template-card
+            primary: "€{{ states('sensor.pool_cost_today') | float(0) | round(2) }}"
+            secondary: >-
+              Bespaard door timing: €{{
+              states('sensor.pool_cost_saved_today') | float(0) | round(2) }}
+            icon: mdi:cash
+            icon_color: green
+            tap_action:
+              action: none
+
+      - type: glance
+        title: 🔄 Filtratie vandaag
+        entities:
+          - entity: sensor.pool_filtration_required_today
+            name: Nodig
+          - entity: sensor.pool_filtration_completed_today
+            name: Gedaan
+          - entity: sensor.pool_filtration_remaining_today
+            name: Resterend
+          - entity: sensor.pool_flow_rate
+            name: Debiet
+
+      # LET OP: de twee sensoren hieronder zijn JOUW eigen bronsensoren, niet
+      # die van de integratie. PoolSmart maakt bewust geen kopie van een sensor
+      # die je al hebt. Vervang ze door je eigen entiteit-ids.
+      - type: custom:mini-graph-card
+        name: Temperatuur (24 uur)
+        entities:
+          - entity: sensor.zwembad_controller_temperatuur
+            name: Zwembad
+            color: "#0ea5e9"
+          - entity: sensor.achtertuin_knmi_temperatuur
+            name: Buiten
+            color: "#f59e0b"
+        hours_to_show: 24
+        points_per_hour: 2
+        line_width: 2
+        show:
+          labels: true
+          state: true
+
+      - type: history-graph
+        title: Wanneer draaide wat?
+        hours_to_show: 48
+        entities:
+          - entity: binary_sensor.pool_heating
+            name: Warmtepomp
+          - entity: binary_sensor.pool_circulating
+            name: Filterpomp
+
+      - type: custom:apexcharts-card
+        header:
+          show: true
+          title: COP en delta-T
+          show_states: true
+        graph_span: 24h
+        series:
+          - entity: sensor.pool_cop_measured
+            name: COP gemeten
+            color: "#10b981"
+          - entity: sensor.pool_cop_expected
+            name: COP verwacht
+            color: "#94a3b8"
+          - entity: sensor.pool_delta_t
+            name: Delta-T
+            color: "#f59e0b"
+
+  # =========================================================================
+  # 3. WATER - chemie blijft handwerk, dat doet de integratie niet
+  # =========================================================================
+  - title: Water
+    path: water
+    icon: mdi:water-check
+    cards:
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-template-card
+            primary: "pH {{ states('input_number.zwembad_meting_ph') | float(7.2) | round(1) }}"
+            secondary: >-
+              {% set ph = states('input_number.zwembad_meting_ph') | float(7.2) %}
+              {% if ph < 7.0 %}⚠️ Te laag — pH-plus toevoegen
+              {% elif ph < 7.2 %}🟡 Licht laag — beetje pH-plus
+              {% elif ph <= 7.6 %}✅ Perfect (7,2–7,6)
+              {% elif ph <= 7.8 %}🟡 Licht hoog — beetje pH-min
+              {% else %}⚠️ Te hoog — pH-min toevoegen{% endif %}
+            icon: mdi:ph
+            icon_color: >-
+              {% set ph = states('input_number.zwembad_meting_ph') | float(7.2) %}
+              {% if ph < 7.0 or ph > 7.8 %}red
+              {% elif ph < 7.2 or ph > 7.6 %}orange{% else %}green{% endif %}
+            tap_action:
+              action: none
+          - type: custom:mushroom-template-card
+            primary: >-
+              Chloor {{ states('input_number.zwembad_meting_chloor') | float(1.5) | round(1) }}
+            secondary: >-
+              {% set cl = states('input_number.zwembad_meting_chloor') | float(1.5) %}
+              {% if cl < 0.5 %}⚠️ Te laag — chloor doseren
+              {% elif cl < 1.0 %}🟡 Licht laag — kleine dosis
+              {% elif cl <= 3.0 %}✅ Perfect (1,0–3,0 mg/L)
+              {% elif cl <= 5.0 %}🟡 Hoog — even wachten
+              {% else %}⚠️ Veel te hoog — water verversen{% endif %}
+            icon: mdi:chemical-weapon
+            icon_color: >-
+              {% set cl = states('input_number.zwembad_meting_chloor') | float(1.5) %}
+              {% if cl < 0.5 or cl > 5.0 %}red
+              {% elif cl < 1.0 or cl > 3.0 %}orange{% else %}green{% endif %}
+            tap_action:
+              action: none
+
+      - type: entities
+        title: 📝 Meting invoeren
+        entities:
+          - entity: input_number.zwembad_meting_ph
+            name: pH — gemeten waarde
+            secondary_info: "Ideaal: 7,2–7,6"
+          - entity: input_number.zwembad_meting_chloor
+            name: Chloor — gemeten waarde (mg/L)
+            secondary_info: "Ideaal: 1,0–3,0 mg/L"
+          - entity: input_datetime.zwembad_laatste_water_meting
+            name: Tijdstip meting
+
+      - type: markdown
+        title: 💡 Doseren
+        content: >
+          Na het doseren zet je het systeem op **🔄 POMP** of druk je op
+          **Chemie** op de eerste pagina — dan draait de pomp door zodat het
+          middel zich verdeelt.
+
+          **Nooit tegelijk:** chloor en pH-middel altijd apart, minstens een uur
+          ertussen. Altijd het middel **in** het water, nooit andersom.
+
+          Doseer chloor 's avonds; overdag breekt UV het af.

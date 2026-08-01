@@ -10,6 +10,11 @@ DEFAULT_NAME = "Pool"
 #: Sidebar panel URL path.
 PANEL_URL = "poolsmart"
 
+#: Set on the config entry once entity ids have been migrated to the fixed,
+#: language-independent form. Stored on the entry rather than in the store so it
+#: survives a reset of the learned values.
+MIGRATION_FLAG = "entity_ids_migrated"
+
 #: How often the decision engine runs.
 UPDATE_INTERVAL = timedelta(seconds=30)
 
@@ -61,6 +66,7 @@ CONF_AIR_TEMP_SENSOR = "air_temp_sensor"
 CONF_HP_INLET_SENSOR = "hp_inlet_sensor"
 CONF_HP_OUTLET_SENSOR = "hp_outlet_sensor"
 CONF_FLOW_SENSOR = "flow_sensor"
+CONF_FLOW_UNIT = "flow_unit"
 CONF_PUMP_POWER_SENSOR = "pump_power_sensor"
 CONF_HP_POWER_SENSOR = "hp_power_sensor"
 CONF_PRICE_SENSOR = "price_sensor"
@@ -154,6 +160,7 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_HP_AIR_TEMP_MAX: 43.0,
     CONF_HP_FLOW_MIN_M3H: 2.0,
     CONF_HP_FLOW_MIN_BLOCKING: False,
+    CONF_FLOW_UNIT: "L/min",
 }
 
 #: Optional file in the configuration directory that overrides SETUP_DEFAULTS.

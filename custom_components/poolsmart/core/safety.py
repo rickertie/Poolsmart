@@ -96,20 +96,23 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
     if flow is None:
         return faults
 
-    if state.heat_pump_on and flow < config.heat_pump.flow_min_m3h:
+    threshold = config.heat_pump.flow_min_m3h
+    if state.heat_pump_on and flow < threshold:
         blocking = config.heat_pump.flow_min_blocking
         faults.append(
             Fault(
                 "flow_below_heat_pump_minimum",
                 Severity.HEATING_BLOCKED if blocking else Severity.WARNING,
                 (
-                    f"Flow of {flow:.2f} m3/h is below the datasheet minimum of "
-                    f"{config.heat_pump.flow_min_m3h:.2f} m3/h."
+                    f"Flow of {flow:.2f} m3/h ({flow / 0.06:.0f} L/min) is below the "
+                    f"datasheet minimum of {threshold:.2f} m3/h "
+                    f"({threshold / 0.06:.0f} L/min)."
                     + (
                         " Heating is paused."
                         if blocking
                         else " Heating continues; the heat pump's own flow switch"
-                        " remains the hardware backstop."
+                        " remains the hardware backstop. Set the minimum to match"
+                        " what your installation actually achieves to silence this."
                     )
                 ),
                 {"flow_m3h": flow, "blocking": blocking},

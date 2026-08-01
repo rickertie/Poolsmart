@@ -3,7 +3,7 @@ import importlib
 import sys
 import traceback
 
-MODULES = ["test_acceptance", "test_planning"]
+MODULES = ["test_acceptance", "test_planning", "test_migration"]
 
 passed, failed = 0, []
 for module_name in MODULES:

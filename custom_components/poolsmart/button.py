@@ -30,6 +30,7 @@ async def async_setup_entry(
 
 
 class PoolSmartBoostNow(PoolSmartEntity, ButtonEntity):
+    _entity_domain = "button"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "boost_now")
@@ -39,6 +40,7 @@ class PoolSmartBoostNow(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartForceFiltration(PoolSmartEntity, ButtonEntity):
+    _entity_domain = "button"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "force_filtration")
@@ -48,6 +50,7 @@ class PoolSmartForceFiltration(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartStartChemistry(PoolSmartEntity, ButtonEntity):
+    _entity_domain = "button"
     """Circulate for a chemical treatment.
 
     The hardware for automated dosing does not exist yet; this button makes the
@@ -62,6 +65,7 @@ class PoolSmartStartChemistry(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartResetLearning(PoolSmartEntity, ButtonEntity):
+    _entity_domain = "button"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator, "reset_learning")
@@ -71,6 +75,7 @@ class PoolSmartResetLearning(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartRunAdvisor(PoolSmartEntity, ButtonEntity):
+    _entity_domain = "button"
     """Ask the advisory layer to review the past week.
 
     This never changes anything by itself. It produces suggestions that sit
@@ -85,6 +90,7 @@ class PoolSmartRunAdvisor(PoolSmartEntity, ButtonEntity):
 
 
 class PoolSmartAcceptSuggestion(PoolSmartEntity, ButtonEntity):
+    _entity_domain = "button"
     """Apply the topmost pending suggestion."""
 
     def __init__(self, coordinator) -> None:

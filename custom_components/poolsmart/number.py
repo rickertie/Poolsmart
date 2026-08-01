@@ -24,6 +24,7 @@ async def async_setup_entry(
 
 
 class PoolSmartTargetTemperature(PoolSmartEntity, NumberEntity):
+    _entity_domain = "number"
     _attr_device_class = NumberDeviceClass.TEMPERATURE
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_native_step = 0.5
@@ -49,6 +50,7 @@ class PoolSmartTargetTemperature(PoolSmartEntity, NumberEntity):
 
 
 class PoolSmartMaxPrice(PoolSmartEntity, NumberEntity):
+    _entity_domain = "number"
     """Upper price limit for heating, ignored in BOOST."""
 
     _attr_native_step = 0.01

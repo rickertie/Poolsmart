@@ -43,6 +43,23 @@ _LOGGER = logging.getLogger(__name__)
 
 UNAVAILABLE = ("unknown", "unavailable", "none", "")
 
+#: Conversion to cubic metres per hour, keyed by the unit string a flow sensor
+#: publishes. Pool flow meters most often report litres per minute.
+FLOW_UNIT_FACTORS = {
+    "m³/h": 1.0,
+    "m3/h": 1.0,
+    "m³/u": 1.0,
+    "m3/u": 1.0,
+    "l/min": 0.06,
+    "lpm": 0.06,
+    "l/m": 0.06,
+    "l/h": 0.001,
+    "l/u": 0.001,
+    "lph": 0.001,
+    "l/s": 3.6,
+    "gpm": 0.2271,
+}
+
 
 def _parse_time(raw: str | None, fallback: time) -> time:
     if not raw:
@@ -303,6 +320,48 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                     break
         return min(candidates) if candidates else None
 
+    def _read_flow(self) -> SensorReading:
+        """Read the flow sensor and convert it to cubic metres per hour.
+
+        Flow meters report in whatever unit their firmware was written for --
+        L/min is the most common on pool hardware, L/h and m3/h both occur. The
+        value was previously taken at face value, so a sensor reporting 17 L/min
+        was read as 17 m3/h: nonsense in both directions, and it made the heat
+        pump's 2 m3/h threshold meaningless.
+
+        The unit comes from the sensor's own ``unit_of_measurement`` where it has
+        one, and falls back to the setting for meters that publish a bare number.
+        """
+        entity_id = self._conf(c.CONF_FLOW_SENSOR)
+        if not entity_id:
+            self.disabled_capabilities.add("flow_protection")
+            return SensorReading(None, None, "flow")
+
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in UNAVAILABLE:
+            return SensorReading(None, None, "flow")
+        try:
+            value = float(state.state)
+        except (TypeError, ValueError):
+            return SensorReading(None, None, "flow")
+
+        unit = (state.attributes.get("unit_of_measurement") or "").strip()
+        factor = FLOW_UNIT_FACTORS.get(unit.lower())
+        if factor is None:
+            factor = FLOW_UNIT_FACTORS.get(
+                str(self._conf(c.CONF_FLOW_UNIT, "m³/h")).lower(), 1.0
+            )
+            if unit:
+                _LOGGER.debug(
+                    "Unrecognised flow unit %r on %s; using the configured unit",
+                    unit,
+                    entity_id,
+                )
+
+        reported = getattr(state, "last_reported", None) or state.last_updated
+        age = (dt_util.utcnow() - reported).total_seconds()
+        return SensorReading(value * factor, age, "flow")
+
     def _build_state(self, now: datetime, config: PoolConfig) -> PoolState:
         self.disabled_capabilities = set()
         price_total, price_energy = self._read_price()
@@ -340,7 +399,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             air_temp=self._read(c.CONF_AIR_TEMP_SENSOR, "air"),
             hp_inlet=self._read(c.CONF_HP_INLET_SENSOR, "hp_inlet"),
             hp_outlet=self._read(c.CONF_HP_OUTLET_SENSOR, "hp_outlet"),
-            flow_m3h=self._read(c.CONF_FLOW_SENSOR, "flow"),
+            flow_m3h=self._read_flow(),
             pump_power_w=self._read(c.CONF_PUMP_POWER_SENSOR, "pump_power"),
             hp_power_w=self._read(c.CONF_HP_POWER_SENSOR, "hp_power"),
             pump_on=pump_on,

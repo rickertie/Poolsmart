@@ -58,7 +58,7 @@
           "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
           "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
-          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan.",
+          "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
           "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt."
         }
       },
@@ -90,7 +90,8 @@
           "solar_power_sensor": "Actuele zonneopbrengst",
           "solar_forecast_sensor": "Zonneverwachting",
           "weather_entity": "Weer",
-          "cover_entity": "Afdekhoes (optioneel)"
+          "cover_entity": "Afdekhoes (optioneel)",
+          "flow_unit": "Eenheid debietmeter"
         },
         "data_description": {
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
@@ -103,7 +104,8 @@
           "solar_power_sensor": "Actuele zonneopbrengst in watt.",
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
           "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
-          "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt."
+          "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
+          "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min."
         }
       }
     }
@@ -225,7 +227,8 @@
           "solar_power_sensor": "Actuele zonneopbrengst",
           "solar_forecast_sensor": "Zonneverwachting",
           "weather_entity": "Weer",
-          "cover_entity": "Afdekhoes (optioneel)"
+          "cover_entity": "Afdekhoes (optioneel)",
+          "flow_unit": "Eenheid debietmeter"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
@@ -241,7 +244,8 @@
           "solar_power_sensor": "Actuele zonneopbrengst in watt.",
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
           "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
-          "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt."
+          "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
+          "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min."
         }
       },
       "hardware": {
@@ -283,7 +287,7 @@
           "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
           "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
-          "hp_flow_min_m3h": "De minimale doorstroom die het apparaat nodig heeft. Vaak rond 2 m³/u. Weet je het niet, laat de standaard staan.",
+          "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
           "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
           "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt."
         }
@@ -304,6 +308,15 @@
         "balls": "Filterballen",
         "cartridge": "Cartridge",
         "none": "Geen filter in de lijn"
+      }
+    },
+    "flow_unit": {
+      "options": {
+        "L/min": "L/min",
+        "L/h": "L/h",
+        "m³/h": "m³/h",
+        "L/s": "L/s",
+        "GPM": "GPM"
       }
     }
   },

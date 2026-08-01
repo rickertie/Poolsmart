@@ -64,6 +64,7 @@ async def async_setup_entry(
 
 
 class PoolSmartBinarySensor(PoolSmartEntity, BinarySensorEntity):
+    _entity_domain = "binary_sensor"
     entity_description: PoolBinaryDescription
 
     def __init__(self, coordinator, description: PoolBinaryDescription) -> None:

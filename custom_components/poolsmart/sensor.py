@@ -39,8 +39,21 @@ def _status_attributes(c: PoolSmartCoordinator) -> dict:
     decision = c.decision
     if decision is None:
         return {}
+    state = c.data.get("state") if c.data else None
     return {
         "reason": decision.reason,
+        # The measured temperatures ride along as attributes rather than getting
+        # entities of their own. A dashboard needs them in the same card as the
+        # reason, but duplicating a source sensor into the registry would mean
+        # two entities holding one number, double the recorder storage, and a
+        # device page that invites the question of which one is real.
+        "water_temperature": (
+            state.water_temp.value if state and state.water_temp.available else None
+        ),
+        "air_temperature": (
+            state.air_temp.value if state and state.air_temp.available else None
+        ),
+        "target_temperature": c.target_temp,
         "branch": decision.branch.name,
         "branch_number": int(decision.branch),
         "pump": decision.pump,
@@ -275,6 +288,7 @@ async def async_setup_entry(
 class PoolSmartSensor(PoolSmartEntity, SensorEntity):
     """A computed value derived from the current decision."""
 
+    _entity_domain = "sensor"
     entity_description: PoolSensorDescription
 
     def __init__(

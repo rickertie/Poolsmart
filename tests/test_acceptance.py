@@ -550,3 +550,99 @@ def test_t28_requirement_tracks_water_temperature():
     assert warm.required_h > cool.required_h
     assert warm.detail["driver"] == "daily minimum"
     assert warm.detail["water_temp"] == 30.5
+
+
+# ---------------------------------------------------------------------------
+# T34 - a flow meter reporting L/min is converted, not taken at face value
+# ---------------------------------------------------------------------------
+
+def test_t34_flow_unit_conversion():
+    """Regression: 17 L/min was being read as 17 m3/h.
+
+    Off by a factor of nearly seventeen, which made the heat pump's 2 m3/h
+    threshold meaningless in both directions: a healthy 17 L/min looked like
+    plenty, and anything genuinely low looked catastrophic.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "coord_consts",
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "coordinator.py",
+    )
+    source = spec.origin
+    text = Path(source).read_text()
+
+    # The table has to exist and cover the units pool hardware actually uses.
+    assert "FLOW_UNIT_FACTORS" in text
+    for unit in ("l/min", "l/h", "m³/h", "l/s"):
+        assert f'"{unit}"' in text, f"missing flow unit: {unit}"
+
+    # And the conversion itself must be right.
+    factors = {"l/min": 0.06, "l/h": 0.001, "l/s": 3.6, "m³/h": 1.0}
+    assert abs(17 * factors["l/min"] - 1.02) < 0.001
+    assert abs(3596 * factors["l/h"] - 3.596) < 0.001
+    assert abs(2.0 / factors["l/min"] - 33.33) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# T35 - real-world flow below the datasheet figure still heats
+# ---------------------------------------------------------------------------
+
+def test_t35_below_datasheet_flow_still_heats():
+    """17 L/min is 1.02 m3/h, below the 2.0 the datasheet asks for.
+
+    It moves 3 kW at a delta-T of about 2.5 C, which is entirely normal, so the
+    installation is fine and the integration must not stand in its way.
+    """
+    config = make_config()
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        flow_m3h=SensorReading(1.02, 10, "flow"),  # 17 L/min
+        pump_on=True,
+        heat_pump_on=True,
+        water_temp=SensorReading(25.0, 10, "water"),
+        hp_inlet=SensorReading(25.0, 10, "hp_inlet"),
+        hp_outlet=SensorReading(27.5, 10, "hp_outlet"),
+        price_total=0.15,
+    )
+
+    faults = safety.evaluate(state, config)
+    flow_fault = next(f for f in faults if f.code == "flow_below_heat_pump_minimum")
+    assert flow_fault.severity is Severity.WARNING
+    # The message has to name both units, or it is unactionable.
+    assert "L/min" in flow_fault.message
+
+    available, _reason = safety.heat_pump_available(state, config, faults)
+    assert available is True
+
+    decision = run_tick(state, config, done_h=0.0)
+    assert decision.heat_pump is True, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T36 - raising the configured minimum silences the warning entirely
+# ---------------------------------------------------------------------------
+
+def test_t36_adjusted_minimum_silences_warning():
+    config = make_config(
+        heat_pump=HeatPumpSpec(
+            input_kw=0.58, thermal_kw=3.0,
+            cop_ref=5.17, cop_ref_temp=26.0, cop_low=4.18, cop_low_temp=15.0,
+            air_temp_min=11.0, air_temp_max=43.0,
+            flow_min_m3h=0.85,  # 14 L/min, what this installation really needs
+        )
+    )
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        flow_m3h=SensorReading(1.02, 10, "flow"),
+        pump_on=True,
+        heat_pump_on=True,
+        water_temp=SensorReading(25.0, 10, "water"),
+    )
+    faults = safety.evaluate(state, config)
+    assert not any(f.code == "flow_below_heat_pump_minimum" for f in faults)
