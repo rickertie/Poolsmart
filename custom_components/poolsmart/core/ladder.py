@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 
 from .config import NegativePriceBasis, PoolConfig
 from .filtration import FiltrationStatus
+from .trace import Trace, Verdict
 from .models import (
     MODE_BRANCHES,
     PRIORITY_BRANCHES,
@@ -175,28 +176,52 @@ def _walk(
     faults: list[Fault],
     hp_available: bool,
     hp_gate_reason: str,
+    trace: Trace | None = None,
 ) -> Decision:
-    """Walk the ladder and return the first matching branch."""
+    """Walk the ladder and return the first matching branch.
+
+    Records why each branch it passes was passed over. That record is what turns
+    "the pump is off" into "the pump is off because the mode excludes it", which
+    is the difference between a log and an explanation.
+    """
     allowed = MODE_BRANCHES[state.mode]
     night = _in_night_window(state, config)
+    trace = trace if trace is not None else Trace()
 
     def permitted(branch: Branch) -> bool:
         if branch not in allowed:
+            trace.record(
+                branch,
+                Verdict.MODE,
+                f"the {state.mode.value} mode does not include this branch",
+            )
             return False
         if night and branch in NIGHT_BLOCKED and state.mode is not Mode.BOOST:
+            trace.record(branch, Verdict.NIGHT, "blocked by the night window")
             return False
         return True
+
+    def skip(branch: Branch, why: str) -> None:
+        trace.record(branch, Verdict.NOT_APPLICABLE, why)
+
+    def win(decision: Decision) -> Decision:
+        trace.record(decision.branch, Verdict.WON)
+        trace.fill_unreached(decision.branch)
+        return decision
 
     # -- 0. Emergency stop -------------------------------------------------
     critical = [f for f in faults if f.severity is Severity.CRITICAL]
     if critical:
-        return Decision(
-            pump=False,
-            heat_pump=False,
-            branch=Branch.EMERGENCY_STOP,
-            reason=f"Emergency stop: {critical[0].message}",
-            detail={"faults": [f.code for f in critical]},
+        return win(
+            Decision(
+                pump=False,
+                heat_pump=False,
+                branch=Branch.EMERGENCY_STOP,
+                reason=f"Emergency stop: {critical[0].message}",
+                detail={"faults": [f.code for f in critical]},
+            )
         )
+    skip(Branch.EMERGENCY_STOP, "no critical fault")
 
     # -- 1. Frost and minimum-temperature protection -----------------------
     if permitted(Branch.FROST_PROTECTION):
@@ -206,41 +231,52 @@ def _walk(
             reason = f"Protecting the pool because {why}."
             if not can_heat and not hp_available:
                 reason += f" Heating is not possible: {hp_gate_reason}"
-            return Decision(
-                pump=True,
-                heat_pump=can_heat,
-                branch=Branch.FROST_PROTECTION,
-                reason=reason,
-                detail={"heat_pump_available": hp_available},
+            return win(
+                Decision(
+                    pump=True,
+                    heat_pump=can_heat,
+                    branch=Branch.FROST_PROTECTION,
+                    reason=reason,
+                    detail={"heat_pump_available": hp_available},
+                )
             )
+        skip(Branch.FROST_PROTECTION, "no frost or low-temperature risk")
 
     # -- 2. Manual control -------------------------------------------------
-    if permitted(Branch.MANUAL) and (state.mode is Mode.PUMP or state.manual_pump_request):
-        return Decision(
-            pump=True,
-            heat_pump=False,
-            branch=Branch.MANUAL,
-            reason="The pump is running because it was switched on manually.",
-        )
+    if permitted(Branch.MANUAL):
+        if state.mode is Mode.PUMP or state.manual_pump_request:
+            return win(
+                Decision(
+                    pump=True,
+                    heat_pump=False,
+                    branch=Branch.MANUAL,
+                    reason="The pump is running because it was switched on manually.",
+                )
+            )
+        skip(Branch.MANUAL, "no manual override is active")
 
     # -- 3. Chemistry cycle ------------------------------------------------
-    if (
-        permitted(Branch.CHEMISTRY)
-        and state.chemistry_until is not None
-        and state.now < state.chemistry_until
-    ):
-        minutes = (state.chemistry_until - state.now).total_seconds() / 60
-        return Decision(
-            pump=True,
-            heat_pump=False,
-            branch=Branch.CHEMISTRY,
-            reason=f"Circulating for a chemical treatment cycle, {minutes:.0f} minutes remaining.",
-            detail={"until": state.chemistry_until.isoformat()},
-        )
+    if permitted(Branch.CHEMISTRY):
+        if state.chemistry_until is not None and state.now < state.chemistry_until:
+            minutes = (state.chemistry_until - state.now).total_seconds() / 60
+            return win(
+                Decision(
+                    pump=True,
+                    heat_pump=False,
+                    branch=Branch.CHEMISTRY,
+                    reason=(
+                        "Circulating for a chemical treatment cycle, "
+                        f"{minutes:.0f} minutes remaining."
+                    ),
+                    detail={"until": state.chemistry_until.isoformat()},
+                )
+            )
+        skip(Branch.CHEMISTRY, "no chemistry cycle is running")
 
     # -- 4. Filtration deadline -------------------------------------------
-    if permitted(Branch.FILTRATION_DEADLINE) and filtration.deadline_critical:
-        return Decision(
+    if permitted(Branch.FILTRATION_DEADLINE):
+      if filtration.deadline_critical:
+        return win(Decision(
             pump=True,
             heat_pump=False,
             branch=Branch.FILTRATION_DEADLINE,
@@ -253,31 +289,60 @@ def _walk(
                 "remaining_h": round(filtration.remaining_h, 3),
                 "available_h": round(filtration.available_h, 3),
             },
+        ))
+      else:
+        skip(
+            Branch.FILTRATION_DEADLINE,
+            f"{filtration.remaining_h:.2f} h still owed but {filtration.available_h:.2f} h "
+            "of window left, so there is time",
         )
 
     # -- 5. Free electricity ----------------------------------------------
-    if permitted(Branch.FREE_POWER) and hp_available and _needs_heat(state, config):
-        negative, price = _negative_price(state, config)
-        if negative:
-            return Decision(
-                pump=True,
-                heat_pump=True,
-                branch=Branch.FREE_POWER,
-                reason=(
-                    f"Heating because electricity is priced at {price:.3f}/kWh. "
-                    "Running now earns money."
-                ),
-                detail={"price": price, "basis": config.energy.negative_price_basis},
+    if permitted(Branch.FREE_POWER):
+        if not _needs_heat(state, config):
+            skip(Branch.FREE_POWER, "the pool is already at target")
+        elif not hp_available:
+            trace.record(Branch.FREE_POWER, Verdict.ENVELOPE, hp_gate_reason)
+        else:
+            negative, price = _negative_price(state, config)
+            if negative:
+                return win(
+                    Decision(
+                        pump=True,
+                        heat_pump=True,
+                        branch=Branch.FREE_POWER,
+                        reason=(
+                            f"Heating because electricity is priced at {price:.3f}/kWh. "
+                            "Running now earns money."
+                        ),
+                        detail={
+                            "price": price,
+                            "basis": config.energy.negative_price_basis,
+                        },
+                    )
+                )
+            skip(
+                Branch.FREE_POWER,
+                f"the price is {price:.3f}/kWh, not below zero"
+                if price is not None
+                else "no price data",
             )
 
     # -- 6. Heating session ------------------------------------------------
-    if permitted(Branch.HEATING) and _needs_heat(state, config):
-        if not hp_available:
-            # Fall through, but record why so the reason is not silently lost.
-            pass
-        else:
-            if state.mode is Mode.BOOST:
-                return Decision(
+    if permitted(Branch.HEATING):
+        if not _needs_heat(state, config):
+            skip(
+                Branch.HEATING,
+                f"the pool is at {state.water_temp.value:.1f} C, at or above the "
+                f"{state.target_temp:.1f} C target"
+                if state.water_temp.available
+                else "the water temperature is unknown",
+            )
+        elif not hp_available:
+            trace.record(Branch.HEATING, Verdict.ENVELOPE, hp_gate_reason)
+        elif state.mode is Mode.BOOST:
+            return win(
+                Decision(
                     pump=True,
                     heat_pump=True,
                     branch=Branch.HEATING,
@@ -286,24 +351,30 @@ def _walk(
                     ),
                     detail={"mode": state.mode.value},
                 )
+            )
+        else:
             acceptable, why = _price_acceptable(state, config)
             planned = state.heating_session_active or (
                 state.heating_session_planned_start is not None
                 and state.heating_session_planned_start <= state.now
             )
             if acceptable or planned:
-                return Decision(
-                    pump=True,
-                    heat_pump=True,
-                    branch=Branch.HEATING,
-                    reason=f"Heating to {state.target_temp:.1f} C because {why}.",
-                    detail={"planned": planned, "price": state.price_total},
+                return win(
+                    Decision(
+                        pump=True,
+                        heat_pump=True,
+                        branch=Branch.HEATING,
+                        reason=f"Heating to {state.target_temp:.1f} C because {why}.",
+                        detail={"planned": planned, "price": state.price_total},
+                    )
                 )
+            trace.record(Branch.HEATING, Verdict.PRICE, why)
 
     # -- 7. Scheduled filtration block ------------------------------------
-    if permitted(Branch.FILTRATION_BLOCK) and filtration.active_block is not None:
+    if permitted(Branch.FILTRATION_BLOCK):
+      if filtration.active_block is not None:
         block = filtration.active_block
-        return Decision(
+        return win(Decision(
             pump=True,
             heat_pump=False,
             branch=Branch.FILTRATION_BLOCK,
@@ -316,27 +387,40 @@ def _walk(
                 "block_end": block.end.isoformat(),
                 "remaining_h": round(filtration.remaining_h, 3),
             },
+        ))
+      else:
+        skip(
+            Branch.FILTRATION_BLOCK,
+            "no filtration block is scheduled for right now"
+            if not filtration.satisfied
+            else "today's filtration is already complete",
         )
 
     # -- 8. Pump rundown after heating ------------------------------------
-    if permitted(Branch.PUMP_RUNDOWN) and state.heat_pump_stopped_at is not None:
-        rundown_end = state.heat_pump_stopped_at + timedelta(
-            minutes=config.comfort.pump_rundown_minutes
+    if permitted(Branch.PUMP_RUNDOWN):
+        rundown_end = (
+            state.heat_pump_stopped_at
+            + timedelta(minutes=config.comfort.pump_rundown_minutes)
+            if state.heat_pump_stopped_at is not None
+            else None
         )
-        if state.now < rundown_end:
-            return Decision(
-                pump=True,
-                heat_pump=False,
-                branch=Branch.PUMP_RUNDOWN,
-                reason=(
-                    "Circulating briefly after the heat pump stopped, until "
-                    f"{rundown_end.strftime('%H:%M')}."
-                ),
-                detail={"until": rundown_end.isoformat()},
+        if rundown_end is not None and state.now < rundown_end:
+            return win(
+                Decision(
+                    pump=True,
+                    heat_pump=False,
+                    branch=Branch.PUMP_RUNDOWN,
+                    reason=(
+                        "Circulating briefly after the heat pump stopped, until "
+                        f"{rundown_end.strftime('%H:%M')}."
+                    ),
+                    detail={"until": rundown_end.isoformat()},
+                )
             )
+        skip(Branch.PUMP_RUNDOWN, "the heat pump did not just stop")
 
     # -- 9. Idle -----------------------------------------------------------
-    return Decision(
+    return win(Decision(
         pump=False,
         heat_pump=False,
         branch=Branch.IDLE,
@@ -345,8 +429,9 @@ def _walk(
             "filtration_remaining_h": round(filtration.remaining_h, 3),
             "night": night,
             "heat_pump_available": hp_available,
+            "blocked_by": [e.describe() for e in trace.blockers],
         },
-    )
+    ))
 
 
 def _idle_reason(
@@ -430,9 +515,17 @@ def decide(
     hp_available: bool,
     hp_gate_reason: str,
     previous: Decision | None = None,
+    trace: Trace | None = None,
 ) -> Decision:
-    """Produce this tick's decision."""
-    candidate = _walk(state, config, filtration, faults, hp_available, hp_gate_reason)
+    """Produce this tick's decision.
+
+    Pass a ``Trace`` to find out what was considered along the way; the decision
+    itself is unaffected by whether anyone is listening.
+    """
+    trace = trace if trace is not None else Trace()
+    candidate = _walk(
+        state, config, filtration, faults, hp_available, hp_gate_reason, trace
+    )
     candidate = _augment_with_heating(candidate, state, config, hp_available)
 
     detail = dict(candidate.detail)

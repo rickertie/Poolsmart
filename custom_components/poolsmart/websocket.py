@@ -177,6 +177,12 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                 if coordinator.advisor.last_result
                 else None
             ),
+            "trace": coordinator.trace.as_list() if coordinator.trace else [],
+            "blocked_by": (
+                [e.describe() for e in coordinator.trace.blockers]
+                if coordinator.trace
+                else []
+            ),
             "last_error": coordinator.last_error,
             "subsystem_errors": coordinator.subsystem_errors,
             "learned": coordinator.store.learned.as_dict(),

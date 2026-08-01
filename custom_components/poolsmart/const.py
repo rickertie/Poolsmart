@@ -28,6 +28,25 @@ DECISION_LOG_SIZE = 100
 #: Number of finished heating sessions kept in the log.
 SESSION_LOG_SIZE = 60
 
+# -- Events, which is how decisions reach the Home Assistant logbook -------
+EVENT_DECISION = f"{DOMAIN}_decision"
+EVENT_OBSTACLE = f"{DOMAIN}_obstacle"
+EVENT_FAULT = f"{DOMAIN}_fault"
+
+ATTR_BRANCH = "branch"
+ATTR_REASON = "reason"
+ATTR_PUMP = "pump"
+ATTR_HEAT_PUMP = "heat_pump"
+ATTR_DURATION = "duration_seconds"
+ATTR_BLOCKERS = "blockers"
+ATTR_MESSAGE = "message"
+ATTR_TRACE = "trace"
+
+#: An obstacle is only worth logging again after this long. Without it, a pool
+#: waiting all evening for a cheaper price would fill the logbook with the same
+#: sentence every thirty seconds.
+OBSTACLE_REPEAT_MINUTES = 30
+
 # -- Step 1: pool ----------------------------------------------------------
 CONF_VOLUME_L = "volume_l"
 CONF_SURFACE_M2 = "surface_m2"

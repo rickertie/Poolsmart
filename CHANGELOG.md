@@ -4,6 +4,20 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-08-01
+
+### Added
+- Decisions, obstacles and faults now appear in the Home Assistant logbook,
+  attached to the pool device
+- A full trace of every ladder branch per tick, with a verdict for each, shown
+  in the panel's Diagnostics tab. Answers "why is it not heating" directly
+  instead of leaving it to be inferred
+- Branch changes are logged even when the switches do not move, since a change
+  of reasoning is worth recording
+- How long the previous state lasted is recorded with each entry
+- Faults log both when they appear and when they clear, so duration is visible
+- Diagnostics export gained the trace and a plain-sentence timeline
+
 ## [0.10.0] - 2026-08-01
 
 ### Fixed
@@ -82,6 +96,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.11.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.11.0
 [0.10.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.10.0
 [0.9.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.9.0
 [0.8.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.8.0

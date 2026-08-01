@@ -71,5 +71,37 @@ async def async_get_config_entry_diagnostics(
             "deadline_critical": filtration.deadline_critical if filtration else None,
         },
         "learned": coordinator.store.learned.as_dict(),
+        "trace": coordinator.trace.as_list() if coordinator.trace else [],
+        "blocked_by": (
+            [e.describe() for e in coordinator.trace.blockers]
+            if coordinator.trace
+            else []
+        ),
+        "timeline": _timeline(coordinator),
         "decision_log": coordinator.store.decision_log,
+        "session_log": coordinator.store.session_log,
     }
+
+
+def _timeline(coordinator: PoolSmartCoordinator) -> list[str]:
+    """The decision log as plain sentences, newest last.
+
+    A list of dicts is fine for a machine and poor for a person reading a bug
+    report. This is the same data in the form someone can actually scan.
+    """
+    lines = []
+    for item in coordinator.store.decision_log:
+        stamp = str(item.get("at", ""))[11:19]
+        outputs = []
+        if item.get("pump"):
+            outputs.append("pump")
+        if item.get("heat_pump"):
+            outputs.append("heat pump")
+        running = " + ".join(outputs) if outputs else "all off"
+        held = item.get("duration_seconds")
+        held_text = f" (previous state lasted {held / 60:.0f} min)" if held else ""
+        lines.append(
+            f"{stamp}  {item.get('branch', '?'):<20} {running:<20}{held_text}  "
+            f"{item.get('reason', '')}"
+        )
+    return lines

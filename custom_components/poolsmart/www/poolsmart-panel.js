@@ -31,6 +31,17 @@ const BRANCH_COLOURS = {
   IDLE: "#78909c",
 };
 
+
+const VERDICT_STYLE = {
+  won: { colour: "#2e7d32", label: "chosen" },
+  price: { colour: "#ef6c00", label: "price" },
+  envelope: { colour: "#c62828", label: "outside limits" },
+  mode: { colour: "#6a1b9a", label: "mode" },
+  night: { colour: "#37474f", label: "night" },
+  not_applicable: { colour: "#b0bec5", label: "n/a" },
+  not_reached: { colour: "#cfd8dc", label: "not reached" },
+};
+
 const fmtTime = (iso) =>
   iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
 
@@ -407,8 +418,44 @@ class PoolSmartPanel extends HTMLElement {
     `;
   }
 
+  _traceCard(s) {
+    const trace = s.trace || [];
+    if (!trace.length) return "";
+    return `<div class="card">
+      <strong>This tick, branch by branch</strong>
+      <div class="reason muted">The ladder is walked top to bottom. The first branch
+        that matches decides; everything below it is never evaluated.</div>
+      <table>
+        ${trace
+          .map((t) => {
+            const style = VERDICT_STYLE[t.verdict] || VERDICT_STYLE.not_applicable;
+            return `<tr>
+              <td style="width:28px" class="muted">${t.number}</td>
+              <td>${esc(t.branch.replace(/_/g, " ").toLowerCase())}</td>
+              <td style="width:110px"><span class="badge" style="background:${
+                style.colour
+              }">${style.label}</span></td>
+              <td class="muted">${esc(t.detail || "")}</td>
+            </tr>`;
+          })
+          .join("")}
+      </table>
+    </div>`;
+  }
+
   _diagnostics(s) {
     return `
+      ${
+        (s.blocked_by || []).length
+          ? `<div class="card"><strong>Wanted to, but could not</strong>
+             ${s.blocked_by
+               .map((b) => `<div class="reason">${esc(b)}</div>`)
+               .join("")}
+             <div class="reason muted">These branches would have run. This is the
+               answer to "why is it not heating".</div></div>`
+          : ""
+      }
+      ${this._traceCard(s)}
       ${
         s.last_error || Object.keys(s.subsystem_errors || {}).length
           ? `<div class="card"><strong class="warn">Errors</strong>
@@ -428,7 +475,13 @@ class PoolSmartPanel extends HTMLElement {
           ${s.decision_log
             .map(
               (x) => `<tr>
-              <td>${fmtTime(x.at)}</td>
+              <td>${fmtTime(x.at)}${
+                x.duration_seconds
+                  ? `<div class="muted" style="font-size:11px">+${(
+                      x.duration_seconds / 60
+                    ).toFixed(0)}m</div>`
+                  : ""
+              }</td>
               <td><span class="badge" style="background:${
                 BRANCH_COLOURS[x.branch] || "#78909c"
               }">${esc(x.branch)}</span></td>

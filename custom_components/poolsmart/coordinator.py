@@ -12,6 +12,8 @@ from dataclasses import asdict
 from datetime import datetime, time, timedelta
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_DEVICE_ID, ATTR_NAME
+from homeassistant.helpers import device_registry as dr
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
@@ -19,6 +21,7 @@ from homeassistant.util import dt as dt_util
 from . import const as c
 from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
+from .core.trace import Trace
 from .core.config import (
     FILTER_MEDIA_DERATE,
     ComfortSettings,
@@ -89,6 +92,8 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.filtration: filt.FiltrationStatus | None = None
         self.estimate: heating.HeatingEstimate | None = None
         self.plan: optimizer.HeatingPlan | None = None
+        #: What the ladder considered on the last tick.
+        self.trace: Trace | None = None
         self.notifier = NotificationManager(hass, self)
         self.advisor = Advisor(hass, self)
         self.chemistry = ChemistryModule(self)
@@ -110,6 +115,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._idle_since: datetime | None = None
         self._idle_water_temp: float | None = None
         self._price_slots: tuple = ()
+        self._last_obstacle: tuple | None = None
+        self._last_obstacle_at: datetime | None = None
+        self._active_faults: dict[str, datetime] = {}
+        self._device_id_cache: str | None = None
 
     # -- Configuration -----------------------------------------------------
 
@@ -483,6 +492,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             measured_flow_m3h=self.store.learned.measured_flow_m3h,
         )
 
+        self.trace = Trace()
         decision = ladder.decide(
             state,
             config,
@@ -491,6 +501,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self.heat_pump_available,
             self.heat_pump_gate_reason,
             previous=self.decision,
+            trace=self.trace,
         )
 
         await self._async_execute(decision, state)
@@ -568,6 +579,15 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             heating_session_active=self.plan.is_active(now),
             heating_session_planned_start=self.plan.next_start,
         )
+
+    @property
+    def _device_id(self) -> str | None:
+        """This integration's device, so logbook entries attach to it."""
+        if self._device_id_cache is None:
+            registry = dr.async_get(self.hass)
+            device = registry.async_get_device(identifiers={(c.DOMAIN, self.entry.entry_id)})
+            self._device_id_cache = device.id if device else None
+        return self._device_id_cache
 
     # -- Flow baseline -----------------------------------------------------
 
@@ -772,11 +792,25 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self.store.active_block = None
 
     def _log(self, decision: Decision, state: PoolState) -> None:
-        if self.decision is not None and decision.same_outputs(self.decision):
-            if decision.branch is self.decision.branch:
-                return
-        self.store.log_decision(
-            {
+        """Record the decision, in the store and in the Home Assistant logbook.
+
+        Two things are logged that the old version missed. A branch change with
+        identical outputs is still a change of reasoning, and it used to be
+        invisible: the pump stayed on, so nothing was written, and the answer to
+        "why is it not heating" was thrown away. And how long the previous state
+        lasted is recorded here rather than left to be worked out by subtracting
+        timestamps.
+        """
+        previous = self.decision
+        changed_outputs = not decision.same_outputs(previous)
+        changed_branch = previous is None or decision.branch is not previous.branch
+
+        duration = None
+        if previous is not None and previous.taken_at is not None:
+            duration = (state.now - previous.taken_at).total_seconds()
+
+        if changed_outputs or changed_branch:
+            payload = {
                 "at": state.now.isoformat(),
                 "branch": decision.branch.name,
                 "pump": decision.pump,
@@ -784,8 +818,97 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 "reason": decision.reason,
                 "detail": decision.detail,
                 "faults": [f.code for f in self.faults],
+                "duration_seconds": round(duration) if duration else None,
+                "trace": self.trace.as_list() if self.trace else [],
             }
+            self.store.log_decision(payload)
+            self._fire_decision(decision, duration)
+
+        self._log_obstacles(state)
+        self._log_faults(state, duration)
+
+    def _fire_decision(self, decision: Decision, duration: float | None) -> None:
+        self.hass.bus.async_fire(
+            c.EVENT_DECISION,
+            {
+                ATTR_NAME: self.entry.title,
+                ATTR_DEVICE_ID: self._device_id,
+                c.ATTR_BRANCH: decision.branch.name,
+                c.ATTR_REASON: decision.reason,
+                c.ATTR_PUMP: decision.pump,
+                c.ATTR_HEAT_PUMP: decision.heat_pump,
+                c.ATTR_DURATION: round(duration) if duration else None,
+            },
         )
+
+    def _log_obstacles(self, state: PoolState) -> None:
+        """Log what the ladder wanted to do but could not.
+
+        Rate limited, because a pool waiting all evening for a cheaper price
+        would otherwise write the same sentence every thirty seconds.
+        """
+        if self.trace is None:
+            return
+        blockers = self.trace.blockers
+        if not blockers:
+            self._last_obstacle = None
+            self._last_obstacle_at = None
+            return
+
+        signature = tuple(sorted((b.branch.name, b.verdict.value) for b in blockers))
+        recently = (
+            self._last_obstacle_at is not None
+            and (state.now - self._last_obstacle_at).total_seconds()
+            < c.OBSTACLE_REPEAT_MINUTES * 60
+        )
+        if signature == self._last_obstacle and recently:
+            return
+
+        self._last_obstacle = signature
+        self._last_obstacle_at = state.now
+        self.hass.bus.async_fire(
+            c.EVENT_OBSTACLE,
+            {
+                ATTR_NAME: self.entry.title,
+                ATTR_DEVICE_ID: self._device_id,
+                c.ATTR_BLOCKERS: [b.describe() for b in blockers],
+            },
+        )
+
+    def _log_faults(self, state: PoolState, duration: float | None) -> None:
+        """Fire an event when a fault appears and when it clears."""
+        current = {f.code: f for f in self.faults}
+
+        for code, fault in current.items():
+            if code in self._active_faults:
+                continue
+            self._active_faults[code] = state.now
+            self.hass.bus.async_fire(
+                c.EVENT_FAULT,
+                {
+                    ATTR_NAME: self.entry.title,
+                    ATTR_DEVICE_ID: self._device_id,
+                    "code": code,
+                    "severity": fault.severity.value,
+                    c.ATTR_MESSAGE: fault.message,
+                    "cleared": False,
+                },
+            )
+
+        for code in list(self._active_faults):
+            if code in current:
+                continue
+            started = self._active_faults.pop(code)
+            self.hass.bus.async_fire(
+                c.EVENT_FAULT,
+                {
+                    ATTR_NAME: self.entry.title,
+                    ATTR_DEVICE_ID: self._device_id,
+                    "code": code,
+                    "cleared": True,
+                    c.ATTR_DURATION: round((state.now - started).total_seconds()),
+                },
+            )
 
     # -- Commands from entities -------------------------------------------
 
