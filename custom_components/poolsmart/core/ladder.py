@@ -448,7 +448,10 @@ def _idle_reason(
     most specific explanation of all of them.
     """
     if state.mode is Mode.OFF:
-        return "Everything is off. Frost protection stays active."
+        return (
+            "Everything is off, including frost protection. Use Stand-by if the "
+            "pool is still filled and should be protected."
+        )
     if night:
         return "Night quiet hours. Nothing runs unless safety or a negative price requires it."
     if _needs_heat(state, config) and not hp_available:
@@ -481,6 +484,78 @@ def _hold_minutes(candidate: Decision, previous: Decision | None, config: PoolCo
     return config.comfort.min_on_minutes if turning_on else config.comfort.min_off_minutes
 
 
+def _compressor_guard(
+    candidate: Decision,
+    state: PoolState,
+    config: PoolConfig,
+) -> Decision:
+    """Enforce the compressor's own minimum off and on times.
+
+    This is separate from the ordinary hold, and deliberately so. A hold protects
+    a decision; this protects hardware, and hardware does not care which branch
+    won the argument. A scroll or rotary compressor needs its refrigerant
+    pressures to equalise before restarting, and short cycling is the classic way
+    to wear one out early.
+
+    The bug this exists to prevent: priority branches are allowed to break a hold,
+    which is right for the pump -- a filtration deadline should not wait ten
+    minutes -- but once those branches learned to heat alongside, they started
+    dragging the compressor through the exception with them. Off at 20:01 and on
+    again at 20:04 is not something to do to a heat pump.
+
+    Only an emergency stop overrides this, and that switches off, which is always
+    safe.
+    """
+    if candidate.branch is Branch.EMERGENCY_STOP:
+        return candidate
+
+    # Starting: has it been off long enough?
+    if candidate.heat_pump and not state.heat_pump_on:
+        stopped = state.heat_pump_stopped_at
+        if stopped is not None:
+            elapsed = (state.now - stopped).total_seconds() / 60
+            required = config.comfort.compressor_min_off_minutes
+            if elapsed < required:
+                wait = required - elapsed
+                detail = dict(candidate.detail)
+                detail["compressor_guard"] = "min_off"
+                detail["minutes_remaining"] = round(wait, 1)
+                return replace(
+                    candidate,
+                    heat_pump=False,
+                    reason=(
+                        f"{candidate.reason} Heating waits another {wait:.0f} min: the "
+                        "compressor needs its pressures to equalise before restarting."
+                    ),
+                    detail=detail,
+                )
+
+    # Stopping: has it run long enough? Never delay a stop that is about
+    # temperature or safety -- only one that is merely a change of plan.
+    if not candidate.heat_pump and state.heat_pump_on:
+        started = state.heat_pump_started_at
+        target_reached = (
+            state.water_temp.available and state.water_temp.value >= state.target_temp
+        )
+        if started is not None and not target_reached:
+            elapsed = (state.now - started).total_seconds() / 60
+            required = config.comfort.compressor_min_on_minutes
+            if elapsed < required and candidate.branch is not Branch.EMERGENCY_STOP:
+                detail = dict(candidate.detail)
+                detail["compressor_guard"] = "min_on"
+                return replace(
+                    candidate,
+                    heat_pump=True,
+                    reason=(
+                        f"{candidate.reason} The heat pump keeps running for now: "
+                        f"stopping it after {elapsed:.0f} min would be short cycling."
+                    ),
+                    detail=detail,
+                )
+
+    return candidate
+
+
 def _may_override_hold(
     candidate: Decision, previous: Decision, state: PoolState, hp_available: bool
 ) -> bool:
@@ -489,6 +564,11 @@ def _may_override_hold(
     Holds exist so that nothing can flip a relay inside the minimum on or off
     time. There are only three ways past one, and they are all cases where
     waiting would be worse than switching.
+
+    Note that breaking a hold does not give the compressor a free pass; that is
+    handled separately by :func:`_compressor_guard`, because the reasons to
+    override a hold are about circulation and the reasons to protect a compressor
+    are about hardware.
     """
     # Safety and non-negotiable obligations always win.
     if candidate.branch in PRIORITY_BRANCHES:
@@ -527,6 +607,10 @@ def decide(
         state, config, filtration, faults, hp_available, hp_gate_reason, trace
     )
     candidate = _augment_with_heating(candidate, state, config, hp_available)
+    # Hardware protection sits outside the branch argument entirely: it applies
+    # to whatever the ladder decided, including the priority branches that are
+    # allowed to break an ordinary hold.
+    candidate = _compressor_guard(candidate, state, config)
 
     detail = dict(candidate.detail)
     detail["mode_at_decision"] = state.mode.value

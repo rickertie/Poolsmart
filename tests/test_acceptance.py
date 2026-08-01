@@ -73,6 +73,7 @@ def make_state(now: datetime, **overrides) -> PoolState:
         "hp_power_w": SensorReading(0.0, 10, "hp_power"),
         "pump_on": False,
         "heat_pump_on": False,
+        "pump_runtime_seconds": 3600.0,
         "target_temp": 28.0,
         "price_total": 0.30,
         "price_energy": 0.08,
@@ -355,15 +356,39 @@ def test_t9_no_latching_on_actual_state():
 
 
 # ---------------------------------------------------------------------------
-# T10 - frost protection works even in OFF mode
+# T10 - Off means off, and Stand-by is what protects a filled pool
 # ---------------------------------------------------------------------------
 
-def test_t10_frost_protection_in_off_mode():
+def test_t10_off_really_is_off():
+    """Off used to keep frost protection alive, which was wrong.
+
+    The reasoning was that an off switch should not be able to cause damage. But
+    the pool may have been drained and dismantled for the winter, or the pump
+    disconnected, and a system that starts a pump against an explicit instruction
+    is worse than one that lets an unattended pool freeze. Protection belongs to
+    Stand-by, which means "not swimming, but the pool is still there".
+    """
+    config = make_config()
+    now = datetime(2026, 12, 15, 3, 0, tzinfo=TZ)
+    freezing = make_state(
+        now,
+        mode=Mode.OFF,
+        air_temp=SensorReading(2.0, 10, "air"),
+        water_temp=SensorReading(6.0, 10, "water"),
+    )
+    decision = run_tick(freezing, config, done_h=0.0)
+    assert decision.pump is False, decision.reason
+    assert decision.heat_pump is False
+    assert decision.branch is Branch.IDLE
+    assert "Stand-by" in decision.reason, decision.reason
+
+
+def test_t10b_standby_protects_against_frost():
     config = make_config()
     now = datetime(2026, 12, 15, 3, 0, tzinfo=TZ)
     state = make_state(
         now,
-        mode=Mode.OFF,
+        mode=Mode.STANDBY,
         air_temp=SensorReading(2.0, 10, "air"),
         water_temp=SensorReading(6.0, 10, "water"),
     )
@@ -814,4 +839,121 @@ def test_t40d_heating_still_blocked_outside_the_envelope():
         measured_flow_m3h=1.02,
     )
     decision = run_tick(state, config, done_h=1.0)
+    assert decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T46 - the compressor is protected from short cycling
+# ---------------------------------------------------------------------------
+
+def test_t46_compressor_minimum_off_time():
+    """Regression: off at 20:01, on again at 20:04.
+
+    Priority branches may break an ordinary hold, which is right for the pump --
+    a filtration deadline should not wait ten minutes. Once those branches
+    learned to heat alongside, they dragged the compressor through the exception
+    with them, and three minutes between stopping and restarting is how you wear
+    a compressor out early.
+    """
+    config = make_config()
+    stopped = datetime(2026, 8, 1, 20, 1, 40, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 20, 4, 10, tzinfo=TZ)  # 2.5 minutes later
+
+    state = make_state(
+        now,
+        mode=Mode.BOOST,
+        water_temp=SensorReading(26.0, 10, "water"),
+        target_temp=32.0,
+        heat_pump_on=False,
+        pump_on=True,
+        heat_pump_stopped_at=stopped,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=1.0)
+
+    assert decision.heat_pump is False, decision.reason
+    assert decision.detail.get("compressor_guard") == "min_off"
+    assert "equalise" in decision.reason
+
+    # Once the minimum has passed it starts normally.
+    later = state.replace(now=stopped + timedelta(minutes=11))
+    decision = run_tick(later, config, done_h=1.0)
+    assert decision.heat_pump is True, decision.reason
+
+
+def test_t46b_priority_branch_cannot_bypass_the_compressor_guard():
+    """A filtration deadline may break a hold. It may not restart a compressor."""
+    config = make_config()
+    stopped = datetime(2026, 8, 1, 20, 1, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 20, 3, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.BOOST,
+        water_temp=SensorReading(26.0, 10, "water"),
+        target_temp=32.0,
+        heat_pump_stopped_at=stopped,
+        pump_on=True,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=1.0)
+    assert decision.branch is Branch.FILTRATION_DEADLINE
+    assert decision.pump is True, "circulation must not be delayed"
+    assert decision.heat_pump is False, "but the compressor must be"
+
+
+def test_t46c_reaching_target_still_stops_immediately():
+    """The minimum run time must never keep heating a pool that is done."""
+    config = make_config()
+    started = datetime(2026, 8, 1, 20, 0, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 20, 3, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.AUTO,
+        water_temp=SensorReading(28.0, 10, "water"),
+        target_temp=28.0,
+        heat_pump_on=True,
+        pump_on=True,
+        heat_pump_started_at=started,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T47 - the solar threshold follows the equipment, not a fixed guess
+# ---------------------------------------------------------------------------
+
+def test_t47_solar_threshold_matches_the_equipment():
+    """A blanket 1500 W was over twice what this installation draws.
+
+    On a moderately sunny afternoon with 900 W spare it would decline to heat
+    while 680 W of free power sat unused.
+    """
+    from core.config import EnergySettings
+
+    draw_w = round((0.58 + 0.10) * 1000)  # heat pump plus pump
+    assert draw_w == 680
+
+    config = make_config(
+        energy=EnergySettings(solar_threshold_w=draw_w + 200, max_price=0.25)
+    )
+    assert config.energy.solar_threshold_w == 880
+
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(25.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.60,  # expensive: only solar can justify this
+        solar_power_w=900.0,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+    assert "solar" in decision.reason
+
+    # Below the threshold the price limit applies again.
+    dim = state.replace(solar_power_w=500.0)
+    decision = run_tick(dim, config, done_h=20.0)
     assert decision.heat_pump is False, decision.reason

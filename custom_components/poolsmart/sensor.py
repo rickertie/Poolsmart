@@ -61,9 +61,12 @@ def _why_unknown(coordinator: PoolSmartCoordinator, what: str) -> dict:
                     "no heat pump inlet and outlet sensors are configured"
                 )
             }
-        if not state.heat_pump_on:
+        if what == "cop_measured" and not state.heat_pump_on:
             return {
-                "unavailable_because": "the heat pump is not running",
+                "unavailable_because": (
+                    "the heat pump is not running, so there is no duty point to "
+                    "measure a COP at"
+                ),
                 "available_when": "the heat pump is heating",
             }
     if what == "cop_measured" and not state.hp_power_w.available:
@@ -164,6 +167,11 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         ),
         attributes_fn=lambda c: (
             {
+                "readable": _readable_hours(
+                    c.estimate.hours_needed
+                    if c.estimate.hours_needed != float("inf")
+                    else None
+                ),
                 "plan_mode": c.estimate.plan_mode.value,
                 "degrees_needed": round(c.estimate.degrees_needed, 2),
                 "kwh_electric": round(c.estimate.kwh_electric, 2),
@@ -179,9 +187,7 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         suggested_display_precision=2,
         value_fn=lambda c: (
             round(c.data["state"].delta_t, 2)
-            if c.data
-            and c.data["state"].delta_t is not None
-            and not c.pool_config.is_aliased("hp_inlet", "hp_outlet")
+            if c.data and c.data["state"].delta_t is not None
             else None
         ),
         attributes_fn=lambda c: _why_unknown(c, "delta_t"),
@@ -203,6 +209,18 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         suggested_display_precision=2,
         value_fn=lambda c: _thermal_power(c),
         attributes_fn=lambda c: _why_unknown(c, "thermal_power"),
+    ),
+    PoolSensorDescription(
+        key="solar_surplus",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        value_fn=lambda c: (
+            round(c.data["state"].solar_power_w)
+            if c.data and c.data["state"].solar_power_w is not None
+            else None
+        ),
+        attributes_fn=lambda c: _solar_attributes(c),
     ),
     PoolSensorDescription(
         key="flow_rate",
@@ -234,7 +252,9 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         value_fn=lambda c: round(c.filtration.remaining_h, 2) if c.filtration else None,
         attributes_fn=lambda c: (
             {
+                "readable": _readable_hours(c.filtration.remaining_h),
                 "available_h": round(c.filtration.available_h, 2),
+                "available_readable": _readable_hours(c.filtration.available_h),
                 "deadline_critical": c.filtration.deadline_critical,
                 "next_block_start": (
                     c.filtration.next_block.start.isoformat()
@@ -302,8 +322,99 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
         value_fn=lambda c: round(c.store.cost_baseline_today - c.store.cost_today, 3),
+        attributes_fn=lambda c: _savings_note(c),
     ),
 )
+
+
+def _readable_hours(hours: float | None) -> str | None:
+    """A duration as someone would say it.
+
+    Hours with two decimals is precise and unreadable: "0.78 h" has to be
+    converted in your head before it means anything. Every duration attribute
+    carries this alongside the number, so a card can show it without repeating
+    the arithmetic.
+    """
+    if hours is None:
+        return None
+    total = round(hours * 60)
+    if total == 0:
+        return "0 min"
+    if total < 60:
+        return f"{total} min"
+    if total % 60 == 0:
+        return f"{total // 60} h"
+    return f"{total // 60} h {total % 60} min"
+
+
+def _solar_attributes(coordinator: PoolSmartCoordinator) -> dict:
+    """Show the threshold next to the reading.
+
+    A solar figure on its own does not answer the question people have, which is
+    "is this enough". Putting the threshold and the shortfall beside it does.
+    """
+    config = coordinator.pool_config
+    threshold = config.energy.solar_threshold_w
+    draw_w = (config.heat_pump.input_kw + config.pump.power_kw) * 1000
+
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None or state.solar_power_w is None:
+        return {
+            "threshold_w": threshold,
+            "equipment_draw_w": round(draw_w),
+            "unavailable_because": "no solar power sensor is configured",
+        }
+
+    surplus = state.solar_power_w
+    enough = surplus >= threshold
+    return {
+        "threshold_w": threshold,
+        "equipment_draw_w": round(draw_w),
+        "eco_threshold_w": threshold + config.energy.solar_hysteresis_w,
+        "enough_for_free_heating": enough,
+        "shortfall_w": 0 if enough else round(threshold - surplus),
+        "explanation": (
+            "Above the threshold, heating is treated as free and the price limit "
+            "is ignored. The threshold should be at least what the heat pump and "
+            "pump draw together, plus a margin so a passing cloud does not start "
+            "and stop a session."
+        ),
+    }
+
+
+def _savings_note(coordinator: PoolSmartCoordinator) -> dict:
+    """Explain a zero saving.
+
+    Savings are the difference between what the energy cost and what it would
+    have cost at the average price across the forecast. Zero is the honest answer
+    in three common situations, and none of them is a fault.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None or state.price_total is None:
+        return {
+            "unavailable_because": (
+                "no electricity price sensor is configured, so there is nothing to "
+                "compare against"
+            )
+        }
+    if not coordinator._price_slots:
+        return {
+            "unavailable_because": (
+                "the price sensor publishes a current price but no forecast, so "
+                "there is no average to compare against. Savings appear once a "
+                "forecast is available"
+            )
+        }
+    if coordinator.store.energy_today_kwh <= 0:
+        return {"unavailable_because": "nothing has run yet today"}
+    return {
+        "baseline_cost": round(coordinator.store.cost_baseline_today, 3),
+        "actual_cost": round(coordinator.store.cost_today, 3),
+        "explanation": (
+            "what the same energy would have cost at the average price of the "
+            "forecast, minus what it actually cost"
+        ),
+    }
 
 
 def _next_action(coordinator: PoolSmartCoordinator) -> object | None:
@@ -317,12 +428,21 @@ def _next_action(coordinator: PoolSmartCoordinator) -> object | None:
 
 
 def _measured_cop(coordinator: PoolSmartCoordinator) -> float | None:
-    """COP from measured thermal output divided by measured electrical input."""
+    """COP from measured thermal output divided by measured electrical input.
+
+    Only meaningful while the heat pump is actually working. Dividing a near-zero
+    output by a near-zero input produces a number, but not one that means
+    anything, so this stays blank until the appliance is drawing real power.
+    """
     thermal = _thermal_power(coordinator)
     if thermal is None or not coordinator.data:
         return None
-    electric = coordinator.data["state"].hp_power_w.value
-    if not electric:
+    state = coordinator.data["state"]
+    if not state.heat_pump_on:
+        return None
+    electric = state.hp_power_w.value
+    # A heat pump idling on standby draws a few watts; that is not a duty point.
+    if not electric or electric < 50:
         return None
     cop = thermal / (electric / 1000.0)
     limits = coordinator.pool_config.heat_pump
@@ -333,13 +453,19 @@ def _thermal_power(coordinator: PoolSmartCoordinator) -> float | None:
     """Thermal output in kW from flow and temperature rise.
 
     1 m³/h of water carrying 1 K corresponds to about 1.163 kW.
+
+    Reported whenever flow and a temperature difference are available, whether or
+    not the heat pump is running. With it off the figure sits near zero, which is
+    a real measurement and a useful one: it shows the sensors are alive and gives
+    a baseline to compare a heating session against. Blanking it made a working
+    installation look broken.
     """
     if not coordinator.data:
         return None
     state = coordinator.data["state"]
     delta = state.delta_t
     flow = state.effective_flow_m3h
-    if delta is None or flow is None or not state.heat_pump_on:
+    if delta is None or flow is None:
         return None
     if coordinator.pool_config.is_aliased("hp_inlet", "hp_outlet"):
         return None

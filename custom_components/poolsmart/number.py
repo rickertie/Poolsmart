@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import UnitOfPower, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -19,7 +19,11 @@ async def async_setup_entry(
 ) -> None:
     coordinator: PoolSmartCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        [PoolSmartTargetTemperature(coordinator), PoolSmartMaxPrice(coordinator)]
+        [
+            PoolSmartTargetTemperature(coordinator),
+            PoolSmartMaxPrice(coordinator),
+            PoolSmartSolarThreshold(coordinator),
+        ]
     )
 
 
@@ -63,11 +67,58 @@ class PoolSmartMaxPrice(PoolSmartEntity, NumberEntity):
 
     @property
     def native_value(self) -> float | None:
-        return self.coordinator.pool_config.energy.max_price
+        """The configured limit, or the default if none was ever set.
+
+        Leaving this blank made the entity render as unknown, which broke any
+        dashboard template doing arithmetic on it and gave no hint what a
+        sensible value looks like.
+        """
+        configured = self.coordinator.pool_config.energy.max_price
+        return configured if configured is not None else c.DEFAULT_MAX_PRICE
 
     async def async_set_native_value(self, value: float) -> None:
         options = dict(self.coordinator.entry.options)
         options[c.CONF_MAX_PRICE] = value
+        self.hass.config_entries.async_update_entry(
+            self.coordinator.entry, options=options
+        )
+
+
+class PoolSmartSolarThreshold(PoolSmartEntity, NumberEntity):
+    """Solar surplus above which heating is treated as free.
+
+    Adjustable here rather than only in the options flow, because this is a
+    number people want to tune while watching the sun, not while reading a
+    settings page.
+    """
+
+    _entity_domain = "number"
+    _attr_device_class = NumberDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.WATT
+    _attr_native_step = 50
+    _attr_native_min_value = 0
+    _attr_native_max_value = 20000
+    _attr_mode = NumberMode.BOX
+
+    def __init__(self, coordinator: PoolSmartCoordinator) -> None:
+        super().__init__(coordinator, "solar_threshold")
+
+    @property
+    def native_value(self) -> float:
+        return self.coordinator.pool_config.energy.solar_threshold_w
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        config = self.coordinator.pool_config
+        draw = (config.heat_pump.input_kw + config.pump.power_kw) * 1000
+        return {
+            "equipment_draw_w": round(draw),
+            "suggested_minimum_w": round(draw + 200),
+        }
+
+    async def async_set_native_value(self, value: float) -> None:
+        options = dict(self.coordinator.entry.options)
+        options[c.CONF_SOLAR_THRESHOLD_W] = value
         self.hass.config_entries.async_update_entry(
             self.coordinator.entry, options=options
         )

@@ -528,6 +528,14 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     default=current.get(c.CONF_MIN_OFF_MINUTES, 10),
                 ): _positive(1, 120, 1),
                 vol.Optional(
+                    c.CONF_COMPRESSOR_MIN_OFF,
+                    default=current.get(c.CONF_COMPRESSOR_MIN_OFF, 10),
+                ): _positive(0, 60, 1),
+                vol.Optional(
+                    c.CONF_COMPRESSOR_MIN_ON,
+                    default=current.get(c.CONF_COMPRESSOR_MIN_ON, 10),
+                ): _positive(0, 60, 1),
+                vol.Optional(
                     c.CONF_PUMP_RUNDOWN_MINUTES,
                     default=current.get(c.CONF_PUMP_RUNDOWN_MINUTES, 5),
                 ): _positive(0, 60, 1),
@@ -544,7 +552,8 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     default=current.get(c.CONF_FROST_AIR_TEMP, 3.0),
                 ): _positive(-10, 10, 0.5),
                 vol.Optional(
-                    c.CONF_MAX_PRICE, default=current.get(c.CONF_MAX_PRICE, 0.22)
+                    c.CONF_MAX_PRICE,
+                    default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
                 ): _positive(0, 3, 0.01),
                 vol.Optional(
                     c.CONF_NEGATIVE_PRICE_BASIS,
@@ -557,8 +566,14 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 ),
                 vol.Optional(
                     c.CONF_SOLAR_THRESHOLD_W,
-                    default=current.get(c.CONF_SOLAR_THRESHOLD_W, 1500),
+                    description={
+                        "suggested_value": current.get(c.CONF_SOLAR_THRESHOLD_W)
+                    },
                 ): _positive(0, 20000, 50),
+                vol.Optional(
+                    c.CONF_SOLAR_MARGIN_W,
+                    default=current.get(c.CONF_SOLAR_MARGIN_W, 200),
+                ): _positive(0, 5000, 50),
                 vol.Optional(
                     c.CONF_SOLAR_HYSTERESIS_W,
                     default=current.get(c.CONF_SOLAR_HYSTERESIS_W, 300),
@@ -571,6 +586,10 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     c.CONF_CHEMISTRY_MINUTES,
                     default=current.get(c.CONF_CHEMISTRY_MINUTES, 30),
                 ): _positive(5, 240, 5),
+                vol.Optional(
+                    c.CONF_PUMP_STARTUP_GRACE,
+                    default=current.get(c.CONF_PUMP_STARTUP_GRACE, 120),
+                ): _positive(0, 900, 10),
                 vol.Optional(
                     c.CONF_STALE_WARNING_SECONDS,
                     default=current.get(c.CONF_STALE_WARNING_SECONDS, 900),

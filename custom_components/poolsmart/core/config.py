@@ -221,6 +221,16 @@ class ComfortSettings:
     min_on_minutes: int = 15
     min_off_minutes: int = 10
 
+    #: Compressor protection, enforced separately from the hold above.
+    #:
+    #: A hold protects a decision and can be overridden when waiting would be
+    #: worse than switching. These cannot: a compressor needs its refrigerant
+    #: pressures to equalise before restarting, and short cycling is the classic
+    #: way to wear one out early. Manufacturers typically ask for five to ten
+    #: minutes off and a similar minimum run.
+    compressor_min_off_minutes: int = 10
+    compressor_min_on_minutes: int = 10
+
     #: Pump keeps running after the heat pump stops, to clear residual heat.
     pump_rundown_minutes: int = 5
 
@@ -264,6 +274,13 @@ class SafetySettings:
     delta_t_max: float = 8.0
     #: Grace period before a running heat pump is expected to produce delta-T.
     hp_output_grace_minutes: int = 10
+    #: How long after the pump starts before flow is judged at all.
+    #:
+    #: The pump has to prime, push the air out of the lines and get the impeller
+    #: up to speed. Judging flow during that window reports a fault about the
+    #: first few seconds of a perfectly normal start, which is exactly when
+    #: someone switching from Off to Boost is watching.
+    pump_startup_grace_seconds: int = 120
     #: Flow decline relative to the commissioned value that triggers a service
     #: notification rather than a fault.
     filter_service_flow_ratio: float = 0.75

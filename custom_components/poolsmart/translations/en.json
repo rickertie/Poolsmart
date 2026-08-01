@@ -169,14 +169,18 @@
           "frost_air_temp": "Frost protection below (°C)",
           "max_price": "Maximum price for heating (per kWh)",
           "negative_price_basis": "Which price counts as below zero",
-          "solar_threshold_w": "Solar surplus threshold (W)",
+          "solar_threshold_w": "Solar surplus for free heating (W)",
           "solar_hysteresis_w": "Solar hysteresis (W)",
           "eco_price_factor": "ECO strictness factor",
           "chemistry_cycle_minutes": "Chemistry cycle length (minutes)",
           "learning_enabled": "Self-learning enabled",
           "stale_warning_seconds": "Warn when a reading is older than (seconds)",
           "stale_blocking_seconds": "Treat a sensor as dead after (seconds)",
-          "min_daily_hours": "Minimum filtration per day at swimming temperature (hours)"
+          "min_daily_hours": "Minimum filtration per day at swimming temperature (hours)",
+          "pump_startup_grace_seconds": "Pump start-up grace (seconds)",
+          "solar_margin_w": "Margin above the equipment draw (W)",
+          "compressor_min_off_minutes": "Compressor minimum off time (minutes)",
+          "compressor_min_on_minutes": "Compressor minimum run time (minutes)"
         },
         "data_description": {
           "turnover_factor": "How many times the whole pool should pass the filter per day. Filtered water mixes back in, so one pass cleans about 63% of the pool, two 86%, three 95%. Three is where the gains flatten off.",
@@ -192,13 +196,17 @@
           "frost_air_temp": "Below this outdoor temperature the pump circulates. Moving water does not freeze.",
           "max_price": "Heating waits for a cheaper moment above this price. Boost ignores it. Leave it high to effectively switch price optimisation off.",
           "negative_price_basis": "Which price has to drop below zero before heating runs regardless of everything else.",
-          "solar_threshold_w": "Solar surplus above which heating counts as free and the price limit is ignored.",
+          "solar_threshold_w": "Above this, heating is treated as free and the price limit is ignored. Leave empty and it is calculated from what the heat pump and pump draw together, plus the margin below. A figure lower than the equipment draw means exporting less than you use; much higher means missing sunny afternoons.",
           "solar_hysteresis_w": "Extra margin required in ECO mode, so passing clouds do not start and stop a session.",
           "eco_price_factor": "ECO multiplies the price limit by this, making it stricter. 0.7 means ECO only heats below 70% of your normal limit.",
           "chemistry_cycle_minutes": "How long the pump runs when you press the chemistry button.",
           "stale_warning_seconds": "Some sensors only report when their value changes, so a steady temperature can look old. This is when to start mentioning it.",
           "stale_blocking_seconds": "When to treat the sensor as dead and pause heating. Circulation and filtration continue.",
-          "learning_enabled": "Whether finished sessions update the heating rate, heat loss and COP figures."
+          "learning_enabled": "Whether finished sessions update the heating rate, heat loss and COP figures.",
+          "pump_startup_grace_seconds": "Flow is not judged for this long after the pump starts. The pump has to prime and push the air out of the lines, and reporting that as a fault turns a normal start into an alarm.",
+          "solar_margin_w": "Added to the equipment draw when the threshold is calculated. A margin stops a passing cloud from starting and stopping a session.",
+          "compressor_min_off_minutes": "How long the heat pump must stay off before restarting, so refrigerant pressures can equalise. Short cycling wears a compressor out early. This cannot be overridden by any other rule.",
+          "compressor_min_on_minutes": "Minimum run once started. Reaching the target temperature still stops it immediately."
         }
       },
       "init": {
@@ -375,6 +383,9 @@
       },
       "ai_suggestion": {
         "name": "AI suggestions"
+      },
+      "solar_surplus": {
+        "name": "Solar surplus"
       }
     },
     "binary_sensor": {
@@ -413,6 +424,9 @@
       },
       "max_price": {
         "name": "Maximum price"
+      },
+      "solar_threshold": {
+        "name": "Solar threshold"
       }
     },
     "switch": {

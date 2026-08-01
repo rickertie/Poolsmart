@@ -88,6 +88,7 @@ class PoolStore:
         self.learned = LearnedValues()
         self.active_block: dict | None = None
         self.heat_pump_stopped_at: datetime | None = None
+        self.heat_pump_started_at: datetime | None = None
         self.chemistry_until: datetime | None = None
         self.mode: str | None = None
         self.target_temp: float | None = None
@@ -111,6 +112,8 @@ class PoolStore:
             self.active_block = raw.get("active_block")
             if raw.get("heat_pump_stopped_at"):
                 self.heat_pump_stopped_at = datetime.fromisoformat(raw["heat_pump_stopped_at"])
+            if raw.get("heat_pump_started_at"):
+                self.heat_pump_started_at = datetime.fromisoformat(raw["heat_pump_started_at"])
             if raw.get("chemistry_until"):
                 self.chemistry_until = datetime.fromisoformat(raw["chemistry_until"])
             self.mode = raw.get("mode")
@@ -148,6 +151,11 @@ class PoolStore:
                 "heat_pump_stopped_at": (
                     self.heat_pump_stopped_at.isoformat()
                     if self.heat_pump_stopped_at
+                    else None
+                ),
+                "heat_pump_started_at": (
+                    self.heat_pump_started_at.isoformat()
+                    if self.heat_pump_started_at
                     else None
                 ),
                 "chemistry_until": (

@@ -169,14 +169,18 @@
           "frost_air_temp": "Vorstbeveiliging onder (°C)",
           "max_price": "Maximale prijs voor verwarmen (per kWh)",
           "negative_price_basis": "Welke prijs geldt als onder nul",
-          "solar_threshold_w": "Drempel zonoverschot (W)",
+          "solar_threshold_w": "Zonoverschot voor gratis verwarmen (W)",
           "solar_hysteresis_w": "Hysterese zon (W)",
           "eco_price_factor": "Strengheidsfactor ECO",
           "chemistry_cycle_minutes": "Duur chemiecyclus (minuten)",
           "learning_enabled": "Zelflerend actief",
           "stale_warning_seconds": "Waarschuw als een meting ouder is dan (seconden)",
           "stale_blocking_seconds": "Beschouw een sensor als defect na (seconden)",
-          "min_daily_hours": "Minimale filtratie per dag bij zwemtemperatuur (uren)"
+          "min_daily_hours": "Minimale filtratie per dag bij zwemtemperatuur (uren)",
+          "pump_startup_grace_seconds": "Aanlooptijd pomp (seconden)",
+          "solar_margin_w": "Marge boven het verbruik van de apparatuur (W)",
+          "compressor_min_off_minutes": "Minimale stilstand compressor (minuten)",
+          "compressor_min_on_minutes": "Minimale draaitijd compressor (minuten)"
         },
         "data_description": {
           "turnover_factor": "Hoe vaak het hele bad per dag door het filter moet. Gefilterd water mengt terug, dus één ronde reinigt ongeveer 63% van het bad, twee 86%, drie 95%. Bij drie vlakt de winst af.",
@@ -192,13 +196,17 @@
           "frost_air_temp": "Onder deze buitentemperatuur gaat de pomp draaien. Stromend water bevriest niet.",
           "max_price": "Boven deze prijs wacht de verwarming op een goedkoper moment. Boost negeert dit. Zet hem hoog om prijsoptimalisatie feitelijk uit te schakelen.",
           "negative_price_basis": "Welke prijs onder nul moet zakken voordat er hoe dan ook verwarmd wordt.",
-          "solar_threshold_w": "Zonoverschot waarboven verwarmen als gratis geldt en de prijslimiet wordt genegeerd.",
+          "solar_threshold_w": "Hierboven geldt verwarmen als gratis en wordt de prijslimiet genegeerd. Laat leeg, dan wordt hij berekend uit wat de warmtepomp en de pomp samen verbruiken, plus de marge hieronder. Lager dan dat verbruik betekent dat je meer gebruikt dan je opwekt; veel hoger betekent zonnige middagen missen.",
           "solar_hysteresis_w": "Extra marge in ECO, zodat een overtrekkende wolk geen sessie start en stopt.",
           "eco_price_factor": "ECO vermenigvuldigt de prijslimiet hiermee en wordt daardoor strenger. 0,7 betekent dat ECO alleen verwarmt onder 70% van je normale limiet.",
           "chemistry_cycle_minutes": "Hoe lang de pomp draait als je op de chemieknop drukt.",
           "stale_warning_seconds": "Sommige sensoren melden alleen als hun waarde verandert, dus een stabiele temperatuur kan oud lijken. Vanaf hier wordt het gemeld.",
           "stale_blocking_seconds": "Wanneer de sensor als defect geldt en verwarmen pauzeert. Circulatie en filtratie gaan gewoon door.",
-          "learning_enabled": "Of afgeronde sessies de opwarmsnelheid, het warmteverlies en de COP bijwerken."
+          "learning_enabled": "Of afgeronde sessies de opwarmsnelheid, het warmteverlies en de COP bijwerken.",
+          "pump_startup_grace_seconds": "Zo lang na het starten van de pomp wordt de doorstroming niet beoordeeld. De pomp moet eerst aanzuigen en de lucht uit de leidingen duwen; dat als storing melden maakt van een normale start een alarm.",
+          "solar_margin_w": "Wordt bij het verbruik van de apparatuur opgeteld als de drempel berekend wordt. Een marge voorkomt dat een overtrekkende wolk een sessie start en stopt.",
+          "compressor_min_off_minutes": "Hoe lang de warmtepomp uit moet blijven voor hij opnieuw start, zodat de koeldrukken kunnen uitbalanceren. Kortcyclen sloopt een compressor. Geen enkele andere regel kan hier overheen.",
+          "compressor_min_on_minutes": "Minimale draaitijd na starten. Bij het bereiken van de doeltemperatuur stopt hij nog steeds meteen."
         }
       },
       "init": {
@@ -375,6 +383,9 @@
       },
       "ai_suggestion": {
         "name": "AI-aanbevelingen"
+      },
+      "solar_surplus": {
+        "name": "Zonoverschot"
       }
     },
     "binary_sensor": {
@@ -413,6 +424,9 @@
       },
       "max_price": {
         "name": "Maximale prijs"
+      },
+      "solar_threshold": {
+        "name": "Zonnedrempel"
       }
     },
     "switch": {

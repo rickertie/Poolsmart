@@ -38,7 +38,7 @@ from .core.models import Branch, Decision, Fault, Mode, PoolState, SensorReading
 from .ai.advisor import Advisor
 from .engine.chemistry import ChemistryModule
 from .engine.cover import CoverModule
-from .notify import NotificationManager
+from .notify import ActionHandler, NotificationManager
 from .price import average_price, extract_forecast
 from .store import PoolStore
 
@@ -95,6 +95,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         #: What the ladder considered on the last tick.
         self.trace: Trace | None = None
         self.notifier = NotificationManager(hass, self)
+        self.actions = ActionHandler(hass, self)
         self.advisor = Advisor(hass, self)
         self.chemistry = ChemistryModule(self)
         self.cover = CoverModule(self, self._conf(c.CONF_COVER_ENTITY))
@@ -110,6 +111,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._target_temp: float = self._conf(c.CONF_TARGET_TEMP, 28.0)
         self._manual_pump_request = False
         self._hp_running_since: datetime | None = None
+        self._pump_running_since: datetime | None = None
         self._last_tick: datetime | None = None
         self._session: learning.SessionRecord | None = None
         self._idle_since: datetime | None = None
@@ -127,6 +129,20 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if key in self.entry.options:
             return self.entry.options[key]
         return self.entry.data.get(key, default)
+
+    def _default_solar_threshold(self) -> float:
+        """Solar surplus at which heating counts as free.
+
+        A fixed default is wrong for everyone: the figure has to be at least what
+        the equipment draws, and that is a property of the installation. A 3 kW
+        heat pump drawing 580 W with a 100 W pump needs 680 W plus a margin, so a
+        blanket 1500 W meant missing every moderately sunny afternoon.
+        """
+        draw_w = (
+            float(self._conf(c.CONF_HP_INPUT_KW, 1.0))
+            + float(self._conf(c.CONF_PUMP_POWER_KW, 0.1))
+        ) * 1000.0
+        return round(draw_w + float(self._conf(c.CONF_SOLAR_MARGIN_W, 200)), 0)
 
     def _min_hours_curve(self) -> tuple[tuple[float, float], ...]:
         """The time-based daily minimum, scaled by water temperature.
@@ -214,6 +230,12 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 min_hours_by_temp=self._min_hours_curve(),
             ),
             comfort=ComfortSettings(
+                compressor_min_off_minutes=int(
+                    self._conf(c.CONF_COMPRESSOR_MIN_OFF, 10)
+                ),
+                compressor_min_on_minutes=int(
+                    self._conf(c.CONF_COMPRESSOR_MIN_ON, 10)
+                ),
                 target_temp=self._target_temp,
                 max_temp=float(self._conf(c.CONF_MAX_TEMP, 32.0)),
                 min_water_temp=float(self._conf(c.CONF_MIN_WATER_TEMP, 10.0)),
@@ -226,13 +248,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 temp_hysteresis=float(self._conf(c.CONF_TEMP_HYSTERESIS, 0.3)),
             ),
             energy=EnergySettings(
-                max_price=self._conf(c.CONF_MAX_PRICE),
+                max_price=float(self._conf(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE)),
                 negative_price_basis=self._conf(c.CONF_NEGATIVE_PRICE_BASIS, "total"),
-                solar_threshold_w=float(self._conf(c.CONF_SOLAR_THRESHOLD_W, 1500.0)),
+                solar_threshold_w=float(
+                    self._conf(c.CONF_SOLAR_THRESHOLD_W)
+                    or self._default_solar_threshold()
+                ),
                 solar_hysteresis_w=float(self._conf(c.CONF_SOLAR_HYSTERESIS_W, 300.0)),
                 eco_price_factor=float(self._conf(c.CONF_ECO_PRICE_FACTOR, 0.7)),
             ),
             safety=SafetySettings(
+                pump_startup_grace_seconds=int(
+                    self._conf(c.CONF_PUMP_STARTUP_GRACE, 120)
+                ),
                 stale_warning_seconds=int(
                     self._conf(c.CONF_STALE_WARNING_SECONDS, 900)
                 ),
@@ -384,11 +412,22 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         if heat_pump_on and self._hp_running_since is None:
             self._hp_running_since = now
+            self.store.heat_pump_started_at = now
         elif not heat_pump_on:
             self._hp_running_since = None
 
+        if pump_on and self._pump_running_since is None:
+            self._pump_running_since = now
+        elif not pump_on:
+            self._pump_running_since = None
+
         runtime = (
             (now - self._hp_running_since).total_seconds() if self._hp_running_since else 0.0
+        )
+        pump_runtime = (
+            (now - self._pump_running_since).total_seconds()
+            if self._pump_running_since
+            else 0.0
         )
 
         block = None
@@ -422,7 +461,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             target_temp=self._target_temp,
             filtration_done_h=self.store.runtime_hours(now),
             heat_pump_runtime_seconds=runtime,
+            pump_runtime_seconds=pump_runtime,
             heat_pump_stopped_at=self.store.heat_pump_stopped_at,
+            heat_pump_started_at=self.store.heat_pump_started_at,
             chemistry_until=self.store.chemistry_until,
             manual_pump_request=self._manual_pump_request,
             heat_loss_c_per_h=(

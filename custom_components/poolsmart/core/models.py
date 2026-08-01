@@ -86,9 +86,20 @@ MODE_BRANCHES: dict[Mode, frozenset[Branch]] = {
             Branch.IDLE,
         }
     ),
-    # OFF still protects against freezing. An off switch must not be able to
-    # cause damage.
-    Mode.OFF: frozenset({Branch.EMERGENCY_STOP, Branch.FROST_PROTECTION, Branch.IDLE}),
+    # Off means off. Nothing runs, including frost protection.
+    #
+    # The earlier design kept frost protection alive here, reasoning that a
+    # freezing pool is damage and an off switch should not cause damage. That
+    # reasoning has a hole in it: the pool may not be there any more. Someone who
+    # has drained and dismantled it for the winter, or disconnected the pump, has
+    # every right to expect an off switch to be off, and a system that starts a
+    # pump against their explicit instruction is worse than one that lets an
+    # unattended pool freeze.
+    #
+    # Frost protection therefore lives in Stand-by, which is the mode that means
+    # "I am not swimming but the pool is still there". The distinction is now
+    # something the user chooses rather than something the software assumes.
+    Mode.OFF: frozenset({Branch.IDLE}),
 }
 
 
@@ -178,8 +189,14 @@ class PoolState:
     active_block: tuple[int, datetime, datetime] | None = None
     #: Continuous seconds the heat pump has been running, for output checks.
     heat_pump_runtime_seconds: float = 0.0
-    #: Moment the heat pump last switched off, for the rundown branch.
+    #: Continuous seconds the circulation pump has been running. Flow is not
+    #: judged until it has had time to prime.
+    pump_runtime_seconds: float = 0.0
+    #: Moment the heat pump last switched off, for the rundown branch and the
+    #: compressor's minimum off time.
     heat_pump_stopped_at: datetime | None = None
+    #: Moment the heat pump last switched on, for the compressor's minimum run.
+    heat_pump_started_at: datetime | None = None
     #: A chemistry cycle requested by the user, with its end time.
     chemistry_until: datetime | None = None
     #: Manual override requested through the switch entity.

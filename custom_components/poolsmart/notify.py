@@ -13,16 +13,45 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.util import dt as dt_util
 
 from . import const as c
-from .core.models import Branch, Decision, Fault, Severity
+from .core.models import Branch, Decision, Fault, Mode, Severity
 
 _LOGGER = logging.getLogger(__name__)
 
 #: Repeat intervals for unresolved faults, in minutes. The last value repeats.
 ESCALATION_MINUTES = (0, 15, 60, 240, 720)
+
+
+#: Actions offered on a notification, per event type. Tapping one fires a
+#: `poolsmart_action` event that the integration acts on, so a notification
+#: becomes something you can answer rather than only read.
+#:
+#: Only mobile app targets render these; other notify platforms ignore the extra
+#: data, so nothing breaks when they are sent regardless.
+EVENT_ACTIONS: dict[str, tuple[tuple[str, str], ...]] = {
+    "heating_postponed": (
+        ("BOOST", "Heat now anyway"),
+        ("STANDBY", "Do not heat today"),
+    ),
+    "target_reached": (
+        ("STANDBY", "Stop heating"),
+        ("EXTEND_1C", "One degree warmer"),
+    ),
+    "flow_fault": (
+        ("PUMP_ONLY", "Circulate only"),
+        ("OFF", "Switch everything off"),
+    ),
+    "sensor_fault": (("OFF", "Switch everything off"),),
+    "filter_service": (("PUMP_ONLY", "Circulate only"),),
+    "high_energy_cost": (
+        ("BOOST", "Heat now anyway"),
+        ("STANDBY", "Wait"),
+    ),
+    "ai_recommendation": (("ACCEPT_SUGGESTION", "Apply the suggestion"),),
+}
 
 
 @dataclass
@@ -75,15 +104,27 @@ class NotificationManager:
         entity_exists = self.hass.states.get(target) is not None
         service_exists = self.hass.services.has_service("notify", service)
 
+        payload: dict = {"title": title, "message": message}
+        actions = EVENT_ACTIONS.get(event)
+        if actions:
+            payload["data"] = {
+                "actions": [
+                    {"action": f"{c.ACTION_PREFIX}{key}", "title": label}
+                    for key, label in actions
+                ],
+                "tag": f"{c.DOMAIN}_{event}",
+            }
+
         try:
             if service_exists:
                 await self.hass.services.async_call(
                     "notify",
                     service,
-                    {"title": title, "message": message},
+                    payload,
                     blocking=False,
                 )
             elif entity_exists:
+                # Notify entities take no action payload; the text still lands.
                 await self.hass.services.async_call(
                     "notify",
                     "send_message",
@@ -211,3 +252,50 @@ class NotificationManager:
 
     async def async_send_chemistry(self, message: str) -> None:
         await self._send("chemistry_alarm", "Pool: chemistry", message)
+
+
+class ActionHandler:
+    """Acts on a notification button.
+
+    The mobile app fires `mobile_app_notification_action` when someone taps one
+    of the buttons offered above. Without this, those buttons would be decoration.
+    """
+
+    def __init__(self, hass: HomeAssistant, coordinator) -> None:
+        self.hass = hass
+        self.coordinator = coordinator
+        self._unsub = None
+
+    @callback
+    def async_start(self) -> None:
+        self._unsub = self.hass.bus.async_listen(
+            "mobile_app_notification_action", self._async_handle
+        )
+
+    @callback
+    def async_stop(self) -> None:
+        if self._unsub:
+            self._unsub()
+            self._unsub = None
+
+    async def _async_handle(self, event) -> None:
+        action = event.data.get("action", "")
+        if not action.startswith(c.ACTION_PREFIX):
+            return
+        key = action[len(c.ACTION_PREFIX) :]
+        _LOGGER.info("Acting on notification action %s", key)
+
+        if key == "BOOST":
+            await self.coordinator.async_set_mode(Mode.BOOST.value)
+        elif key == "STANDBY":
+            await self.coordinator.async_set_mode(Mode.STANDBY.value)
+        elif key == "PUMP_ONLY":
+            await self.coordinator.async_set_mode(Mode.PUMP.value)
+        elif key == "OFF":
+            await self.coordinator.async_set_mode(Mode.OFF.value)
+        elif key == "EXTEND_1C":
+            await self.coordinator.async_set_target(self.coordinator.target_temp + 1.0)
+        elif key == "ACCEPT_SUGGESTION":
+            await self.coordinator.async_accept_suggestion(0)
+        else:
+            _LOGGER.debug("Unrecognised notification action: %s", key)

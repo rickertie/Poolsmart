@@ -54,7 +54,21 @@ const fmtDateTime = (iso) =>
       })
     : "—";
 
-const fmtHours = (h) => (h === null || h === undefined ? "—" : `${Number(h).toFixed(2)} h`);
+/**
+ * Durations, written the way someone would say them.
+ *
+ * "0.78 h" is a number you have to convert before it means anything. Under an
+ * hour, minutes are the natural unit; above it, hours and minutes together.
+ */
+const fmtHours = (h) => {
+  if (h === null || h === undefined) return "—";
+  const total = Math.round(Number(h) * 60);
+  if (total === 0) return "0 min";
+  if (total < 60) return `${total} min`;
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
+};
 
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (ch) =>

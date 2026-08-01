@@ -111,6 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_restore()
     await coordinator.async_config_entry_first_refresh()
 
+    coordinator.actions.async_start()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     if not hass.data.get(f"{DOMAIN}_ws"):
@@ -132,6 +133,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         coordinator: PoolSmartCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator.actions.async_stop()
         await coordinator.store.async_save()
     return unloaded
 

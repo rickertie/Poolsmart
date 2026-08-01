@@ -4,6 +4,65 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.12.2] - 2026-08-01
+
+### Changed
+- Durations read as hours and minutes instead of decimal hours. "0.78 h" is a
+  number you have to convert before it means anything; "47 min" is not
+- Every duration sensor carries a `readable` attribute, so a custom card does
+  not have to repeat the arithmetic
+- The filtration card on the Energy tab shows the window pressure warning when
+  the daily requirement fills nearly the whole window
+
+## [0.12.1] - 2026-08-01
+
+### Fixed
+- **Short cycling.** Priority branches are allowed to break an ordinary hold,
+  which is right for the pump — a filtration deadline should not wait ten
+  minutes. Once those branches learned to heat alongside in 0.10.0, they dragged
+  the compressor through the exception with them, producing off at 20:01 and on
+  again at 20:04. Compressor protection is now enforced separately from the
+  hold and cannot be overridden by any branch. Reaching the target temperature
+  still stops heating immediately
+- The default solar threshold of 1500 W was over twice what a typical small
+  installation draws, so moderately sunny afternoons were declined while free
+  power went unused. It is now calculated from the heat pump and pump draw plus
+  a configurable margin
+
+### Added
+- A solar surplus sensor showing the current figure against the threshold, the
+  shortfall, and what the equipment actually draws
+- The solar threshold as a number entity, adjustable without opening settings
+- Compressor minimum off and run times as settings
+- Solar on the dashboard: a chip, a card explaining how far off the threshold
+  is, and a 24 hour graph
+
+## [0.12.0] - 2026-08-01
+
+### Changed
+- **Off now means off.** Frost protection no longer runs in this mode; it lives
+  in Stand-by. A pool may have been drained and dismantled, and starting a pump
+  against an explicit instruction is worse than letting an unattended pool freeze
+
+### Added
+- A start-up grace period before flow is judged, so priming the pump after
+  switching on no longer reports a fault at the moment someone is watching
+- Notification buttons: heat now anyway, do not heat today, circulate only,
+  switch everything off, apply the suggestion
+- An explanation on the savings sensor for the three situations where zero is
+  the honest answer
+
+### Fixed
+- Thermal power and delta-T were blanked while the heat pump was off, making a
+  working installation look broken. They now report whenever the sensors allow
+- Measured COP stays blank while the heat pump is idle, where dividing near-zero
+  by near-zero produced a number that meant nothing
+- Maximum price defaults to 0.22 instead of being empty, which rendered as
+  unknown and broke dashboard templates doing arithmetic on it
+- The mismatched-flow warning said the filter needed cleaning. It now says the
+  setting is out of date, which is what it actually detected
+- Dashboard templates carry defaults on every int and float filter
+
 ## [0.11.0] - 2026-08-01
 
 ### Added
@@ -96,6 +155,9 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.12.2]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.2
+[0.12.1]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.1
+[0.12.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.0
 [0.11.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.11.0
 [0.10.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.10.0
 [0.9.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.9.0

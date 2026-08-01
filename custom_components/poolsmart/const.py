@@ -47,6 +47,10 @@ ATTR_TRACE = "trace"
 #: sentence every thirty seconds.
 OBSTACLE_REPEAT_MINUTES = 30
 
+#: Prefix on notification action ids, so taps meant for this integration can be
+#: told apart from every other app's buttons.
+ACTION_PREFIX = "POOLSMART_"
+
 # -- Step 1: pool ----------------------------------------------------------
 CONF_VOLUME_L = "volume_l"
 CONF_SURFACE_M2 = "surface_m2"
@@ -125,6 +129,7 @@ CAPABILITY_BY_ENTITY = {
 # -- Options ---------------------------------------------------------------
 CONF_TURNOVER_FACTOR = "turnover_factor"
 CONF_MIN_DAILY_HOURS = "min_daily_hours"
+CONF_PUMP_STARTUP_GRACE = "pump_startup_grace_seconds"
 CONF_BLOCK_WINDOWS = "block_windows"
 CONF_MIN_BLOCK_MINUTES = "min_block_minutes"
 CONF_NIGHT_START = "night_start"
@@ -132,12 +137,15 @@ CONF_NIGHT_END = "night_end"
 CONF_MIN_ON_MINUTES = "min_on_minutes"
 CONF_MIN_OFF_MINUTES = "min_off_minutes"
 CONF_PUMP_RUNDOWN_MINUTES = "pump_rundown_minutes"
+CONF_COMPRESSOR_MIN_OFF = "compressor_min_off_minutes"
+CONF_COMPRESSOR_MIN_ON = "compressor_min_on_minutes"
 CONF_TEMP_HYSTERESIS = "temp_hysteresis"
 CONF_MIN_WATER_TEMP = "min_water_temp"
 CONF_FROST_AIR_TEMP = "frost_air_temp"
 CONF_MAX_PRICE = "max_price"
 CONF_NEGATIVE_PRICE_BASIS = "negative_price_basis"
 CONF_SOLAR_THRESHOLD_W = "solar_threshold_w"
+CONF_SOLAR_MARGIN_W = "solar_margin_w"
 CONF_SOLAR_HYSTERESIS_W = "solar_hysteresis_w"
 CONF_ECO_PRICE_FACTOR = "eco_price_factor"
 CONF_STALE_WARNING_SECONDS = "stale_warning_seconds"
@@ -150,6 +158,9 @@ CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
 
 DEFAULT_CHEMISTRY_MINUTES = 30
+
+#: Starting price ceiling for heating, in the local currency per kWh.
+DEFAULT_MAX_PRICE = 0.22
 
 #: Starting values for the setup wizard, so no field is ever blank.
 #:

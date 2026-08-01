@@ -96,6 +96,12 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
     if flow is None:
         return faults
 
+    # Let the pump prime before judging it. Coming out of Off, the first reading
+    # is always low, and reporting that as a fault turns a normal start into an
+    # alarm at the precise moment someone is watching to see whether it works.
+    if state.pump_on and state.pump_runtime_seconds < config.safety.pump_startup_grace_seconds:
+        return faults
+
     threshold = config.heat_pump.flow_min_m3h
     if state.heat_pump_on and flow < threshold:
         blocking = config.heat_pump.flow_min_blocking
@@ -163,10 +169,11 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
                 "configured_flow_too_high",
                 Severity.WARNING,
                 (
-                    f"Measured flow is {flow:.2f} m3/h ({flow / 0.06:.0f} L/min) but "
-                    f"the configuration says {configured:.2f} m3/h. Filtration times "
-                    "are calculated from the configured value, so correct it under "
-                    "Configure, Pool and equipment, and tick 'measured'."
+                    f"The configured pump flow of {configured:.2f} m3/h does not match "
+                    f"the measured {flow:.2f} m3/h ({flow / 0.06:.0f} L/min). Nothing "
+                    "is wrong with the pump or the filter; the setting is simply out "
+                    "of date, and filtration times are calculated from it. Correct it "
+                    "under Configure, Pool and equipment, and tick 'measured'."
                 ),
                 {"measured_m3h": flow, "configured_m3h": configured},
             )
@@ -266,6 +273,7 @@ def heat_pump_available(
         and flow is not None
         and flow < config.heat_pump.flow_min_m3h
         and state.pump_on
+        and state.pump_runtime_seconds >= config.safety.pump_startup_grace_seconds
     ):
         return False, (
             f"Flow of {flow:.2f} m3/h is below the heat pump minimum of "
