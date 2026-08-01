@@ -91,6 +91,7 @@ def run_tick(state: PoolState, config: PoolConfig, done_h: float, previous=None,
         done_h,
         active_block=active_block,
         water_temp=state.water_temp.value if state.water_temp.available else None,
+        measured_flow_m3h=state.measured_flow_m3h,
     )
     available, reason = safety.heat_pump_available(state, config, faults)
     return ladder.decide(state, config, status, faults, available, reason, previous)
@@ -725,3 +726,92 @@ def test_t39_filtration_uses_measured_flow():
     assert abs(in_reality.required_h - 11.28) < 0.1, in_reality.required_h
     assert in_reality.detail["flow_source"] == "measured"
     assert in_reality.detail["driver"] == "turnover"
+
+
+# ---------------------------------------------------------------------------
+# T40 - a filtration deadline must not block heating
+# ---------------------------------------------------------------------------
+
+def test_t40_deadline_does_not_block_boost():
+    """Regression: Boost appeared to do nothing.
+
+    The filtration deadline sits above heating in the ladder and switched the
+    heat pump off. On a pool needing many hours of filtration a day that branch
+    is active most of the time, so heating almost never ran and the reason line
+    talked about filtration while the user waited for a warm pool.
+
+    The pump is running either way, so heating alongside costs nothing extra.
+    """
+    config = make_config()
+    now = datetime(2026, 8, 1, 16, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.BOOST,
+        water_temp=SensorReading(28.8, 10, "water"),
+        air_temp=SensorReading(26.5, 10, "air"),
+        target_temp=32.0,
+        price_total=0.45,  # expensive: Boost must ignore it
+        measured_flow_m3h=1.02,  # real flow, so filtration needs eleven hours
+    )
+    # Deadline critical: more filtration owed than window remaining.
+    decision = run_tick(state, config, done_h=1.0)
+
+    assert decision.branch is Branch.FILTRATION_DEADLINE
+    assert decision.pump is True
+    assert decision.heat_pump is True, decision.reason
+    assert decision.detail.get("heating_added") is True
+
+
+def test_t40b_deadline_respects_price_outside_boost():
+    """In AUTO the same situation still waits for an acceptable price."""
+    config = make_config()  # max_price 0.25
+    now = datetime(2026, 8, 1, 16, 0, tzinfo=TZ)
+    expensive = make_state(
+        now,
+        mode=Mode.AUTO,
+        water_temp=SensorReading(28.8, 10, "water"),
+        target_temp=32.0,
+        price_total=0.45,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(expensive, config, done_h=1.0)
+    assert decision.branch is Branch.FILTRATION_DEADLINE
+    assert decision.pump is True
+    assert decision.heat_pump is False, decision.reason
+
+    cheap = expensive.replace(price_total=0.10)
+    decision = run_tick(cheap, config, done_h=1.0)
+    assert decision.heat_pump is True, decision.reason
+
+
+def test_t40c_standby_still_circulates_without_heating():
+    """Stand-by exists precisely to filter without heating; leave it alone."""
+    config = make_config()
+    now = datetime(2026, 8, 1, 16, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.STANDBY,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=32.0,
+        price_total=0.05,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=1.0)
+    assert decision.pump is True
+    assert decision.heat_pump is False, decision.reason
+
+
+def test_t40d_heating_still_blocked_outside_the_envelope():
+    """Adding heat to a circulation branch must respect the appliance limits."""
+    config = make_config()
+    now = datetime(2026, 12, 1, 16, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.BOOST,
+        water_temp=SensorReading(15.0, 10, "water"),
+        air_temp=SensorReading(6.0, 10, "air"),  # below the 11 C minimum
+        target_temp=32.0,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=1.0)
+    assert decision.heat_pump is False, decision.reason

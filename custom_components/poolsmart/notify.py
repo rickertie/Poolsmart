@@ -56,17 +56,50 @@ class NotificationManager:
         return targets.get("default")
 
     async def _send(self, event: str, title: str, message: str) -> None:
+        """Deliver one message.
+
+        There are two kinds of notify target and they are not interchangeable.
+        Older integrations register a *service* per device, called as
+        `notify.mobile_app_phone`. Newer ones register an *entity* in the notify
+        domain, which has no service of its own and is reached through
+        `notify.send_message` with the entity id. An entity picker offers both,
+        so both have to work: calling an entity as though it were a service is
+        what produced "Could not deliver".
+        """
         target = self._target(event)
         if not target:
             _LOGGER.debug("No notify target configured for %s", event)
             return
+
         service = target.split(".", 1)[-1]
+        entity_exists = self.hass.states.get(target) is not None
+        service_exists = self.hass.services.has_service("notify", service)
+
         try:
-            await self.hass.services.async_call(
-                "notify", service, {"title": title, "message": message}, blocking=False
+            if service_exists:
+                await self.hass.services.async_call(
+                    "notify",
+                    service,
+                    {"title": title, "message": message},
+                    blocking=False,
+                )
+            elif entity_exists:
+                await self.hass.services.async_call(
+                    "notify",
+                    "send_message",
+                    {"entity_id": target, "title": title, "message": message},
+                    blocking=False,
+                )
+            else:
+                _LOGGER.warning(
+                    "Notification target %s no longer exists; %s not delivered",
+                    target,
+                    event,
+                )
+        except Exception as err:  # noqa: BLE001 -- a bad target must not break control
+            _LOGGER.warning(
+                "Could not deliver a %s notification via %s: %s", event, target, err
             )
-        except Exception:  # noqa: BLE001 -- a bad notify target must not break control
-            _LOGGER.warning("Could not deliver a %s notification via %s", event, target)
 
     # -- Entry point -------------------------------------------------------
 

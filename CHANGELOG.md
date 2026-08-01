@@ -4,6 +4,22 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-08-01
+
+### Fixed
+- The filtration deadline branch switched the heat pump off, so on a pool
+  needing many hours of filtration a day heating almost never ran and Boost
+  appeared to do nothing. Circulation branches now heat alongside when heating
+  is wanted and allowed — the pump is running either way. Stand-by is
+  unaffected, since filtering without heating is its purpose
+- Notifications delivered to a notify *entity* failed, because the entity was
+  being called as though it were a service. Both kinds of target now work
+
+### Added
+- A warning when the daily filtration requirement occupies more than about 80%
+  of the configured windows, since the deadline branch then dominates everything
+  below it in the ladder
+
 ## [0.9.0] - 2026-08-01
 
 ### Fixed
@@ -66,5 +82,6 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.10.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.10.0
 [0.9.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.9.0
 [0.8.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.8.0

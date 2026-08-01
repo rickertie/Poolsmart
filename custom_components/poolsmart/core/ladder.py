@@ -108,6 +108,66 @@ def _protection_needed(state: PoolState, config: PoolConfig) -> tuple[bool, str]
     return False, ""
 
 
+#: Branches that run the pump for their own reasons but have no objection to the
+#: heat pump running at the same time. The pump is the expensive prerequisite;
+#: once it is turning, heating alongside costs nothing extra in circulation.
+CIRCULATION_ONLY = frozenset(
+    {Branch.CHEMISTRY, Branch.FILTRATION_DEADLINE, Branch.FILTRATION_BLOCK}
+)
+
+
+def _augment_with_heating(
+    decision: Decision,
+    state: PoolState,
+    config: PoolConfig,
+    hp_available: bool,
+) -> Decision:
+    """Let a circulation branch heat as well when heating is wanted.
+
+    Without this, a branch that only cares about circulation silently blocks
+    heating for as long as it runs. On a pool needing many hours of filtration a
+    day the deadline branch is active most of the time, so heating would almost
+    never happen -- and asking for Boost would appear to do nothing at all, with
+    the reason line talking about filtration.
+
+    The pump is already running, so this changes nothing about circulation. It
+    only adds heat that was wanted anyway.
+    """
+    if decision.branch not in CIRCULATION_ONLY or decision.heat_pump:
+        return decision
+    if not hp_available or not _needs_heat(state, config):
+        return decision
+    if Branch.HEATING not in MODE_BRANCHES[state.mode]:
+        return decision
+    # STANDBY deliberately circulates without heating; that is its whole purpose.
+    if state.mode is Mode.STANDBY:
+        return decision
+
+    if state.mode is Mode.BOOST:
+        why = "Boost is on, so price is ignored"
+    else:
+        acceptable, reason = _price_acceptable(state, config)
+        planned = state.heating_session_active or (
+            state.heating_session_planned_start is not None
+            and state.heating_session_planned_start <= state.now
+        )
+        if not (acceptable or planned):
+            return decision
+        why = reason if acceptable else "this moment is part of the plan"
+
+    detail = dict(decision.detail)
+    detail["heating_added"] = True
+    return replace(
+        decision,
+        heat_pump=True,
+        reason=(
+            f"{decision.reason} Heating at the same time to reach "
+            f"{state.target_temp:.1f} C, because {why} and the pump is running anyway."
+        ),
+        detail=detail,
+    )
+
+
 def _walk(
     state: PoolState,
     config: PoolConfig,
@@ -373,6 +433,7 @@ def decide(
 ) -> Decision:
     """Produce this tick's decision."""
     candidate = _walk(state, config, filtration, faults, hp_available, hp_gate_reason)
+    candidate = _augment_with_heating(candidate, state, config, hp_available)
 
     detail = dict(candidate.detail)
     detail["mode_at_decision"] = state.mode.value

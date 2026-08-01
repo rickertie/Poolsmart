@@ -215,6 +215,15 @@ def evaluate(
 
     deadline_critical = remaining_h > 0 and available_h <= remaining_h + DEADLINE_MARGIN_H
 
+    # How much of the day's window the requirement occupies. Above roughly 80%
+    # the deadline branch is critical almost permanently, which quietly takes
+    # priority over everything below it in the ladder -- worth saying out loud
+    # rather than leaving someone to wonder why nothing else ever runs.
+    window_h = sum(
+        (end - start).total_seconds() / 3600.0 for _i, start, end in window_bounds(now, config)
+    )
+    window_pressure = required_h / window_h if window_h > 0 else 0.0
+
     return FiltrationStatus(
         required_h=required_h,
         done_h=done_h,
@@ -235,5 +244,8 @@ def evaluate(
             "turnover_hours": round(config.turnover_hours(measured_flow_m3h), 3),
             "min_hours": round(config.filtration.min_hours_at(water_temp), 3),
             "water_temp": water_temp,
+            "window_hours": round(window_h, 2),
+            "window_pressure": round(window_pressure, 3),
+            "window_too_tight": window_pressure > 0.8,
         },
     )
