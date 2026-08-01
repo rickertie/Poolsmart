@@ -172,7 +172,7 @@ switches itself off and shows up clearly in diagnostics instead of failing.
 
 ## Licence
 
-AGPL-3.0-or-later.
+GNU General Public License v3.0
 
 ---
 
