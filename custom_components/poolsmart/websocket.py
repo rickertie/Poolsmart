@@ -66,6 +66,7 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     plan = coordinator.plan
     state = coordinator.data.get("state") if coordinator.data else None
     water = state.water_temp.value if state and state.water_temp.available else None
+    measured = coordinator.store.learned.measured_flow_m3h
 
     connection.send_result(
         msg["id"],
@@ -154,13 +155,13 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                 else None
             ),
             "derived": {
-                "daily_filtration_hours": round(config.daily_filtration_hours(water), 3),
-                "block_hours": round(config.block_hours(water), 3),
-                "turnover_hours": round(config.turnover_hours, 3),
+                "daily_filtration_hours": round(config.daily_filtration_hours(water, measured), 3),
+                "block_hours": round(config.block_hours(water, measured), 3),
+                "turnover_hours": round(config.turnover_hours(measured), 3),
                 "min_hours": round(config.filtration.min_hours_at(water), 3),
-                "filtration_driver": config.filtration_driver(water),
+                "filtration_driver": config.filtration_driver(water, measured),
                 "kwh_thermal_per_degree": round(config.pool.kwh_thermal_per_degree, 3),
-                "effective_flow_m3h": round(config.pump.effective_flow_m3h, 3),
+                "effective_flow_m3h": round(config.effective_flow(measured), 3),
                 "turnover_factor": config.filtration.turnover_factor,
                 "volume_l": config.pool.volume_l,
             },

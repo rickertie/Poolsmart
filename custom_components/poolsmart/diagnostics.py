@@ -36,15 +36,16 @@ async def async_get_config_entry_diagnostics(
     decision = coordinator.decision
     filtration = coordinator.filtration
     water = _water(coordinator)
+    measured = coordinator.store.learned.measured_flow_m3h
 
     return {
         "derived": {
-            "daily_filtration_hours": round(config.daily_filtration_hours(water), 3),
-            "block_hours": round(config.block_hours(water), 3),
-            "turnover_hours": round(config.turnover_hours, 3),
-            "filtration_driver": config.filtration_driver(water),
+            "daily_filtration_hours": round(config.daily_filtration_hours(water, measured), 3),
+            "block_hours": round(config.block_hours(water, measured), 3),
+            "turnover_hours": round(config.turnover_hours(measured), 3),
+            "filtration_driver": config.filtration_driver(water, measured),
             "kwh_thermal_per_degree": round(config.pool.kwh_thermal_per_degree, 3),
-            "effective_flow_m3h": round(config.pump.effective_flow_m3h, 3),
+            "effective_flow_m3h": round(config.effective_flow(measured), 3),
         },
         "mode": coordinator.mode.value,
         "target_temp": coordinator.target_temp,

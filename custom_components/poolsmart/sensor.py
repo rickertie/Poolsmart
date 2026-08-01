@@ -35,6 +35,44 @@ class PoolSensorDescription(SensorEntityDescription):
     attributes_fn: Callable[[PoolSmartCoordinator], dict] | None = None
 
 
+def _why_unknown(coordinator: PoolSmartCoordinator, what: str) -> dict:
+    """Explain an empty value.
+
+    Most of these sensors are blank for a perfectly good reason -- the heat pump
+    is off, or nothing has been learned yet. Saying so beats leaving someone to
+    work out whether their installation is broken.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None:
+        return {"unavailable_because": "no measurement has been taken yet"}
+
+    if what in ("delta_t", "cop_measured", "thermal_power"):
+        if coordinator.pool_config.is_aliased("hp_inlet", "hp_outlet"):
+            return {
+                "unavailable_because": (
+                    "the heat pump inlet and outlet are set to the same entity, so "
+                    "there is no temperature difference to measure. Point them at "
+                    "two different sensors under Configure, Entities."
+                )
+            }
+        if not (state.hp_inlet.available and state.hp_outlet.available):
+            return {
+                "unavailable_because": (
+                    "no heat pump inlet and outlet sensors are configured"
+                )
+            }
+        if not state.heat_pump_on:
+            return {
+                "unavailable_because": "the heat pump is not running",
+                "available_when": "the heat pump is heating",
+            }
+    if what == "cop_measured" and not state.hp_power_w.available:
+        return {"unavailable_because": "no heat pump power sensor is configured"}
+    if what == "flow" and not state.flow_m3h.available:
+        return {"unavailable_because": "no flow meter is configured"}
+    return {}
+
+
 def _status_attributes(c: PoolSmartCoordinator) -> dict:
     decision = c.decision
     if decision is None:
@@ -81,6 +119,11 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         value_fn=lambda c: c.plan.ready_at if c.plan else None,
         attributes_fn=lambda c: (
             {
+                "unavailable_because": (
+                    None
+                    if c.plan.ready_at
+                    else "the pool is at or above its target, so no heating is planned"
+                ),
                 "plan_mode": c.plan.mode.value,
                 "reason": c.plan.reason,
                 "hours_needed": round(c.plan.hours_needed, 2),
@@ -99,6 +142,16 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         key="next_action_at",
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda c: _next_action(c),
+        attributes_fn=lambda c: (
+            {}
+            if _next_action(c) is not None
+            else {
+                "unavailable_because": (
+                    "nothing is scheduled: the pool is at temperature and today's "
+                    "filtration blocks are either running or finished"
+                )
+            }
+        ),
     ),
     PoolSensorDescription(
         key="heating_time_required",
@@ -126,9 +179,12 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         suggested_display_precision=2,
         value_fn=lambda c: (
             round(c.data["state"].delta_t, 2)
-            if c.data and c.data["state"].delta_t is not None
+            if c.data
+            and c.data["state"].delta_t is not None
+            and not c.pool_config.is_aliased("hp_inlet", "hp_outlet")
             else None
         ),
+        attributes_fn=lambda c: _why_unknown(c, "delta_t"),
     ),
     PoolSensorDescription(
         key="cop_expected",
@@ -146,6 +202,7 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.KILO_WATT,
         suggested_display_precision=2,
         value_fn=lambda c: _thermal_power(c),
+        attributes_fn=lambda c: _why_unknown(c, "thermal_power"),
     ),
     PoolSensorDescription(
         key="flow_rate",
@@ -194,6 +251,17 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         native_unit_of_measurement="°C/h",
         suggested_display_precision=3,
         value_fn=lambda c: c.store.learned.heating_rate_c_per_h,
+        attributes_fn=lambda c: (
+            {}
+            if c.store.learned.heating_rate_c_per_h is not None
+            else {
+                "unavailable_because": (
+                    "no complete heating session has been recorded yet; this fills "
+                    "in after the first one"
+                ),
+                "sessions_recorded": len(c.store.session_log),
+            }
+        ),
     ),
     PoolSensorDescription(
         key="heat_loss_rate",

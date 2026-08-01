@@ -117,7 +117,7 @@ class Advisor:
 
         return {
             "pool_volume_l": config.pool.volume_l,
-            "daily_filtration_hours": round(config.daily_filtration_hours(None), 2),
+            "daily_filtration_hours": round(config.daily_filtration_hours(None, store.learned.measured_flow_m3h), 2),
             "turnover_factor": config.filtration.turnover_factor,
             "target_temp": self.coordinator.target_temp,
             "learned": store.learned.as_dict(),

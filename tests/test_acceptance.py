@@ -76,6 +76,7 @@ def make_state(now: datetime, **overrides) -> PoolState:
         "target_temp": 28.0,
         "price_total": 0.30,
         "price_energy": 0.08,
+        "measured_flow_m3h": None,
     }
     defaults.update(overrides)
     return PoolState(**defaults)
@@ -414,7 +415,7 @@ def test_t12_works_without_price_data():
 def test_derived_filtration_figures():
     config = make_config()
     # Turnover alone: 3 x 3834 L at 3.596 m3/h.
-    assert abs(config.turnover_hours - 3.198) < 0.01
+    assert abs(config.turnover_hours() - 3.198) < 0.01
     # At swimming temperature the time-based minimum is larger and wins.
     assert abs(config.daily_filtration_hours(28.0) - 5.0) < 0.01
     assert config.filtration_driver(28.0) == "daily minimum"
@@ -512,14 +513,14 @@ def test_t26_daily_minimum_beats_turnover():
     day for this pool, which is well under what a pool of this kind needs.
     """
     config = make_config()
-    assert config.turnover_hours < 4.0
+    assert config.turnover_hours() < 4.0
     # Cold water: little algae pressure, the floor drops.
-    assert config.daily_filtration_hours(12.0) == max(config.turnover_hours, 2.0)
+    assert config.daily_filtration_hours(12.0) == max(config.turnover_hours(), 2.0)
     # Swimming temperature: the floor rises above turnover and wins.
     assert config.daily_filtration_hours(28.0) == 5.0
     assert config.daily_filtration_hours(32.0) == 6.0
     # Unknown temperature falls back to a safe middle value.
-    assert config.daily_filtration_hours(None) == max(config.turnover_hours, 4.0)
+    assert config.daily_filtration_hours(None) == max(config.turnover_hours(), 4.0)
 
 
 # ---------------------------------------------------------------------------
@@ -646,3 +647,81 @@ def test_t36_adjusted_minimum_silences_warning():
     )
     faults = safety.evaluate(state, config)
     assert not any(f.code == "flow_below_heat_pump_minimum" for f in faults)
+
+
+# ---------------------------------------------------------------------------
+# T37 - the filter warning tracks decline, not the datasheet
+# ---------------------------------------------------------------------------
+
+def test_t37_filter_warning_uses_measured_baseline():
+    """Regression: the warning fired permanently on a healthy system.
+
+    It compared measured flow against the configured figure, so any installation
+    whose real flow sits below its datasheet number -- most of them -- was told
+    forever that its filter needed cleaning. That reports a fact about the
+    paperwork, not about the filter.
+    """
+    config = make_config()  # configured 3.596 m3/h
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+
+    # Steady at the flow this system actually achieves: no filter warning.
+    healthy = make_state(
+        now,
+        pump_on=True,
+        flow_m3h=SensorReading(1.02, 10, "flow"),
+        measured_flow_m3h=1.02,
+    )
+    faults = safety.evaluate(healthy, config)
+    assert not any(f.code == "filter_service_needed" for f in faults)
+
+    # A real decline from that baseline does warn.
+    fouled = make_state(
+        now,
+        pump_on=True,
+        flow_m3h=SensorReading(0.60, 10, "flow"),
+        measured_flow_m3h=1.02,
+    )
+    faults = safety.evaluate(fouled, config)
+    warning = next(f for f in faults if f.code == "filter_service_needed")
+    assert warning.severity is Severity.WARNING
+    assert "usual" in warning.message
+
+
+# ---------------------------------------------------------------------------
+# T38 - a configured flow that measurement contradicts is pointed out
+# ---------------------------------------------------------------------------
+
+def test_t38_configured_flow_mismatch_is_reported():
+    config = make_config()  # configured 3.596, measuring 1.02
+    now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+    state = make_state(now, pump_on=True, flow_m3h=SensorReading(1.02, 10, "flow"))
+
+    fault = next(
+        f for f in safety.evaluate(state, config) if f.code == "configured_flow_too_high"
+    )
+    assert "1.02" in fault.message
+    assert "measured" in fault.message
+
+
+# ---------------------------------------------------------------------------
+# T39 - filtration is calculated from measured flow when there is one
+# ---------------------------------------------------------------------------
+
+def test_t39_filtration_uses_measured_flow():
+    """The whole daily requirement hangs off this number.
+
+    Calculating with a datasheet figure the pump never reaches means filtering
+    for a fraction of the time the pool actually needs.
+    """
+    config = make_config()
+    now = datetime(2026, 7, 30, 12, 0, tzinfo=TZ)
+
+    on_paper = filt.evaluate(now, config, done_h=0.0, water_temp=28.0)
+    in_reality = filt.evaluate(
+        now, config, done_h=0.0, water_temp=28.0, measured_flow_m3h=1.02
+    )
+
+    assert in_reality.required_h > on_paper.required_h
+    assert abs(in_reality.required_h - 11.28) < 0.1, in_reality.required_h
+    assert in_reality.detail["flow_source"] == "measured"
+    assert in_reality.detail["driver"] == "turnover"

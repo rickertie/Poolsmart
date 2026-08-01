@@ -304,16 +304,29 @@ class PoolConfig:
 
     # -- Derived filtration figures ---------------------------------------
 
-    @property
-    def turnover_hours(self) -> float:
+    def effective_flow(self, measured_m3h: float | None = None) -> float:
+        """The flow figure to calculate with.
+
+        A measured value beats a configured one every time. Filtration duration
+        is entirely determined by this number, so using a datasheet figure the
+        installation never reaches means filtering for a fraction of the time the
+        pool actually needs.
+        """
+        if measured_m3h and measured_m3h > 0:
+            return measured_m3h
+        return self.pump.effective_flow_m3h
+
+    def turnover_hours(self, measured_m3h: float | None = None) -> float:
         """Runtime needed to meet the turnover target."""
         litres = self.pool.volume_l * self.filtration.turnover_factor
-        litres_per_hour = self.pump.effective_flow_m3h * 1000.0
+        litres_per_hour = self.effective_flow(measured_m3h) * 1000.0
         if litres_per_hour <= 0:
             return 0.0
         return litres / litres_per_hour
 
-    def daily_filtration_hours(self, water_temp: float | None = None) -> float:
+    def daily_filtration_hours(
+        self, water_temp: float | None = None, measured_m3h: float | None = None
+    ) -> float:
         """Total pump runtime needed per day.
 
         The larger of the volume-based turnover requirement and the time-based
@@ -321,22 +334,29 @@ class PoolConfig:
         which is correct: a pump that can turn the water over in an hour still
         cannot skim the surface in an hour.
         """
-        return max(self.turnover_hours, self.filtration.min_hours_at(water_temp))
+        return max(
+            self.turnover_hours(measured_m3h),
+            self.filtration.min_hours_at(water_temp),
+        )
 
-    def filtration_driver(self, water_temp: float | None = None) -> str:
+    def filtration_driver(
+        self, water_temp: float | None = None, measured_m3h: float | None = None
+    ) -> str:
         """Which of the two rules is setting the requirement, for explanation."""
         return (
             "turnover"
-            if self.turnover_hours >= self.filtration.min_hours_at(water_temp)
+            if self.turnover_hours(measured_m3h) >= self.filtration.min_hours_at(water_temp)
             else "daily minimum"
         )
 
-    def block_hours(self, water_temp: float | None = None) -> float:
+    def block_hours(
+        self, water_temp: float | None = None, measured_m3h: float | None = None
+    ) -> float:
         """Runtime per filtration block."""
         count = self.filtration.block_count
         if count <= 0:
             return 0.0
-        return self.daily_filtration_hours(water_temp) / count
+        return self.daily_filtration_hours(water_temp, measured_m3h) / count
 
     def is_aliased(self, role_a: str, role_b: str) -> bool:
         """Whether two logical sensor roles are the same physical sensor."""

@@ -128,21 +128,49 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
             )
         )
 
-    commissioned = config.pump.effective_flow_m3h
-    if state.pump_on and commissioned > 0:
-        ratio = flow / commissioned
+    if not state.pump_on:
+        return faults
+
+    # A fouling filter shows up as a decline from what this installation normally
+    # achieves. Comparing against the configured figure instead would fire
+    # permanently on any system whose real flow sits below its datasheet number,
+    # which is most of them: that reports a fact about the paperwork, not about
+    # the filter.
+    baseline = state.measured_flow_m3h
+    if baseline and baseline > 0:
+        ratio = flow / baseline
         if ratio < config.safety.filter_service_flow_ratio:
             faults.append(
                 Fault(
                     "filter_service_needed",
                     Severity.WARNING,
                     (
-                        f"Flow has dropped to {ratio * 100:.0f}% of the commissioned value. "
-                        "The filter probably needs cleaning."
+                        f"Flow has fallen to {ratio * 100:.0f}% of the usual "
+                        f"{baseline:.2f} m3/h for this system. The filter probably "
+                        "needs cleaning."
                     ),
-                    {"ratio": ratio, "flow_m3h": flow},
+                    {"ratio": ratio, "flow_m3h": flow, "baseline_m3h": baseline},
                 )
             )
+        return faults
+
+    # No baseline yet. Point out a configured figure that measurement clearly
+    # contradicts, because every derived number depends on it.
+    configured = config.pump.effective_flow_m3h
+    if configured > 0 and flow < configured * 0.6:
+        faults.append(
+            Fault(
+                "configured_flow_too_high",
+                Severity.WARNING,
+                (
+                    f"Measured flow is {flow:.2f} m3/h ({flow / 0.06:.0f} L/min) but "
+                    f"the configuration says {configured:.2f} m3/h. Filtration times "
+                    "are calculated from the configured value, so correct it under "
+                    "Configure, Pool and equipment, and tick 'measured'."
+                ),
+                {"measured_m3h": flow, "configured_m3h": configured},
+            )
+        )
     return faults
 
 

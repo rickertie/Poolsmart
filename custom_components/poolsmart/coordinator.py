@@ -146,6 +146,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             for start, end in windows_raw
         )
 
+        # Two logical roles pointing at one physical sensor would otherwise be
+        # compared against each other, yielding a permanent zero difference and a
+        # fault that does not exist.
         aliases: set[frozenset[str]] = set()
         inlet = self._conf(c.CONF_HP_INLET_SENSOR)
         outlet = self._conf(c.CONF_HP_OUTLET_SENSOR)
@@ -477,6 +480,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             active_block=self._restored_block,
             price_forecast=self._price_slots,
             water_temp=state.water_temp.value if state.water_temp.available else None,
+            measured_flow_m3h=self.store.learned.measured_flow_m3h,
         )
 
         decision = ladder.decide(
@@ -496,6 +500,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if decision.heat_pump is False and state.heat_pump_on:
             self.store.heat_pump_stopped_at = now
 
+        self._guard("flow", self._track_flow, now, state, config)
         self._guard("energy", self._track_energy, now, state)
         self._guard("session", self._track_session, now, state, config)
         self._guard("idle", self._track_idle, now, state, config)
@@ -562,6 +567,34 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             swim_time=deadline,
             heating_session_active=self.plan.is_active(now),
             heating_session_planned_start=self.plan.next_start,
+        )
+
+    # -- Flow baseline -----------------------------------------------------
+
+    def _track_flow(self, now: datetime, state: PoolState, config: PoolConfig) -> None:
+        """Learn what flow this installation normally achieves.
+
+        Everything derived from flow -- filtration duration, the filter service
+        warning -- is only as good as this figure, and the datasheet number is
+        not it. A slow rolling average settles on the truth within a few hours of
+        running and then tracks gradual fouling.
+        """
+        if not state.pump_on or not state.flow_m3h.available:
+            return
+        reading = state.flow_m3h.value
+        if reading <= 0.05:
+            return
+
+        current = self.store.learned.measured_flow_m3h
+        if current is None:
+            self.store.learned.measured_flow_m3h = round(reading, 3)
+            return
+
+        # Slow enough that a fouling filter registers as a decline rather than
+        # being quietly absorbed into the average.
+        alpha = 0.002
+        self.store.learned.measured_flow_m3h = round(
+            current * (1 - alpha) + reading * alpha, 3
         )
 
     # -- Energy and cost ---------------------------------------------------
