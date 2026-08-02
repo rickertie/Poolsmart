@@ -103,7 +103,11 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
         return faults
 
     threshold = config.heat_pump.flow_min_m3h
-    if state.heat_pump_on and flow < threshold:
+    if (
+        state.heat_pump_on
+        and flow < threshold
+        and not config.heat_pump.flow_min_site_verified
+    ):
         blocking = config.heat_pump.flow_min_blocking
         faults.append(
             Fault(
@@ -117,8 +121,11 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
                         " Heating is paused."
                         if blocking
                         else " Heating continues; the heat pump's own flow switch"
-                        " remains the hardware backstop. Set the minimum to match"
-                        " what your installation actually achieves to silence this."
+                        " remains the hardware backstop. Check the temperature rise"
+                        " across the heat pump: if it is normal, the water is"
+                        " carrying the heat away and the datasheet figure simply"
+                        " does not apply to this plumbing. Tick 'verified for this"
+                        " installation' to stop this warning."
                     )
                 ),
                 {"flow_m3h": flow, "blocking": blocking},
@@ -270,6 +277,78 @@ def _calibration_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
             },
         )
     ]
+
+
+def flow_adequacy(state: PoolState, config: PoolConfig) -> tuple[str, str, dict]:
+    """Judge whether the water is carrying the heat away, using delta-T.
+
+    Flow in m³/h is a proxy. Delta-T is the thing the proxy stands for, and it can
+    be measured directly.
+
+    The reasoning: a heat pump rejecting a fixed amount of heat into a stream of
+    water raises that water by ``kW / (flow × 1.163)`` degrees. Halve the flow and
+    the rise doubles. Starve it further and the condensing temperature climbs
+    until the appliance derates or trips on high pressure. So the danger has a
+    signature, and the signature is a *high* delta-T, not a low flow number.
+
+    This matters because datasheet minima are written for a generic installation.
+    A long pipe run, a filter, elbows and a diverter valve all cost head, and
+    plenty of systems settle below the quoted figure while moving heat perfectly
+    well. Judging them on the quoted figure tells the owner to chase a number
+    their plumbing cannot produce, while the actual measurements say everything
+    is fine.
+
+    Returns a verdict, an explanation, and the numbers behind it.
+    """
+    delta = state.delta_t
+    flow = state.effective_flow_m3h
+
+    if not state.heat_pump_on:
+        return "idle", "The heat pump is not running.", {}
+    if delta is None:
+        return (
+            "unknown",
+            "No inlet and outlet probes, so heat transfer cannot be judged. Flow "
+            "alone cannot tell an adequate installation from a starved one.",
+            {},
+        )
+    if state.heat_pump_runtime_seconds < config.safety.hp_output_grace_minutes * 60:
+        return "starting", "The heat pump has not been running long enough to judge.", {}
+
+    numbers = {
+        "delta_t": round(delta, 2),
+        "flow_m3h": round(flow, 3) if flow else None,
+        "healthy_below": config.safety.delta_t_healthy_max,
+        "starved_above": config.safety.delta_t_starved,
+    }
+
+    if delta >= config.safety.delta_t_starved:
+        return (
+            "starved",
+            (
+                f"A temperature rise of {delta:.1f} C means the water is not carrying "
+                "the heat away fast enough. This is what a genuine flow problem looks "
+                "like: check the filter, the valve positions and for air in the lines."
+            ),
+            numbers,
+        )
+    if delta >= config.safety.delta_t_healthy_max:
+        return (
+            "marginal",
+            (
+                f"A temperature rise of {delta:.1f} C is on the high side. Not a "
+                "problem yet, but worth watching if it climbs."
+            ),
+            numbers,
+        )
+    return (
+        "healthy",
+        (
+            f"A temperature rise of {delta:.1f} C means the water is carrying the heat "
+            "away comfortably, whatever the flow figure says against the datasheet."
+        ),
+        numbers,
+    )
 
 
 def evaluate(state: PoolState, config: PoolConfig) -> list[Fault]:

@@ -23,6 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
+from .core import safety
 from .coordinator import PoolSmartCoordinator
 from .entity import PoolSmartEntity
 
@@ -211,6 +212,16 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         attributes_fn=lambda c: _why_unknown(c, "thermal_power"),
     ),
     PoolSensorDescription(
+        key="flow_adequacy",
+        value_fn=lambda c: _flow_adequacy(c)[0],
+        attributes_fn=lambda c: {
+            "explanation": _flow_adequacy(c)[1],
+            **_flow_adequacy(c)[2],
+            "datasheet_minimum_m3h": c.pool_config.heat_pump.flow_min_m3h,
+            "site_verified": c.pool_config.heat_pump.flow_min_site_verified,
+        },
+    ),
+    PoolSensorDescription(
         key="solar_surplus",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -345,6 +356,19 @@ def _readable_hours(hours: float | None) -> str | None:
     if total % 60 == 0:
         return f"{total // 60} h"
     return f"{total // 60} h {total % 60} min"
+
+
+def _flow_adequacy(coordinator: PoolSmartCoordinator):
+    """Whether the water is carrying the heat away.
+
+    Kept as a sensor rather than only a fault, because the answer is usually
+    "yes, comfortably" and that is worth being able to see. A warning that only
+    appears when something is wrong cannot reassure anyone.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None:
+        return "unknown", "No measurement yet.", {}
+    return safety.flow_adequacy(state, coordinator.pool_config)
 
 
 def _solar_attributes(coordinator: PoolSmartCoordinator) -> dict:

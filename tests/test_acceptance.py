@@ -1158,3 +1158,84 @@ def test_t51c_no_check_without_the_probe():
     assert not any(
         f.code == "probe_disagreement" for f in safety.evaluate(state, config)
     )
+
+
+# ---------------------------------------------------------------------------
+# T52 - flow is judged by delta-T, using Rick's measured data
+# ---------------------------------------------------------------------------
+
+def test_t52_real_installation_reads_as_healthy():
+    """Measured: 1.05 m3/h against a 2.0 datasheet minimum, delta-T 1.56 C.
+
+    Opening the diverter valve took flow from 1.04 to 1.30 m3/h. Delta-T fell
+    from 1.56 to 1.27 and thermal output stayed at 1.9 kW, which is what an
+    installation that is not flow-limited looks like. Chasing the datasheet
+    figure would have been chasing nothing.
+    """
+    config = make_config()
+    now = datetime(2026, 8, 2, 9, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        flow_m3h=SensorReading(1.05, 10, "flow"),
+        hp_inlet=SensorReading(28.00, 10, "hp_inlet"),
+        hp_outlet=SensorReading(29.56, 10, "hp_outlet"),   # delta-T 1.56
+        heat_pump_on=True,
+        pump_on=True,
+        heat_pump_runtime_seconds=45 * 60,
+    )
+
+    verdict, explanation, numbers = safety.flow_adequacy(state, config)
+    assert verdict == "healthy", (verdict, explanation)
+    assert numbers["delta_t"] == 1.56
+    assert "carrying the heat away" in explanation
+
+    # And the thermal output that implies matches what was measured.
+    assert abs(1.05 * 1.56 * 1.163 - 1.9) < 0.1
+
+
+def test_t52b_a_real_flow_problem_looks_different():
+    """Starvation shows up as a high rise, not a low flow figure."""
+    config = make_config()
+    now = datetime(2026, 8, 2, 9, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        flow_m3h=SensorReading(0.28, 10, "flow"),
+        hp_inlet=SensorReading(28.0, 10, "hp_inlet"),
+        hp_outlet=SensorReading(33.8, 10, "hp_outlet"),   # delta-T 5.8
+        heat_pump_on=True,
+        pump_on=True,
+        heat_pump_runtime_seconds=45 * 60,
+    )
+    verdict, explanation, _numbers = safety.flow_adequacy(state, config)
+    assert verdict == "starved"
+    assert "not carrying the heat away" in explanation
+
+
+def test_t52c_verifying_the_site_silences_the_datasheet_warning():
+    """Once confirmed, stop repeating a number the plumbing cannot reach."""
+    now = datetime(2026, 8, 2, 9, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        flow_m3h=SensorReading(1.05, 10, "flow"),
+        heat_pump_on=True,
+        pump_on=True,
+    )
+
+    unverified = make_config()
+    assert any(
+        f.code == "flow_below_heat_pump_minimum"
+        for f in safety.evaluate(state, unverified)
+    )
+
+    verified = make_config(
+        heat_pump=HeatPumpSpec(
+            input_kw=0.58, thermal_kw=3.0,
+            cop_ref=5.17, cop_ref_temp=26.0, cop_low=4.18, cop_low_temp=15.0,
+            air_temp_min=11.0, air_temp_max=43.0,
+            flow_min_m3h=2.0, flow_min_site_verified=True,
+        )
+    )
+    assert not any(
+        f.code == "flow_below_heat_pump_minimum"
+        for f in safety.evaluate(state, verified)
+    )

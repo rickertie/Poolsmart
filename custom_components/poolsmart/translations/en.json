@@ -48,7 +48,8 @@
           "hp_air_temp_min": "Minimum air temperature (°C)",
           "hp_air_temp_max": "Maximum air temperature (°C)",
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
-          "hp_flow_min_blocking": "Pause heating below the minimum flow"
+          "hp_flow_min_blocking": "Pause heating below the minimum flow",
+          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation"
         },
         "data_description": {
           "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
@@ -59,7 +60,8 @@
           "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
-          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped."
+          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
+          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach."
         }
       },
       "entities": {
@@ -287,7 +289,8 @@
           "hp_air_temp_max": "Maximum air temperature (°C)",
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
           "filter_media": "Filter medium",
-          "hp_flow_min_blocking": "Pause heating below the minimum flow"
+          "hp_flow_min_blocking": "Pause heating below the minimum flow",
+          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation"
         },
         "data_description": {
           "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
@@ -307,7 +310,8 @@
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
           "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
-          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped."
+          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
+          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach."
         }
       }
     }
@@ -396,6 +400,9 @@
       },
       "solar_surplus": {
         "name": "Solar surplus"
+      },
+      "flow_adequacy": {
+        "name": "Flow adequacy"
       }
     },
     "binary_sensor": {

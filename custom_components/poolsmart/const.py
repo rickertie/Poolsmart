@@ -78,6 +78,7 @@ CONF_HP_AIR_TEMP_MIN = "hp_air_temp_min"
 CONF_HP_AIR_TEMP_MAX = "hp_air_temp_max"
 CONF_HP_FLOW_MIN_M3H = "hp_flow_min_m3h"
 CONF_HP_FLOW_MIN_BLOCKING = "hp_flow_min_blocking"
+CONF_HP_FLOW_MIN_VERIFIED = "hp_flow_min_site_verified"
 
 # -- Step 4: required entities --------------------------------------------
 CONF_PUMP_SWITCH = "pump_switch"
@@ -197,6 +198,7 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_HP_AIR_TEMP_MAX: 43.0,
     CONF_HP_FLOW_MIN_M3H: 2.0,
     CONF_HP_FLOW_MIN_BLOCKING: False,
+    CONF_HP_FLOW_MIN_VERIFIED: False,
     CONF_FLOW_UNIT: "L/min",
 }
 

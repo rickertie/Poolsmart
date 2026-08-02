@@ -224,6 +224,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 flow_min_blocking=bool(
                     self._conf(c.CONF_HP_FLOW_MIN_BLOCKING, False)
                 ),
+                flow_min_site_verified=bool(
+                    self._conf(c.CONF_HP_FLOW_MIN_VERIFIED, False)
+                ),
             ),
             filtration=FiltrationSettings(
                 turnover_factor=float(self._conf(c.CONF_TURNOVER_FACTOR, 3.0)),

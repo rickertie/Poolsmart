@@ -1,42 +1,94 @@
 {
   "entity": {
     "sensor": {
-      "status": { "default": "mdi:information-outline" },
-      "ready_at": { "default": "mdi:clock-check-outline" },
-      "next_action_at": { "default": "mdi:clock-fast" },
-      "heating_time_required": { "default": "mdi:timer-sand" },
-      "delta_t": { "default": "mdi:thermometer-lines" },
-      "cop_expected": { "default": "mdi:chart-line" },
-      "cop_measured": { "default": "mdi:chart-line-variant" },
-      "thermal_power": { "default": "mdi:radiator" },
-      "flow_rate": { "default": "mdi:waves-arrow-right" },
-      "filtration_required_today": { "default": "mdi:filter" },
-      "filtration_completed_today": { "default": "mdi:filter-check" },
-      "filtration_remaining_today": { "default": "mdi:filter-outline" },
-      "heating_rate": { "default": "mdi:trending-up" },
-      "heat_loss_rate": { "default": "mdi:trending-down" },
-      "energy_today": { "default": "mdi:lightning-bolt" },
-      "cost_today": { "default": "mdi:cash" },
-      "cost_saved_today": { "default": "mdi:piggy-bank" },
-      "ai_suggestion": { "default": "mdi:lightbulb-on-outline" }
+      "status": {
+        "default": "mdi:information-outline"
+      },
+      "ready_at": {
+        "default": "mdi:clock-check-outline"
+      },
+      "next_action_at": {
+        "default": "mdi:clock-fast"
+      },
+      "heating_time_required": {
+        "default": "mdi:timer-sand"
+      },
+      "delta_t": {
+        "default": "mdi:thermometer-lines"
+      },
+      "cop_expected": {
+        "default": "mdi:chart-line"
+      },
+      "cop_measured": {
+        "default": "mdi:chart-line-variant"
+      },
+      "thermal_power": {
+        "default": "mdi:radiator"
+      },
+      "flow_rate": {
+        "default": "mdi:waves-arrow-right"
+      },
+      "filtration_required_today": {
+        "default": "mdi:filter"
+      },
+      "filtration_completed_today": {
+        "default": "mdi:filter-check"
+      },
+      "filtration_remaining_today": {
+        "default": "mdi:filter-outline"
+      },
+      "heating_rate": {
+        "default": "mdi:trending-up"
+      },
+      "heat_loss_rate": {
+        "default": "mdi:trending-down"
+      },
+      "energy_today": {
+        "default": "mdi:lightning-bolt"
+      },
+      "cost_today": {
+        "default": "mdi:cash"
+      },
+      "cost_saved_today": {
+        "default": "mdi:piggy-bank"
+      },
+      "ai_suggestion": {
+        "default": "mdi:lightbulb-on-outline"
+      },
+      "flow_adequacy": {
+        "default": "mdi:water-check"
+      }
     },
     "binary_sensor": {
-      "heating": { "default": "mdi:fire-off", "state": { "on": "mdi:fire" } },
+      "heating": {
+        "default": "mdi:fire-off",
+        "state": {
+          "on": "mdi:fire"
+        }
+      },
       "circulating": {
         "default": "mdi:pump-off",
-        "state": { "on": "mdi:pump" }
+        "state": {
+          "on": "mdi:pump"
+        }
       },
       "heat_pump_available": {
         "default": "mdi:heat-pump-outline",
-        "state": { "on": "mdi:heat-pump" }
+        "state": {
+          "on": "mdi:heat-pump"
+        }
       },
       "fault": {
         "default": "mdi:check-circle-outline",
-        "state": { "on": "mdi:alert-circle" }
+        "state": {
+          "on": "mdi:alert-circle"
+        }
       },
       "filter_service_needed": {
         "default": "mdi:air-filter",
-        "state": { "on": "mdi:alert-octagon-outline" }
+        "state": {
+          "on": "mdi:alert-octagon-outline"
+        }
       }
     },
     "select": {
@@ -53,26 +105,46 @@
       }
     },
     "number": {
-      "target_temperature": { "default": "mdi:thermometer-check" },
-      "max_price": { "default": "mdi:cash-lock" }
+      "target_temperature": {
+        "default": "mdi:thermometer-check"
+      },
+      "max_price": {
+        "default": "mdi:cash-lock"
+      }
     },
     "switch": {
       "manual_override": {
         "default": "mdi:hand-back-right-outline",
-        "state": { "on": "mdi:hand-back-right" }
+        "state": {
+          "on": "mdi:hand-back-right"
+        }
       },
       "learning_enabled": {
         "default": "mdi:school-outline",
-        "state": { "on": "mdi:school" }
+        "state": {
+          "on": "mdi:school"
+        }
       }
     },
     "button": {
-      "boost_now": { "default": "mdi:rocket-launch" },
-      "force_filtration": { "default": "mdi:filter-plus" },
-      "start_chemistry_cycle": { "default": "mdi:flask" },
-      "reset_learning": { "default": "mdi:restore" },
-      "run_advisor": { "default": "mdi:lightbulb-on-outline" },
-      "accept_suggestion": { "default": "mdi:check-decagram" }
+      "boost_now": {
+        "default": "mdi:rocket-launch"
+      },
+      "force_filtration": {
+        "default": "mdi:filter-plus"
+      },
+      "start_chemistry_cycle": {
+        "default": "mdi:flask"
+      },
+      "reset_learning": {
+        "default": "mdi:restore"
+      },
+      "run_advisor": {
+        "default": "mdi:lightbulb-on-outline"
+      },
+      "accept_suggestion": {
+        "default": "mdi:check-decagram"
+      }
     }
   }
 }

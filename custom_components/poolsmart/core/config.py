@@ -118,6 +118,12 @@ class HeatPumpSpec:
 
     #: Minimum water flow the datasheet asks for.
     flow_min_m3h: float = 2.0
+    #: Whether the datasheet minimum has been checked against this installation.
+    #:
+    #: Set once the owner has confirmed the system moves heat properly below the
+    #: quoted figure -- a normal delta-T is the evidence. It silences the flow
+    #: warning, which otherwise repeats a number the plumbing cannot reach.
+    flow_min_site_verified: bool = False
     #: Whether falling below that figure stops heating or merely warns.
     #:
     #: Datasheet minima are conservative, and a pool heat pump has its own
@@ -272,6 +278,15 @@ class SafetySettings:
     #: Expected delta-T range across the heat pump while it is running.
     delta_t_min: float = 0.2
     delta_t_max: float = 8.0
+
+    #: Delta-T bands used to judge whether flow is adequate.
+    #:
+    #: This replaces judging flow against a datasheet minimum, which is a proxy
+    #: for the same thing and a poor one: it is written for a generic
+    #: installation and takes no account of pipe length, elbows or a diverter
+    #: valve. Delta-T measures directly what the flow figure stands for.
+    delta_t_healthy_max: float = 3.0
+    delta_t_starved: float = 5.0
     #: Grace period before a running heat pump is expected to produce delta-T.
     hp_output_grace_minutes: int = 10
     #: How long after the pump starts before flow is judged at all.

@@ -4,6 +4,26 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.13.0] - 2026-08-02
+
+### Changed
+- Flow is judged by the temperature rise across the heat pump rather than
+  against a datasheet minimum. The rise measures directly what a flow figure
+  stands for, and a genuine problem shows up as a *high* rise, not a low flow
+  number. Measured on a real installation: raising flow 25% lowered delta-T 19%
+  and left thermal output unchanged, which is what an installation that was never
+  flow-limited looks like
+- The AI review is told this explicitly and instructed not to recommend chasing
+  a datasheet figure. It was previously advising owners to reach a number their
+  plumbing cannot produce
+
+### Added
+- `sensor.<name>_flow_adequacy`, reporting healthy, marginal or starved with the
+  numbers behind the verdict. Visible when the answer is "fine", not only when
+  something is wrong
+- A "verified for this installation" setting that silences the datasheet warning
+  once the owner has confirmed the system moves heat properly below it
+
 ## [0.12.6] - 2026-08-01
 
 ### Added
@@ -221,6 +241,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.13.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.0
 [0.12.6]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.6
 [0.12.5]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.5
 [0.12.4]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.4

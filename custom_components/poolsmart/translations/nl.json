@@ -48,7 +48,8 @@
           "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
-          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom"
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
+          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie"
         },
         "data_description": {
           "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
@@ -59,7 +60,8 @@
           "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
           "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
-          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt."
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
+          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen."
         }
       },
       "entities": {
@@ -287,7 +289,8 @@
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
           "filter_media": "Filtermedium",
-          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom"
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
+          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie"
         },
         "data_description": {
           "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
@@ -307,7 +310,8 @@
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
           "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
           "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
-          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt."
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
+          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen."
         }
       }
     }
@@ -396,6 +400,9 @@
       },
       "solar_surplus": {
         "name": "Zonoverschot"
+      },
+      "flow_adequacy": {
+        "name": "Doorstroming toereikend"
       }
     },
     "binary_sensor": {

@@ -155,6 +155,10 @@ def _heat_pump_schema(d: dict) -> vol.Schema:
                 c.CONF_HP_FLOW_MIN_BLOCKING,
                 default=d[c.CONF_HP_FLOW_MIN_BLOCKING],
             ): bool,
+            vol.Required(
+                c.CONF_HP_FLOW_MIN_VERIFIED,
+                default=d[c.CONF_HP_FLOW_MIN_VERIFIED],
+            ): bool,
         }
     )
 
@@ -442,6 +446,10 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 vol.Optional(
                     c.CONF_HP_FLOW_MIN_BLOCKING,
                     default=current.get(c.CONF_HP_FLOW_MIN_BLOCKING, False),
+                ): bool,
+                vol.Optional(
+                    c.CONF_HP_FLOW_MIN_VERIFIED,
+                    default=current.get(c.CONF_HP_FLOW_MIN_VERIFIED, False),
                 ): bool,
             }
         )

@@ -21,6 +21,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .. import const as c
+from ..core import safety
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +38,20 @@ ADJUSTABLE = {
 }
 
 PROMPT = """You are reviewing a week of operating data from a swimming pool controller.
+
+IMPORTANT CONTEXT ABOUT FLOW
+Do not recommend increasing water flow to reach a datasheet minimum. That figure
+is written for a generic installation and takes no account of pipe length,
+elbows, filters or a diverter valve; many systems settle below it and move heat
+perfectly well. Telling the owner to reach a number their plumbing cannot produce
+is not advice, it is noise.
+
+Judge heat transfer by the temperature rise across the heat pump instead, which
+measures directly what the flow figure stands for. A rise under about 3 C means
+the water is carrying the heat away comfortably. Above 5 C means it is not, and
+that is when a flow problem is worth raising. The field `flow_adequacy` below
+already contains this verdict; trust it over any comparison you make yourself
+between measured flow and the datasheet minimum.
 
 Reply with JSON only. No prose, no markdown fences. Use this shape:
 {"summary": "two or three plain sentences for a homeowner",
@@ -115,7 +130,24 @@ class Advisor:
                     out.append(item)
             return out
 
+        state = self.coordinator.data.get("state") if self.coordinator.data else None
+        verdict, explanation, numbers = (
+            safety.flow_adequacy(state, config) if state else ("unknown", "", {})
+        )
+
         return {
+            "flow_adequacy": {
+                "verdict": verdict,
+                "explanation": explanation,
+                **numbers,
+                "datasheet_minimum_m3h": config.heat_pump.flow_min_m3h,
+                "site_verified": config.heat_pump.flow_min_site_verified,
+                "note": (
+                    "The datasheet minimum is a generic figure. This installation's "
+                    "measured behaviour is what counts, and the verdict above is "
+                    "based on it."
+                ),
+            },
             "pool_volume_l": config.pool.volume_l,
             "daily_filtration_hours": round(config.daily_filtration_hours(None, store.learned.measured_flow_m3h), 2),
             "turnover_factor": config.filtration.turnover_factor,
