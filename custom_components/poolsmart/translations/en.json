@@ -91,7 +91,8 @@
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
           "cover_entity": "Pool cover (optional)",
-          "flow_unit": "Flow meter unit"
+          "flow_unit": "Flow meter unit",
+          "cheap_price_sensor": "Cheap price period signal"
         },
         "data_description": {
           "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
@@ -105,7 +106,8 @@
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
           "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
-          "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min."
+          "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
+          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed."
         }
       }
     }
@@ -236,7 +238,8 @@
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
           "cover_entity": "Pool cover (optional)",
-          "flow_unit": "Flow meter unit"
+          "flow_unit": "Flow meter unit",
+          "cheap_price_sensor": "Cheap price period signal"
         },
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",
@@ -253,7 +256,8 @@
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
           "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
-          "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min."
+          "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
+          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed."
         }
       },
       "hardware": {

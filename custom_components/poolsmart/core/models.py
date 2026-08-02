@@ -171,6 +171,13 @@ class PoolState:
     #: Cheapest upcoming intervals, as (start, end, all-in price) tuples.
     price_forecast: tuple[tuple[datetime, datetime, float], ...] = ()
     solar_power_w: float | None = None
+    #: An external "this is a good moment to use power" signal, if configured.
+    #:
+    #: Integrations that publish dynamic tariffs often expose one, and it knows
+    #: things the raw price does not: where today's cheap window sits relative to
+    #: the rest of the day, rather than only how the current price compares to a
+    #: fixed ceiling.
+    cheap_price_now: bool | None = None
     solar_forecast_w: tuple[tuple[datetime, float], ...] = ()
 
     # -- Targets and plan --------------------------------------------------
@@ -180,6 +187,8 @@ class PoolState:
     #: Set by the heating planner in WP3. Until then heating is reactive.
     heating_session_active: bool = False
     heating_session_planned_start: datetime | None = None
+    #: Whether the plan behind this session actually compared prices.
+    plan_price_informed: bool = False
 
     # -- Runtime bookkeeping ----------------------------------------------
     #: Pump runtime credited to today's filtration quota, in hours. Heating

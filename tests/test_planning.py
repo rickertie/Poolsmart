@@ -105,7 +105,10 @@ def test_t17_no_price_data_starts_now():
     plan = optimizer.plan(now, config, est, slots=())
 
     assert plan.is_active(now)
-    assert "No price forecast" in plan.reason
+    assert "No usable price forecast" in plan.reason
+    # And the plan must admit no comparison took place, so nothing downstream
+    # describes this as a chosen cheap moment.
+    assert plan.price_informed is False
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,62 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.12.5] - 2026-08-01
+
+### Fixed
+- The system claimed "it is the cheapest time still available" while running at
+  0.248 on a day whose low was 0.13. Without a price forecast the planner falls
+  back to heating on demand, and that fallback was being described as a chosen
+  cheap moment. It now says no usable forecast is available and suggests
+  checking the price sensor. A claim that cannot be backed is worse than no claim
+
+### Added
+- Optional cheap-price period signal: an on/off sensor from a dynamic tariff
+  integration saying whether now is a good moment. It outranks the fixed price
+  ceiling, which cannot tell a cheap hour from an expensive day — with a limit
+  of 0.20 and a day whose cheapest hour is 0.22, nothing would ever heat
+- The plan records the lowest and highest prices it actually saw, so a claim
+  about cheapness can be checked rather than taken on trust
+
+## [0.12.4] - 2026-08-01
+
+### Fixed
+- "Heating because price 0.248/kWh exceeds the limit of 0.200" read as though
+  the logic were inverted. The heating was justified by the plan; the price
+  sentence was the rejection reason being printed as though it were the
+  justification. A planned interval over the limit now says that it is part of
+  the plan and the cheapest time still available
+
+### Added
+- The plan records when it had to exceed the price limit to meet a deadline, and
+  says so in its reason. Arriving cold at swimming time is a worse failure than
+  paying a couple of cents over a self-imposed ceiling, but it should not happen
+  silently either way
+
+## [0.12.3] - 2026-08-01
+
+### Changed
+- The example ESPHome configuration no longer calculates delta-T, thermal power
+  or COP. Those figures only existed for people running ESPHome, and a
+  calibration offset changed on one side left two numbers disagreeing. The
+  integration already computes all three from whatever sensors it is given
+- Temperature probes are read internally and published through a template that
+  applies a calibration offset, so there is one temperature per probe rather
+  than a raw and a corrected one
+
+### Added
+- Calibration offsets as number entities on the board: adjustable without
+  reflashing, and they survive a restart
+- A running pulse total, so the flow meter can be calibrated with a bucket
+- `docs/SENSORS.md`, covering probe calibration, flow calibration and which
+  sensor maps to which field
+
+### Fixed
+- The example had two different flow divisors applied in two places,
+  disagreeing by a factor of two and a half. There is now one, with the
+  arithmetic behind the datasheet figure written out and a sanity check for
+  spotting a wrong one
+
 ## [0.12.2] - 2026-08-01
 
 ### Changed
@@ -155,6 +211,9 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.12.5]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.5
+[0.12.4]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.4
+[0.12.3]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.3
 [0.12.2]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.2
 [0.12.1]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.1
 [0.12.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.0

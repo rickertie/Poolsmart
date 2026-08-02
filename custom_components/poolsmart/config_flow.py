@@ -198,6 +198,9 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+        vol.Optional(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
+        ),
         vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
@@ -364,6 +367,11 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+                field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=["binary_sensor", "input_boolean"]
+                    )
+                ),
                 field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
                 field(c.CONF_WEATHER_ENTITY): WEATHER,

@@ -78,6 +78,8 @@ def make_state(now: datetime, **overrides) -> PoolState:
         "price_total": 0.30,
         "price_energy": 0.08,
         "measured_flow_m3h": None,
+        "plan_price_informed": True,
+        "cheap_price_now": None,
     }
     defaults.update(overrides)
     return PoolState(**defaults)
@@ -957,3 +959,137 @@ def test_t47_solar_threshold_matches_the_equipment():
     dim = state.replace(solar_power_w=500.0)
     decision = run_tick(dim, config, done_h=20.0)
     assert decision.heat_pump is False, decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T48 - a planned session over the price limit says so honestly
+# ---------------------------------------------------------------------------
+
+def test_t48_planned_over_limit_explains_itself():
+    """Regression: the reason read as though the logic were inverted.
+
+    "Heating because price 0.248 exceeds the limit of 0.200" is nonsense. The
+    heating was justified by the plan; the price sentence was the rejection
+    reason being printed as though it were the justification.
+    """
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.248,
+        solar_power_w=0.0,
+        heating_session_active=True,   # the planner chose this interval
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+
+    assert decision.heat_pump is True
+    assert decision.detail.get("over_limit") is True
+    assert "part of the plan" in decision.reason
+    assert "Nothing cheaper was available" in decision.reason
+    # And it must not read as though exceeding the limit were the justification.
+    assert "because price" not in decision.reason
+
+
+def test_t48b_unplanned_over_limit_still_waits():
+    """Without a plan behind it, an expensive interval is simply declined."""
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.248,
+        solar_power_w=0.0,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is False, decision.reason
+    assert "Waiting for cheaper" in decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T49 - never claim a cheap moment that was not chosen
+# ---------------------------------------------------------------------------
+
+def test_t49_no_forecast_does_not_claim_cheapest():
+    """Regression: running at twice the day's low while calling it the cheapest.
+
+    Without a forecast the planner falls back to heating on demand. That is a
+    reasonable fallback and emphatically not a chosen cheap moment. Dressing it
+    up as one is how people stop believing the reasons.
+    """
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.2484,
+        solar_power_w=0.0,
+        heating_session_active=True,
+        plan_price_informed=False,   # no forecast was parsed
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+
+    assert decision.heat_pump is True
+    assert "no usable price forecast" in decision.reason.lower()
+    assert "cheapest" not in decision.reason.lower()
+    assert decision.detail.get("price_informed") is False
+
+
+def test_t49b_with_a_forecast_the_claim_is_fair():
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.2484,
+        solar_power_w=0.0,
+        heating_session_active=True,
+        plan_price_informed=True,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert "Nothing cheaper was available" in decision.reason
+
+
+# ---------------------------------------------------------------------------
+# T50 - an external cheap-period signal outranks the fixed ceiling
+# ---------------------------------------------------------------------------
+
+def test_t50_cheap_period_signal():
+    """A limit alone cannot tell a cheap hour from an expensive day.
+
+    With a ceiling of 0.20 and a day whose cheapest hour is 0.22, nothing would
+    ever heat. The tariff integration knows where this hour sits within today.
+    """
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    base = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.2484,
+        solar_power_w=0.0,
+        measured_flow_m3h=1.02,
+    )
+
+    # No signal: the ceiling applies and it waits.
+    decision = run_tick(base, config, done_h=20.0)
+    assert decision.heat_pump is False
+
+    # Signal on: heat, and say where the justification came from.
+    marked = base.replace(cheap_price_now=True)
+    decision = run_tick(marked, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+    assert "cheap period" in decision.reason
+
+    # Signal off is not an instruction to heat, only the absence of one.
+    marked_off = base.replace(cheap_price_now=False)
+    decision = run_tick(marked_off, config, done_h=20.0)
+    assert decision.heat_pump is False

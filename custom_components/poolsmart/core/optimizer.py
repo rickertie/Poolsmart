@@ -44,6 +44,13 @@ class HeatingPlan:
     ready_at: datetime | None = None
     reason: str = ""
     detail: dict = field(default_factory=dict)
+    #: Whether prices were actually compared to produce this plan.
+    #:
+    #: Without a forecast the planner falls back to heating on demand, which is a
+    #: reasonable fallback and emphatically not a chosen cheap moment. Conflating
+    #: the two let the system claim "this is the cheapest time available" while
+    #: running at twice the day's low, which is worse than saying nothing.
+    price_informed: bool = False
 
     def is_active(self, now: datetime) -> bool:
         """Whether heating should be running at this moment."""
@@ -173,6 +180,7 @@ def plan(
             hours_needed=needed,
             ready_at=end,
             reason="Boost: heating continuously until the target is reached.",
+            price_informed=False,
         )
 
     max_price = config.energy.max_price
@@ -180,13 +188,19 @@ def plan(
         pass  # ECO tightening is applied by the ladder, not here.
 
     affordable = _eligible(slots, now, deadline, max_price)
+    over_limit = False
     if not affordable and slots:
-        # Nothing within the price limit. Fall back to the cheapest available, so
-        # a deadline is still met rather than silently missed.
+        # Nothing within the price limit before the deadline. Two ways to fail
+        # here and one of them is worse: arriving cold at swimming time is a
+        # visible failure, paying two cents over a self-imposed ceiling is not.
+        # So the cheapest available intervals are used and the fact is recorded,
+        # rather than silently missing the deadline or silently overspending.
         affordable = _eligible(slots, now, deadline, None)
+        over_limit = True
 
     if not affordable:
-        # No price data at all: heat straight away and be transparent about why.
+        # No usable price data: heat on demand and be honest that no comparison
+        # took place. This plan must never be described as a cheap moment.
         end = now + timedelta(hours=needed)
         return HeatingPlan(
             mode=estimate.plan_mode,
@@ -194,7 +208,12 @@ def plan(
             hours_planned=needed,
             hours_needed=needed,
             ready_at=end,
-            reason="No price forecast available, so heating starts immediately.",
+            reason=(
+                "No usable price forecast, so heating runs on demand rather than "
+                "waiting for a cheaper moment."
+            ),
+            price_informed=False,
+            detail={"no_forecast": True},
         )
 
     chosen: list[PriceSlot] = []
@@ -224,8 +243,26 @@ def plan(
             reason=(
                 f"Heating for {needed:.1f} h in the cheapest intervals available "
                 f"({cheapest:.3f} to {dearest:.3f} per kWh)."
+                + (
+                    f" Nothing fell under the {max_price:.3f} limit before the "
+                    "deadline, so these are the cheapest intervals there are."
+                    if over_limit and max_price is not None
+                    else ""
+                )
             ),
-            detail={"slots": len(chosen), "cost": round(cost, 3)},
+            price_informed=True,
+            detail={
+                "slots": len(chosen),
+                "cost": round(cost, 3),
+                "over_price_limit": over_limit,
+                "price_limit": max_price,
+                "cheapest_chosen": round(cheapest, 4),
+                "dearest_chosen": round(dearest, 4),
+                # What was on offer at all, so a claim about "cheapest available"
+                # can be checked rather than taken on trust.
+                "forecast_low": round(min(p for _s, _e, p in affordable), 4),
+                "forecast_high": round(max(p for _s, _e, p in affordable), 4),
+            },
         )
 
     # Not enough affordable time before the deadline: this is a seasonal job.
@@ -238,6 +275,7 @@ def plan(
         hours_needed=needed,
         expected_cost=round(cost, 3) if chosen else None,
         ready_at=ready_at,
+        price_informed=True,
         reason=(
             f"This needs {needed:.1f} h of heating, more than fits before the "
             f"deadline. Spreading it over several days: {note}."

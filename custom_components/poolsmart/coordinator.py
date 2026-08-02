@@ -298,6 +298,21 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         age = (dt_util.utcnow() - reported).total_seconds()
         return SensorReading(value, age, role)
 
+    def _read_binary(self, key: str) -> bool | None:
+        """Read an optional on/off signal.
+
+        Returns ``None`` when not configured or unavailable, which the engine
+        treats as "no opinion" rather than as a negative. A missing signal must
+        never read as "this is an expensive moment".
+        """
+        entity_id = self._conf(key)
+        if not entity_id:
+            return None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in UNAVAILABLE:
+            return None
+        return state.state == "on"
+
     def _switch_is_on(self, key: str) -> bool:
         entity_id = self._conf(key)
         if not entity_id:
@@ -407,6 +422,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         price_total, price_energy = self._read_price()
 
         solar = self._read(c.CONF_SOLAR_POWER_SENSOR, "solar")
+        cheap_now = self._read_binary(c.CONF_CHEAP_PRICE_SENSOR)
         pump_on = self._switch_is_on(c.CONF_PUMP_SWITCH)
         heat_pump_on = self._switch_is_on(c.CONF_HP_SWITCH)
 
@@ -458,6 +474,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             price_total=price_total,
             price_energy=price_energy,
             solar_power_w=solar.value,
+            cheap_price_now=cheap_now,
             target_temp=self._target_temp,
             filtration_done_h=self.store.runtime_hours(now),
             heat_pump_runtime_seconds=runtime,
@@ -619,6 +636,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             swim_time=deadline,
             heating_session_active=self.plan.is_active(now),
             heating_session_planned_start=self.plan.next_start,
+            plan_price_informed=self.plan.price_informed,
         )
 
     @property

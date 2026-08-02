@@ -54,6 +54,13 @@ def _negative_price(state: PoolState, config: PoolConfig) -> tuple[bool, float |
 
 def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
     """Whether the current price and solar situation permit heating."""
+    # An external cheap-price signal outranks the fixed ceiling, because it knows
+    # something the ceiling cannot: where this moment sits within today's prices.
+    # A day whose cheapest hour is above the limit would otherwise never heat,
+    # and a cheap hour on an expensive day would be missed.
+    if state.cheap_price_now is True:
+        return True, "the tariff integration marks this as a cheap period"
+
     limit = config.energy.max_price
     if state.mode is Mode.ECO and limit is not None:
         limit *= config.energy.eco_price_factor
@@ -154,7 +161,11 @@ def _augment_with_heating(
         )
         if not (acceptable or planned):
             return decision
-        why = reason if acceptable else "this moment is part of the plan"
+        why = (
+            reason
+            if acceptable
+            else f"this interval is part of the plan, even though {reason}"
+        )
 
     detail = dict(decision.detail)
     detail["heating_added"] = True
@@ -358,7 +369,7 @@ def _walk(
                 state.heating_session_planned_start is not None
                 and state.heating_session_planned_start <= state.now
             )
-            if acceptable or planned:
+            if acceptable:
                 return win(
                     Decision(
                         pump=True,
@@ -366,6 +377,47 @@ def _walk(
                         branch=Branch.HEATING,
                         reason=f"Heating to {state.target_temp:.1f} C because {why}.",
                         detail={"planned": planned, "price": state.price_total},
+                    )
+                )
+            if planned:
+                # The plan outranks the price limit here, and what to say about
+                # that depends on whether the plan actually compared prices.
+                #
+                # With a forecast, it picked the cheapest intervals available
+                # before the deadline, and saying so is fair. Without one, it
+                # simply fell back to heating on demand -- and claiming that
+                # fallback was a chosen cheap moment, which is what this used to
+                # do, is worse than saying nothing. A pool running at twice the
+                # day's low while insisting it found the cheapest time is exactly
+                # the kind of thing that makes people stop believing the reasons.
+                informed = state.plan_price_informed
+                return win(
+                    Decision(
+                        pump=True,
+                        heat_pump=True,
+                        branch=Branch.HEATING,
+                        reason=(
+                            (
+                                f"Heating to {state.target_temp:.1f} C: this interval "
+                                "is part of the plan for reaching temperature on "
+                                f"time, even though {why}. Nothing cheaper was "
+                                "available before the deadline."
+                            )
+                            if informed
+                            else (
+                                f"Heating to {state.target_temp:.1f} C on demand: "
+                                f"{why}, but no usable price forecast is available "
+                                "to wait for a cheaper moment. Check that the price "
+                                "sensor is configured and publishes a forecast."
+                            )
+                        ),
+                        detail={
+                            "planned": True,
+                            "price": state.price_total,
+                            "over_limit": True,
+                            "price_note": why,
+                            "price_informed": informed,
+                        },
                     )
                 )
             trace.record(Branch.HEATING, Verdict.PRICE, why)

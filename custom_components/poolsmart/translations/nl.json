@@ -91,7 +91,8 @@
           "solar_forecast_sensor": "Zonneverwachting",
           "weather_entity": "Weer",
           "cover_entity": "Afdekhoes (optioneel)",
-          "flow_unit": "Eenheid debietmeter"
+          "flow_unit": "Eenheid debietmeter",
+          "cheap_price_sensor": "Signaal goedkope prijsperiode"
         },
         "data_description": {
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
@@ -105,7 +106,8 @@
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
           "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
           "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
-          "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min."
+          "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
+          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen."
         }
       }
     }
@@ -236,7 +238,8 @@
           "solar_forecast_sensor": "Zonneverwachting",
           "weather_entity": "Weer",
           "cover_entity": "Afdekhoes (optioneel)",
-          "flow_unit": "Eenheid debietmeter"
+          "flow_unit": "Eenheid debietmeter",
+          "cheap_price_sensor": "Signaal goedkope prijsperiode"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
@@ -253,7 +256,8 @@
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
           "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
           "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
-          "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min."
+          "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
+          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen."
         }
       },
       "hardware": {
