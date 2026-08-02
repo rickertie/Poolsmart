@@ -92,7 +92,8 @@
           "weather_entity": "Weer",
           "cover_entity": "Afdekhoes (optioneel)",
           "flow_unit": "Eenheid debietmeter",
-          "cheap_price_sensor": "Signaal goedkope prijsperiode"
+          "cheap_price_sensor": "Signaal goedkope prijsperiode",
+          "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)"
         },
         "data_description": {
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
@@ -107,7 +108,8 @@
           "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
           "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
           "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
-          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen."
+          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
+          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is."
         }
       }
     }
@@ -182,7 +184,8 @@
           "pump_startup_grace_seconds": "Aanlooptijd pomp (seconden)",
           "solar_margin_w": "Marge boven het verbruik van de apparatuur (W)",
           "compressor_min_off_minutes": "Minimale stilstand compressor (minuten)",
-          "compressor_min_on_minutes": "Minimale draaitijd compressor (minuten)"
+          "compressor_min_on_minutes": "Minimale draaitijd compressor (minuten)",
+          "calibration_tolerance": "Toegestaan verschil tussen voelers (°C)"
         },
         "data_description": {
           "turnover_factor": "Hoe vaak het hele bad per dag door het filter moet. Gefilterd water mengt terug, dus één ronde reinigt ongeveer 63% van het bad, twee 86%, drie 95%. Bij drie vlakt de winst af.",
@@ -208,7 +211,8 @@
           "pump_startup_grace_seconds": "Zo lang na het starten van de pomp wordt de doorstroming niet beoordeeld. De pomp moet eerst aanzuigen en de lucht uit de leidingen duwen; dat als storing melden maakt van een normale start een alarm.",
           "solar_margin_w": "Wordt bij het verbruik van de apparatuur opgeteld als de drempel berekend wordt. Een marge voorkomt dat een overtrekkende wolk een sessie start en stopt.",
           "compressor_min_off_minutes": "Hoe lang de warmtepomp uit moet blijven voor hij opnieuw start, zodat de koeldrukken kunnen uitbalanceren. Kortcyclen sloopt een compressor. Geen enkele andere regel kan hier overheen.",
-          "compressor_min_on_minutes": "Minimale draaitijd na starten. Bij het bereiken van de doeltemperatuur stopt hij nog steeds meteen."
+          "compressor_min_on_minutes": "Minimale draaitijd na starten. Bij het bereiken van de doeltemperatuur stopt hij nog steeds meteen.",
+          "calibration_tolerance": "Hoeveel de zwembadvoeler en de pompaanvoer mogen verschillen voordat het gemeld wordt. DS18B20's zijn nauwkeurig tot ongeveer ±0,5 °C, dus alles daaronder komt van de sensoren en niet van het bad."
         }
       },
       "init": {
@@ -239,7 +243,8 @@
           "weather_entity": "Weer",
           "cover_entity": "Afdekhoes (optioneel)",
           "flow_unit": "Eenheid debietmeter",
-          "cheap_price_sensor": "Signaal goedkope prijsperiode"
+          "cheap_price_sensor": "Signaal goedkope prijsperiode",
+          "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
@@ -257,7 +262,8 @@
           "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
           "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
           "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
-          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen."
+          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
+          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is."
         }
       },
       "hardware": {

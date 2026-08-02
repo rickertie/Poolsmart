@@ -186,6 +186,7 @@ STEP_REQUIRED_ENTITIES = vol.Schema(
 STEP_OPTIONAL_ENTITIES = vol.Schema(
     {
         vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
+        vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
@@ -352,6 +353,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_HP_SWITCH, True): SWITCH,
                 field(c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
                 field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
+                field(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
@@ -598,6 +600,10 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     c.CONF_PUMP_STARTUP_GRACE,
                     default=current.get(c.CONF_PUMP_STARTUP_GRACE, 120),
                 ): _positive(0, 900, 10),
+                vol.Optional(
+                    c.CONF_CALIBRATION_TOLERANCE,
+                    default=current.get(c.CONF_CALIBRATION_TOLERANCE, 0.6),
+                ): _positive(0.1, 5.0, 0.1),
                 vol.Optional(
                     c.CONF_STALE_WARNING_SECONDS,
                     default=current.get(c.CONF_STALE_WARNING_SECONDS, 900),

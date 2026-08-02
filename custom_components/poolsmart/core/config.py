@@ -284,6 +284,10 @@ class SafetySettings:
     #: Flow decline relative to the commissioned value that triggers a service
     #: notification rather than a fault.
     filter_service_flow_ratio: float = 0.75
+    #: How far two probes measuring the same water may disagree before it is
+    #: worth mentioning. DS18B20s are accurate to about +/- 0.5 C, so anything
+    #: under that is the sensors rather than the pool.
+    calibration_tolerance: float = 0.6
 
 
 @dataclass(frozen=True)

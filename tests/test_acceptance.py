@@ -66,6 +66,7 @@ def make_state(now: datetime, **overrides) -> PoolState:
         "mode": Mode.AUTO,
         "water_temp": SensorReading(27.0, 10, "water"),
         "air_temp": SensorReading(20.0, 10, "air"),
+        "pump_inlet": SensorReading(None, None, "pump_inlet"),
         "hp_inlet": SensorReading(27.0, 10, "hp_inlet"),
         "hp_outlet": SensorReading(30.0, 10, "hp_outlet"),
         "flow_m3h": SensorReading(3.5, 10, "flow"),
@@ -1093,3 +1094,67 @@ def test_t50_cheap_period_signal():
     marked_off = base.replace(cheap_price_now=False)
     decision = run_tick(marked_off, config, done_h=20.0)
     assert decision.heat_pump is False
+
+
+# ---------------------------------------------------------------------------
+# T51 - the fifth probe earns its place as a calibration check
+# ---------------------------------------------------------------------------
+
+def test_t51_probe_disagreement_is_noticed():
+    """The pool probe and the pump inlet measure the same water.
+
+    Nothing else in the system can notice that a temperature is simply wrong
+    rather than merely surprising, and a miscalibrated probe quietly corrupts
+    delta-T and every COP figure derived from it.
+    """
+    config = make_config()
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+
+    agreeing = make_state(
+        now,
+        water_temp=SensorReading(28.50, 10, "water"),
+        pump_inlet=SensorReading(28.42, 10, "pump_inlet"),
+        pump_on=True,
+    )
+    assert not any(
+        f.code == "probe_disagreement" for f in safety.evaluate(agreeing, config)
+    )
+
+    diverging = make_state(
+        now,
+        water_temp=SensorReading(28.50, 10, "water"),
+        pump_inlet=SensorReading(27.10, 10, "pump_inlet"),
+        pump_on=True,
+    )
+    fault = next(
+        f for f in safety.evaluate(diverging, config) if f.code == "probe_disagreement"
+    )
+    assert fault.severity is Severity.WARNING
+    assert "calibrating" in fault.message
+    assert fault.detail["difference"] == 1.4
+
+
+def test_t51b_no_check_while_the_heat_pump_is_adding_heat():
+    """With the heat pump running the two probes are legitimately apart."""
+    config = make_config()
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(28.50, 10, "water"),
+        pump_inlet=SensorReading(27.10, 10, "pump_inlet"),
+        pump_on=True,
+        heat_pump_on=True,
+    )
+    assert not any(
+        f.code == "probe_disagreement" for f in safety.evaluate(state, config)
+    )
+
+
+def test_t51c_no_check_without_the_probe():
+    """A fifth probe is optional; its absence is not a fault."""
+    config = make_config()
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(now, pump_on=True)  # pump_inlet unavailable by default
+    assert not any(
+        f.code == "probe_disagreement" for f in safety.evaluate(state, config)
+    )

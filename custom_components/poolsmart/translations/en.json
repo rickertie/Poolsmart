@@ -92,7 +92,8 @@
           "weather_entity": "Weather",
           "cover_entity": "Pool cover (optional)",
           "flow_unit": "Flow meter unit",
-          "cheap_price_sensor": "Cheap price period signal"
+          "cheap_price_sensor": "Cheap price period signal",
+          "pump_inlet_sensor": "Pump inlet temperature (optional)"
         },
         "data_description": {
           "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
@@ -107,7 +108,8 @@
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
           "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
           "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
-          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed."
+          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
+          "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong."
         }
       }
     }
@@ -182,7 +184,8 @@
           "pump_startup_grace_seconds": "Pump start-up grace (seconds)",
           "solar_margin_w": "Margin above the equipment draw (W)",
           "compressor_min_off_minutes": "Compressor minimum off time (minutes)",
-          "compressor_min_on_minutes": "Compressor minimum run time (minutes)"
+          "compressor_min_on_minutes": "Compressor minimum run time (minutes)",
+          "calibration_tolerance": "Probe disagreement tolerance (°C)"
         },
         "data_description": {
           "turnover_factor": "How many times the whole pool should pass the filter per day. Filtered water mixes back in, so one pass cleans about 63% of the pool, two 86%, three 95%. Three is where the gains flatten off.",
@@ -208,7 +211,8 @@
           "pump_startup_grace_seconds": "Flow is not judged for this long after the pump starts. The pump has to prime and push the air out of the lines, and reporting that as a fault turns a normal start into an alarm.",
           "solar_margin_w": "Added to the equipment draw when the threshold is calculated. A margin stops a passing cloud from starting and stopping a session.",
           "compressor_min_off_minutes": "How long the heat pump must stay off before restarting, so refrigerant pressures can equalise. Short cycling wears a compressor out early. This cannot be overridden by any other rule.",
-          "compressor_min_on_minutes": "Minimum run once started. Reaching the target temperature still stops it immediately."
+          "compressor_min_on_minutes": "Minimum run once started. Reaching the target temperature still stops it immediately.",
+          "calibration_tolerance": "How far the pool probe and the pump inlet may differ before it is mentioned. DS18B20s are accurate to roughly ±0.5 °C, so anything under that is the sensors rather than the pool."
         }
       },
       "init": {
@@ -239,7 +243,8 @@
           "weather_entity": "Weather",
           "cover_entity": "Pool cover (optional)",
           "flow_unit": "Flow meter unit",
-          "cheap_price_sensor": "Cheap price period signal"
+          "cheap_price_sensor": "Cheap price period signal",
+          "pump_inlet_sensor": "Pump inlet temperature (optional)"
         },
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",
@@ -257,7 +262,8 @@
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
           "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
           "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
-          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed."
+          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
+          "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong."
         }
       },
       "hardware": {

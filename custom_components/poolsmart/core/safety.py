@@ -223,11 +223,61 @@ def _delta_t_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
     return []
 
 
+def _calibration_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
+    """Cross-check two probes that should agree.
+
+    The pool probe and the pump inlet measure the same water a metre apart, so
+    they should read the same. When they do not, one of three things is true and
+    all of them are worth knowing:
+
+    * a probe needs calibrating, which quietly corrupts delta-T and every COP
+      figure derived from it;
+    * the pool is stratified, warm at the surface and cold at the inlet, which
+      means the pump has not been circulating enough;
+    * a probe is not actually in the water.
+
+    This is the only use for a fifth probe that would otherwise be redundant, and
+    it is a good one: it is the only check in the system capable of noticing that
+    a temperature reading is simply wrong rather than merely surprising.
+    """
+    if config.is_aliased("water", "pump_inlet"):
+        return []
+    if not (state.water_temp.available and state.pump_inlet.available):
+        return []
+    if state.heat_pump_on:
+        # The heat pump is adding heat; the two probes are legitimately apart.
+        return []
+
+    difference = abs(state.water_temp.value - state.pump_inlet.value)
+    if difference <= config.safety.calibration_tolerance:
+        return []
+
+    return [
+        Fault(
+            "probe_disagreement",
+            Severity.WARNING,
+            (
+                f"The pool probe reads {state.water_temp.value:.2f} C and the pump "
+                f"inlet {state.pump_inlet.value:.2f} C, a difference of "
+                f"{difference:.2f} C. They measure the same water, so either a probe "
+                "needs calibrating, the pool is stratified from too little "
+                "circulation, or a probe is not in the water."
+            ),
+            {
+                "pool": state.water_temp.value,
+                "pump_inlet": state.pump_inlet.value,
+                "difference": round(difference, 3),
+            },
+        )
+    ]
+
+
 def evaluate(state: PoolState, config: PoolConfig) -> list[Fault]:
     """Return every fault currently detected, most severe first."""
     faults = _reading_faults(state, config)
     faults += _flow_faults(state, config)
     faults += _delta_t_faults(state, config)
+    faults += _calibration_faults(state, config)
 
     order = {Severity.CRITICAL: 0, Severity.HEATING_BLOCKED: 1, Severity.WARNING: 2}
     return sorted(faults, key=lambda f: order[f.severity])

@@ -86,6 +86,7 @@ CONF_WATER_TEMP_SENSOR = "water_temp_sensor"
 
 # -- Step 5: optional entities --------------------------------------------
 CONF_AIR_TEMP_SENSOR = "air_temp_sensor"
+CONF_PUMP_INLET_SENSOR = "pump_inlet_sensor"
 CONF_HP_INLET_SENSOR = "hp_inlet_sensor"
 CONF_HP_OUTLET_SENSOR = "hp_outlet_sensor"
 CONF_FLOW_SENSOR = "flow_sensor"
@@ -101,6 +102,7 @@ CONF_COVER_ENTITY = "cover_entity"
 
 OPTIONAL_ENTITY_KEYS = (
     CONF_AIR_TEMP_SENSOR,
+    CONF_PUMP_INLET_SENSOR,
     CONF_HP_INLET_SENSOR,
     CONF_HP_OUTLET_SENSOR,
     CONF_FLOW_SENSOR,
@@ -118,6 +120,7 @@ OPTIONAL_ENTITY_KEYS = (
 #: what is switched off when a field is left blank, instead of failing.
 CAPABILITY_BY_ENTITY = {
     CONF_AIR_TEMP_SENSOR: "operating_envelope",
+    CONF_PUMP_INLET_SENSOR: "calibration_check",
     CONF_HP_INLET_SENSOR: "delta_t_and_cop",
     CONF_HP_OUTLET_SENSOR: "delta_t_and_cop",
     CONF_FLOW_SENSOR: "flow_protection",
@@ -151,6 +154,7 @@ CONF_SOLAR_THRESHOLD_W = "solar_threshold_w"
 CONF_SOLAR_MARGIN_W = "solar_margin_w"
 CONF_SOLAR_HYSTERESIS_W = "solar_hysteresis_w"
 CONF_ECO_PRICE_FACTOR = "eco_price_factor"
+CONF_CALIBRATION_TOLERANCE = "calibration_tolerance"
 CONF_STALE_WARNING_SECONDS = "stale_warning_seconds"
 CONF_STALE_BLOCKING_SECONDS = "stale_blocking_seconds"
 CONF_LEARNING_ENABLED = "learning_enabled"

@@ -4,6 +4,16 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.12.6] - 2026-08-01
+
+### Added
+- Optional pump inlet probe, used as a calibration cross-check. It measures the
+  same water as the pool probe, so a disagreement beyond the tolerance means a
+  probe needs calibrating, the pool is stratified, or a probe is not in the
+  water. Nothing else in the system can notice a reading that is simply wrong
+- Configurable tolerance for that check, defaulting to 0.6 °C, a little above
+  the accuracy of a DS18B20
+
 ## [0.12.5] - 2026-08-01
 
 ### Fixed
@@ -211,6 +221,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.12.6]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.6
 [0.12.5]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.5
 [0.12.4]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.4
 [0.12.3]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.3

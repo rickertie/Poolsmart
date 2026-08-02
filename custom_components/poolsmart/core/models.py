@@ -153,6 +153,7 @@ class PoolState:
     # -- Measurements ------------------------------------------------------
     water_temp: SensorReading
     air_temp: SensorReading
+    pump_inlet: SensorReading
     hp_inlet: SensorReading
     hp_outlet: SensorReading
     flow_m3h: SensorReading

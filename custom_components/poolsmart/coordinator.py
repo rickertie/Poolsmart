@@ -178,12 +178,15 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         inlet = self._conf(c.CONF_HP_INLET_SENSOR)
         outlet = self._conf(c.CONF_HP_OUTLET_SENSOR)
         water = self._conf(c.CONF_WATER_TEMP_SENSOR)
-        for role_a, entity_a in (("hp_inlet", inlet), ("hp_outlet", outlet), ("water", water)):
-            for role_b, entity_b in (
-                ("hp_inlet", inlet),
-                ("hp_outlet", outlet),
-                ("water", water),
-            ):
+        pump_inlet = self._conf(c.CONF_PUMP_INLET_SENSOR)
+        roles = (
+            ("hp_inlet", inlet),
+            ("hp_outlet", outlet),
+            ("water", water),
+            ("pump_inlet", pump_inlet),
+        )
+        for role_a, entity_a in roles:
+            for role_b, entity_b in roles:
                 if role_a != role_b and entity_a and entity_a == entity_b:
                     aliases.add(frozenset({role_a, role_b}))
 
@@ -258,6 +261,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 eco_price_factor=float(self._conf(c.CONF_ECO_PRICE_FACTOR, 0.7)),
             ),
             safety=SafetySettings(
+                calibration_tolerance=float(
+                    self._conf(c.CONF_CALIBRATION_TOLERANCE, 0.6)
+                ),
                 pump_startup_grace_seconds=int(
                     self._conf(c.CONF_PUMP_STARTUP_GRACE, 120)
                 ),
@@ -464,6 +470,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             mode=self._mode,
             water_temp=self._read(c.CONF_WATER_TEMP_SENSOR, "water"),
             air_temp=self._read(c.CONF_AIR_TEMP_SENSOR, "air"),
+            pump_inlet=self._read(c.CONF_PUMP_INLET_SENSOR, "pump_inlet"),
             hp_inlet=self._read(c.CONF_HP_INLET_SENSOR, "hp_inlet"),
             hp_outlet=self._read(c.CONF_HP_OUTLET_SENSOR, "hp_outlet"),
             flow_m3h=self._read_flow(),
