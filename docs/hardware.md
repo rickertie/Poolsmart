@@ -37,32 +37,49 @@ All 5 Dallas probes share a single 1-Wire bus on **GPIO22** and are identified b
 
 > ⚠️ **CRITICAL:** Hall-effect flow meters produce **5V logic pulses**[cite: 1, 4]. Connecting 5V directly to an ESP32 GPIO pin will permanently destroy the pin[cite: 4]! Use a voltage divider:
 
+### ⚡ 5V Hall-Effect Flow Meter Voltage Divider
+
+> ⚠️ **CRITICAL:** Hall-effect flow meters output **5V logic pulses**. Never connect the signal directly to an ESP32 GPIO pin. Use a simple voltage divider to reduce the signal to approximately **3.3V**.
+
 ```text
-Meter Signal (5V Pulse) ───[ 10 kΩ ]───┬───> GPIO19 (3.3V Max)
-                                       │
-                                    [ 20 kΩ ]
-                                       │
-                                      GND
+Meter Signal (5V Pulse)
+          │
+       [10 kΩ]
+          │──────────────► GPIO19 (ESP32)
+          │
+       [20 kΩ]
+          │
+         GND
+```
 
+The 10kΩ / 20kΩ divider reduces the 5V pulse to approximately **3.3V**, making it safe for the ESP32.
 
+---
 
 ## 📸 Physical Installation & Mounting
 
 | Component | Image | Mounting Details |
 | :--- | :---: | :--- |
-| **Filter Pump** | <img src="images/Bestway_pump.webp" width="160"> | In-line circulation setup[cite: 1]. |
-| **Heat Pump** | <img src="images/w_eau_mini_power_3kw_warmtepomp.webp" width="160"> | Connected downstream of the filter pump[cite: 1, 4]. |
-| **Sensor Mounts** | <img src="images/Pipe_clamp.jpg" width="160"> | DS18B20 probes secured against PVC pipes using pipe clamps and thermal paste[cite: 1]. |
-| **Flow Meter** | <img src="images/Flow_meter.jpg" width="160"> | DN50 pulse meter installed on the heat pump return line[cite: 1]. |
+| **Filter Pump** | <img src="images/Bestway_pump.webp" width="160"> | Installed in the main circulation loop. |
+| **Heat Pump** | <img src="images/w_eau_mini_power_3kw_warmtepomp.webp" width="160"> | Installed downstream of the filter pump. |
+| **Temperature Sensors** | <img src="images/Pipe_clamp.jpg" width="160"> | DS18B20 probes attached to the PVC pipe using thermal paste and pipe clamps for accurate surface readings. |
+| **Flow Meter** | <img src="images/Flow_meter.jpg" width="160"> | DN50 Hall-effect flow meter installed in the return line from the heat pump. |
 
-### ⚡ Wiring Schematic Overview
+---
 
-<img src="images/esp32c6_wiring_overview.png" width="550">
+## ⚡ Wiring Overview
+
+<p align="center">
+  <img src="images/esp32c6_wiring_overview.png" width="550">
+</p>
 
 ---
 
 ## 🔗 Next Steps & Calibration
 
-Once physical assembly and wiring are completed:
-1. Proceed to [`esphome.md`](esphome.md) for the complete ESPHome YAML configuration[cite: 1].
-2. Perform temperature probe offset calibration (stirred water test) and flow meter calibration (bucket test)[cite: 1, 4].
+After completing the hardware installation:
+
+1. Continue with the **ESPHome configuration** in [`esphome.md`](esphome.md).
+2. Calibrate the temperature probes using the stirred-water method.
+3. Calibrate the flow meter using a bucket test.
+4. Verify that all GPIO inputs report stable values in Home Assistant before enabling automations.
