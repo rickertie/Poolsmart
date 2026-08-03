@@ -1,137 +1,83 @@
-# Architecture
+[← Back to README](../README.md) • **Architecture** • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Defaults](defaults.md)
+***
 
-This document covers how PoolSmart actually makes decisions, how filtration
-is calculated, and how the configuration options work. For the high-level
-pitch, see the [main README](../README.md).
+# 🏗️ Architecture & Decision Core
 
-## The decision ladder
+This document covers how PoolSmart evaluates decisions, calculates daily filtration, and manages component failure. 
 
-Every 30 seconds the ladder is walked from the top. The first branch that
-matches wins, and lower branches are not evaluated.
+---
 
-| # | Branch | Ignores night quiet |
-|---|---|---|
-| 0 | Emergency stop | yes |
-| 1 | Frost and minimum-temperature protection | yes |
-| 2 | Manual control | yes |
-| 3 | Chemistry cycle | yes |
-| 4 | Filtration deadline | yes |
-| 5 | Free electricity (price below zero) | yes |
-| 6 | Heating session | no |
-| 7 | Scheduled filtration block | no |
-| 8 | Pump rundown | no |
-| 9 | Idle | — |
+## 🪜 The Priority Decision Ladder
 
-Modes do not carry their own logic; they enable or disable branches. Branches
-1 and 4 stay active in every mode including OFF, because an off switch must
-not be able to cause damage.
+Every 30 seconds, PoolSmart evaluates the current state of your pool against a strict priority ladder. The evaluation walks from the top down; **the first condition that matches wins**, and all lower branches are ignored.
 
-In front of branches 5 and 6 sits a gate: the heat pump's operating envelope.
-Below its minimum air temperature nothing can heat the pool, not even a
-negative price and not even the minimum-temperature protection. That
-protection can only circulate, which is enough, because moving water does
-not freeze.
+| Priority | Branch / Condition | Ignores Night Quiet? | Description |
+| :---: | :--- | :---: | :--- |
+| **0** | 🚨 **Emergency Stop** | Yes | Global manual kill-switch or safety interlock triggered[cite: 5]. |
+| **1** | ❄️ **Frost Protection** | Yes | Temp drops below safe threshold; forces circulation[cite: 5]. |
+| **2** | 🕹️ **Manual Override** | Yes | User manually forced the pump ON/OFF in Home Assistant[cite: 5]. |
+| **3** | 🧪 **Chemistry Cycle** | Yes | Scheduled chemical dosing or shock treatment[cite: 5]. |
+| **4** | ⏰ **Filtration Deadline** | Yes | Ensures minimum turnover is met before the day ends[cite: 5]. |
+| **5** | 📉 **Free Electricity** | Yes | Triggered when electricity price is negative ($< 0$)[cite: 5]. |
+| **6** | 🔥 **Heating Session** | **No** | Dynamic heating session active based on COP & prices[cite: 5]. |
+| **7** | 🌀 **Scheduled Filtration** | **No** | Regular background filtration block[cite: 5]. |
+| **8** | ⏳ **Pump Rundown** | **No** | Cool-down period after heating before turning pump off[cite: 5]. |
+| **9** | 💤 **Idle** | — | No action required; pump and heating remain off[cite: 5]. |
 
-## Configuration
+> 🔒 **Safety Interlock:** Branches **0, 1, and 4 stay active even if the integration is turned OFF**[cite: 5]. An off-switch must never be able to cause pipe freeze or damaged equipment[cite: 5].
 
-Settings → Devices & Services → PoolSmart → **Configure** gives five
-sections:
+### 🌡️ Heat Pump Operating Envelope
+In front of branches **5 (Free Electricity)** and **6 (Heating)** sits an operating envelope gate[cite: 5]. If the outdoor air temperature drops below the heat pump's minimum operating limit (e.g., $< 11\text{°C}$), heating is disabled[cite: 5]. In this state, Frost Protection (Branch 1) will only trigger simple **water circulation**, which is sufficient to prevent freezing[cite: 5].
 
-| Section | Contains |
-|---|---|
-| Entities | Every switch and sensor, including the required ones |
-| Pool and equipment | Volume, depth, pump flow, heat pump figures |
-| General settings | Turnover, hysteresis, prices, night quiet |
-| Swimming times | When the pool should be at temperature |
-| Notifications | Which message goes to which device |
+---
 
-Picking the wrong temperature sensor during setup is easy to do, so the
-entity choices live in options where they can be corrected rather than in
-the entry data where they could not.
+## 🌀 Filtration Calculation
 
-Every optional entity may be left blank. The matching capability is switched
-off and listed in diagnostics rather than failing.
+Filtration runtime is calculated dynamically based on physical metrics rather than hardcoded timers[cite: 5]:
 
-| Left blank | What stops working |
-|---|---|
-| Outdoor temperature | Operating envelope check; falls back to the weather entity |
-| Heat pump inlet or outlet | Delta-T and COP learning |
-| Flow meter | Flow protection and self-correcting block duration |
-| Power sensors | Energy, cost and measured COP |
-| Price sensor | Price optimisation, including the free-electricity branch |
-| Solar sensors | Solar optimisation |
+$$\text{Daily Runtime (hours)} = \frac{\text{Pool Volume (L)} \times \text{Turnover Factor}}{\text{Effective Pump Flow (L/h)}}$$
 
-### A recommendation about the heat pump thermostat
+$$\text{Block Duration} = \frac{\text{Daily Runtime}}{\text{Number of Scheduled Blocks}}$$
 
-Set the heat pump's own thermostat to the highest temperature you would ever
-want plus about two degrees. If your maximum is 32 °C, set it to 34 °C.
-Below that you keep full software control over any target, and above it the
-hardware intervenes if the software ever fails to switch off. The setup
-wizard shows this suggestion with your own numbers filled in.
+### Key Filtration Behaviors:
+* **Derating Factor:** If pump flow is unmeasured (taken from a spec sheet), it is automatically derated by $25\text{--}40\%$ to account for filter resistance[cite: 5].
+* **Self-Correcting Blocks:** If a flow meter is installed, block durations automatically adjust as filter pressure changes over time[cite: 5].
+* **Heating Session Credit:** Any time spent running the pump during heating sessions counts directly towards your daily filtration quota, preventing redundant pump runtime[cite: 5].
 
-## Filtration
+---
 
-The daily requirement is calculated, not entered:
+## ⚙️ Entity Mapping & Fallbacks
 
-```
-daily runtime = pool volume x turnover factor / effective pump flow
-block duration = daily runtime / number of blocks
-```
+All sensors and switches can be updated anytime under **Settings → Devices & Services → PoolSmart → Configure**[cite: 5].
 
-Manufacturers specify pump flow without a filter installed; with one in line
-roughly 60-75% remains and it drops as the filter fouls. If you tick
-"measured" the figure is used as it is; otherwise it is derated. With a flow
-meter connected the block duration corrects itself as the filter ages, and a
-sustained decline raises a service notification.
+Every optional entity may be left blank[cite: 5]. The matching capability switches off cleanly and reports in diagnostics without breaking the integration[cite: 5]:
 
-Heating sessions run the pump too, so that runtime counts towards the quota.
-Without that credit the system would filter far more than needed on heating
-days.
+| Unmapped Entity | Consequence / Fallback |
+| :--- | :--- |
+| **Outdoor Temperature** | Disables envelope check; falls back to default HA weather integration[cite: 5]. |
+| **Heat Pump In / Out** | Disables live $\Delta T$ calculation and COP performance learning[cite: 5]. |
+| **Flow Meter** | Disables flow alarms; falls back to estimated pump spec flow[cite: 5]. |
+| **Power Sensors** | Disables real-time energy cost calculations and measured COP[cite: 5]. |
+| **Price / Solar Sensors** | Disables price/solar slot optimization (runs on default scheduled blocks)[cite: 5]. |
 
-## The AI layer
+> 💡 **Heat Pump Thermostat Tip:** Set your heat pump's physical thermostat 2°C higher than your highest desired Home Assistant target (e.g., set physical dial to 34°C if target is 32°C)[cite: 5]. This ensures full software control while retaining hardware safety shutdown[cite: 5].
 
-Optional and advisory. It reads the session history, produces a summary and
-at most a handful of suggested settings changes, and waits. Nothing is
-applied without pressing accept.
+---
 
-Suggestions are validated against a fixed list of adjustable settings with
-hard ranges; anything outside it is discarded. A safety limit cannot be
-suggested away. If the AI is unavailable the pool behaves exactly as it
-otherwise would, because this layer sits outside the control tick entirely.
+## 🤖 AI Advisory Layer
 
-## Development
+The optional AI layer acts strictly as a **non-blocking advisor**[cite: 5]:
+1. Analyzes historical session logs and efficiency metrics[cite: 5].
+2. Proposes parameter tweaks (e.g., adjusting filtration turnover or target temps)[cite: 5].
+3. **Applies nothing automatically.** Suggestions must be manually approved by the user[cite: 5].
+4. Out-of-bounds parameters suggested by AI are discarded by a strict validation filter[cite: 5].
 
-The decision core in `custom_components/poolsmart/core/` has no Home
-Assistant imports, so it runs and is tested standalone:
+---
+
+## 🧪 Developer & Standalone Testing
+
+The core decision logic in `custom_components/poolsmart/core/` has **zero Home Assistant dependencies**[cite: 5]. It can be tested standalone:
 
 ```bash
-cd tests && python run_tests.py
-```
-
-The suite covers twenty-two acceptance cases, including regression tests for
-the two bugs that prompted this rewrite: the pump sitting idle while the
-filtration window closed, and the pump oscillating once the daily quota was
-met.
-
-## The management panel
-
-A sidebar panel at `/poolsmart` with six tabs: overview, planning, sessions,
-learning, settings and diagnostics. It is written as a plain custom element
-with no build step and no external imports, so it keeps working without
-internet.
-
-The panel is for whoever maintains the system. The Lovelace page in
-`docs/lovelace/` is for everyone else, and the two are deliberately not the
-same thing.
-
-## The "icon not available" placeholder
-
-HACS and the integrations page both fetch their picture from the
-`home-assistant/brands` repository, and custom integrations without an entry
-there show a placeholder. It is cosmetic only; entity icons come from
-`icons.json` and display normally.
-
-Ready-made images are in `brands/custom_integrations/poolsmart/` and
-`brands/README.md` has the four steps for submitting them. Once the pull
-request is merged the placeholder disappears on its own, with no update to
-install.
+cd tests
+python run_tests.py

@@ -1,65 +1,68 @@
-# Hardware
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • **Hardware** • [ESPHome](esphome.md) • [Defaults](defaults.md)
+***
 
-This page covers the physical build: what's in it, how it's wired, and what
-it actually looks like. For the ESPHome software side (sensors, entities,
-calibration steps), see [`docs/esphome.md`](esphome.md).
+# 🛠️ Hardware & Wiring Guide
 
-## Parts list
+This page covers the physical installation: component selection, pinouts, voltage stepped-down circuits, and pipe mounting[cite: 1]. For the ESPHome YAML configuration and sensor calibration, see [`esphome.md`](esphome.md)[cite: 1].
 
-| Part | Used for |
-|---|---|
-| Seeed XIAO ESP32C6 | Main controller running ESPHome |
-| 5x DS18B20 (Dallas) temperature sensor | Pool water, pump in/out, heat pump in/out, outdoor |
-| Pulse-based flow meter (DN50) | Flow rate through the heat pump loop |
-| 4.7 kΩ resistor | Pull-up for the 1-Wire (Dallas) bus |
-| Voltage divider (e.g. 10 kΩ + 20 kΩ) | Steps the flow meter's 5V pulse down to 3.3V for the GPIO |
-| Waterproof enclosure | Houses the ESP32 and wiring near the pool |
-| Bestway Flowclear filter pump | Circulation |
-| W'eau Mini heat pump | Heating |
-| Intex Metal Frame pool (3,834 L) | The pool itself |
+---
 
-## Wiring
+## 🛒 Bill of Materials (BOM)
 
-| Signal | GPIO |
-|---|---|
-| 1-Wire bus (all Dallas sensors) | GPIO22 |
-| Flow meter pulse input | GPIO19 |
-| Status LED | GPIO23 |
+| Component | Function / Application | Notes |
+| :--- | :--- | :--- |
+| **Seeed XIAO ESP32-C6** | Main microcontroller running ESPHome. | Compact, native Wi-Fi 6 / Bluetooth. |
+| **5x DS18B20 Probes** | Temperature sensors for pool, pump, heat pump & outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
+| **DN50 Pulse Flow Sensor** | Measures volume flow rate through the heat pump loop[cite: 1]. | Yanmis DN50 Hall-effect pulse sensor. |
+| **4.7 kΩ Resistor** | Pull-up resistor for the 1-Wire bus[cite: 1]. | Connects between 3.3V and GPIO22[cite: 1]. |
+| **10 kΩ + 20 kΩ Resistors** | Voltage divider for the flow meter signal[cite: 1]. | Steps 5V pulses down to 3.3V for GPIO19. |
+| **Waterproof Enclosure** | IP65+ junction box near the pool pump setup[cite: 1]. | Protects ESP32 board and wiring[cite: 1]. |
+| **Bestway Flowclear** | Circulation filter pump[cite: 1]. | Measured at ~3.6 m³/h[cite: 7]. |
+| **W'eau Mini Power (3kW)** | Heat pump for water heating[cite: 1]. | ~0.58 kW electric input[cite: 7]. |
+| **Intex Metal Frame** | Pool structure (3,834 L at 66 cm water level)[cite: 1, 7]. | 300 x 200 x 75 cm[cite: 7]. |
 
-All five Dallas sensors share the same 1-Wire bus on GPIO22 they're
-distinguished in software by their unique hardware address (see
-[`docs/esphome.md`](esphome.md) for the address list and how to find yours
-with a Dallas scan).
+---
 
-The flow meter outputs 5V pulses, so it needs a voltage divider (or a
-5V-tolerant pin) before it reaches the ESP32's GPIO feeding 5V directly
-into a 3.3V-only pin will damage it.
+## 🔌 Pinout & Wiring Diagram
 
-> 🔌 *A wiring diagram will go here.*
+All 5 Dallas probes share a single 1-Wire bus on **GPIO22** and are identified by their unique hardware addresses in software[cite: 1].
 
-## Photos
+| Device / Signal | ESP32-C6 Pin | Circuit Requirements |
+| :--- | :---: | :--- |
+| **1-Wire Bus** (5x DS18B20) | `GPIO22` | Requires a 4.7 kΩ pull-up resistor to 3.3V[cite: 1]. |
+| **Flow Meter Signal** | `GPIO19` | **Must use Voltage Divider** (5V → 3.3V)[cite: 1, 4]. |
+| **Status LED** | `GPIO23` | Direct connection (inverted logic)[cite: 1, 7]. |
 
-| | |
-|---|---|
-| <img src="images/Bestway_pump.webp" width="200"> | Bestway Flowclear filter pump |
-| <img src="images/w_eau_mini_power_3kw_warmtepomp.webp" width="200"> | W'eau Mini Power 3kW heat pump |
-| <img src="images/DS18B20.jpg" width="200"> | DS18B20 temperature sensor |
-| <img src="images/Flow_meter.jpg" width="200"> | Pulse-based flow meter |
-| <img src="images/Pipe_clamp.jpg" width="200"> | Pipe clamp used to mount a sensor against the pipe |
+### ⚡ 5V Hall-Effect Flow Meter Voltage Divider
 
-### Wiring overview
+> ⚠️ **CRITICAL:** Hall-effect flow meters produce **5V logic pulses**[cite: 1, 4]. Connecting 5V directly to an ESP32 GPIO pin will permanently destroy the pin[cite: 4]! Use a voltage divider:
 
-<img src="images/esp32c6_wiring_overview.png" width="500">
+```text
+Meter Signal (5V Pulse) ───[ 10 kΩ ]───┬───> GPIO19 (3.3V Max)
+                                       │
+                                    [ 20 kΩ ]
+                                       │
+                                      GND
 
-The controller's 1-Wire bus (GPIO22) feeds all five Dallas sensors, the
-flow meter sits on GPIO19 behind a voltage divider, and the status LED is
-on GPIO23.
 
-> 📸 *need to add photo :-)
 
-## Calibration
+## 📸 Physical Installation & Mounting
 
-The flow meter needs a one-time calibration after installing (collecting a
-known volume and counting pulses), and each temperature sensor can be
-fine-tuned with a small offset from Home Assistant. Both are covered step by
-step in [`docs/esphome.md`](esphome.md).
+| Component | Image | Mounting Details |
+| :--- | :---: | :--- |
+| **Filter Pump** | <img src="images/Bestway_pump.webp" width="160"> | In-line circulation setup[cite: 1]. |
+| **Heat Pump** | <img src="images/w_eau_mini_power_3kw_warmtepomp.webp" width="160"> | Connected downstream of the filter pump[cite: 1, 4]. |
+| **Sensor Mounts** | <img src="images/Pipe_clamp.jpg" width="160"> | DS18B20 probes secured against PVC pipes using pipe clamps and thermal paste[cite: 1]. |
+| **Flow Meter** | <img src="images/Flow_meter.jpg" width="160"> | DN50 pulse meter installed on the heat pump return line[cite: 1]. |
+
+### ⚡ Wiring Schematic Overview
+
+<img src="images/esp32c6_wiring_overview.png" width="550">
+
+---
+
+## 🔗 Next Steps & Calibration
+
+Once physical assembly and wiring are completed:
+1. Proceed to [`esphome.md`](esphome.md) for the complete ESPHome YAML configuration[cite: 1].
+2. Perform temperature probe offset calibration (stirred water test) and flow meter calibration (bucket test)[cite: 1, 4].

@@ -1,20 +1,21 @@
 {
   "domain": "poolsmart",
   "name": "PoolSmart",
-  "version": "1.0.0",
-  "documentation": "https://github.com/rickertie/Poolsmart",
-  "issue_tracker": "https://github.com/rickertie/Poolsmart/issues",
   "codeowners": [
     "@rickertie"
   ],
   "config_flow": true,
   "dependencies": [
     "http",
-    "websocket_api",
+    "logbook",
     "panel_custom",
-    "logbook"
+    "websocket_api"
   ],
+  "documentation": "https://github.com/rickertie/Poolsmart/tree/main/docs",
   "integration_type": "device",
   "iot_class": "local_polling",
-  "requirements": []
+  "issue_tracker": "https://github.com/rickertie/Poolsmart/issues",
+  "license": "MIT",
+  "requirements": [],
+  "version": "1.0.0"
 }
