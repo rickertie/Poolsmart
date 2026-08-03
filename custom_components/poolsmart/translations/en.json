@@ -348,7 +348,7 @@
         "l_h": "L/h",
         "m3_h": "m³/h",
         "l_s": "L/s",
-        "gpm_": "GPM (US gallons per minute)"
+        "gpm": "GPM (US gallons per minute)"
       }
     },
     "chem_product": {
