@@ -206,7 +206,7 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_HP_FLOW_MIN_M3H: 2.0,
     CONF_HP_FLOW_MIN_BLOCKING: False,
     CONF_HP_FLOW_MIN_VERIFIED: False,
-    CONF_FLOW_UNIT: "L/min",
+    CONF_FLOW_UNIT: "l_min",
 }
 
 #: Optional file in the configuration directory that overrides SETUP_DEFAULTS.

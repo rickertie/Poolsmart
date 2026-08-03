@@ -47,9 +47,16 @@ _LOGGER = logging.getLogger(__name__)
 
 UNAVAILABLE = ("unknown", "unavailable", "none", "")
 
-#: Conversion to cubic metres per hour, keyed by the unit string a flow sensor
-#: publishes. Pool flow meters most often report litres per minute.
+#: Conversion to cubic metres per hour.
+#:
+#: Two kinds of key live here on purpose. The unit a sensor publishes in its
+#: ``unit_of_measurement`` is a real unit string like "L/min", and that is
+#: checked first. The setting chosen in the config flow is a slug like "l_min",
+#: because Home Assistant translation keys cannot contain a slash or a
+#: superscript — so the stored value and the displayed unit are different
+#: strings for the same thing, and both have to resolve.
 FLOW_UNIT_FACTORS = {
+    # As published by a sensor
     "m³/h": 1.0,
     "m3/h": 1.0,
     "m³/u": 1.0,
@@ -62,6 +69,12 @@ FLOW_UNIT_FACTORS = {
     "lph": 0.001,
     "l/s": 3.6,
     "gpm": 0.2271,
+    # As stored by the config flow
+    "m3_h": 1.0,
+    "l_min": 0.06,
+    "l_h": 0.001,
+    "l_s": 3.6,
+    "gpm_": 0.2271,
 }
 
 
@@ -416,12 +429,24 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         unit = (state.attributes.get("unit_of_measurement") or "").strip()
         factor = FLOW_UNIT_FACTORS.get(unit.lower())
         if factor is None:
-            factor = FLOW_UNIT_FACTORS.get(
-                str(self._conf(c.CONF_FLOW_UNIT, "m³/h")).lower(), 1.0
-            )
+            configured = str(self._conf(c.CONF_FLOW_UNIT, "l_min")).lower()
+            factor = FLOW_UNIT_FACTORS.get(configured)
+            if factor is None:
+                # Falling back to 1.0 here would silently treat 17 L/min as
+                # 17 m3/h, and every figure derived from flow would be wrong by a
+                # factor of seventeen without anything looking broken. Refusing
+                # the reading is far safer than guessing at it.
+                _LOGGER.warning(
+                    "Flow unit %r is not recognised, and the sensor %s reports "
+                    "%r. Set the flow meter unit under Configure, Entities.",
+                    configured,
+                    entity_id,
+                    unit or "no unit",
+                )
+                return SensorReading(None, None, "flow")
             if unit:
                 _LOGGER.debug(
-                    "Unrecognised flow unit %r on %s; using the configured unit",
+                    "Unrecognised sensor unit %r on %s; using the configured unit",
                     unit,
                     entity_id,
                 )

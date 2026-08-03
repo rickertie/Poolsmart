@@ -8,6 +8,22 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.0.1] — Slash-Free Slugs — 2026-08-03
+
+### Fixed
+- The flow unit selector stored values like `L/min` while Home Assistant
+  translation keys cannot contain a slash or a superscript, so the labels never
+  resolved. Both the stored slug (`l_min`) and the unit a sensor publishes
+  (`L/min`) now convert, and an unrecognised unit refuses the reading instead of
+  falling back to a factor of 1.0 — that fallback would have read 17 L/min as
+  17 m³/h and put every figure derived from flow out by a factor of seventeen
+  while nothing looked broken
+- Corrected the `gmp` typo in the gallons-per-minute option
+
+### Added
+- Tests that cross-check every selector option against both translation files
+  and against the conversion table, so a key can no longer drift from its label
+
 ## [1.0.0] — Knowledge, Not Storage — 2026-08-03
 
 First stable release.
@@ -318,6 +334,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.0.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.0
 [0.13.2]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.2
 [0.13.1]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.1

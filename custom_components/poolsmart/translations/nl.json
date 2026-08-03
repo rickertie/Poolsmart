@@ -344,11 +344,11 @@
     },
     "flow_unit": {
       "options": {
-        "L/min": "L/min",
-        "L/h": "L/h",
-        "m³/h": "m³/h",
-        "L/s": "L/s",
-        "GPM": "GPM"
+        "l_min": "L/min",
+        "l_h": "L/h",
+        "m3_h": "m³/h",
+        "l_s": "L/s",
+        "gpm_": "GPM (Amerikaanse gallons per minuut)"
       }
     },
     "chem_product": {
