@@ -107,6 +107,14 @@ def _status_attributes(c: PoolSmartCoordinator) -> dict:
         "disabled_capabilities": sorted(c.disabled_capabilities),
         "last_error": c.last_error,
         "subsystem_errors": c.subsystem_errors,
+        "price_forecast_slots": len(c._price_slots),
+        "price_optimisation": (
+            "active"
+            if c._price_slots
+            else "unavailable: no price forecast could be read, so heating waits "
+            "for the price limit or the cheap period signal instead of choosing "
+            "a cheap moment"
+        ),
         **{f"detail_{k}": v for k, v in decision.detail.items()},
     }
 

@@ -19,6 +19,9 @@ from homeassistant.util import dt as dt_util
 _LOGGER = logging.getLogger(__name__)
 
 #: Attribute names that have been seen to hold a list of priced intervals.
+#:
+#: There is no standard for this. Every tariff integration invents its own shape,
+#: so the list grows by observation rather than by specification.
 LIST_ATTRIBUTES = (
     "prices_today",
     "prices_tomorrow",
@@ -29,6 +32,14 @@ LIST_ATTRIBUTES = (
     "forecast",
     "prices",
     "data",
+    # Seen on tibber_prices and similar
+    "intervals",
+    "today_intervals",
+    "tomorrow_intervals",
+    "price_data",
+    "hourly_prices",
+    "all_prices",
+    "attributes",
 )
 
 #: Keys that have been seen to hold the start of an interval.
@@ -94,10 +105,20 @@ def extract_forecast(state: State | None) -> tuple[tuple[datetime, datetime, flo
         collected.extend(parsed)
 
     if not collected:
-        _LOGGER.debug(
-            "No price forecast recognised on %s; planning will fall back to "
-            "heating on demand",
+        # Worth a real warning rather than a debug line: without a forecast the
+        # planner cannot choose a cheap moment, and the difference between "no
+        # price sensor" and "a price sensor whose shape I do not recognise" is
+        # the difference between a setup mistake and a gap in this list.
+        candidates = [
+            name
+            for name, value in state.attributes.items()
+            if isinstance(value, list) and value
+        ]
+        _LOGGER.warning(
+            "No price forecast recognised on %s. Planning will fall back to "
+            "heating on demand. List attributes present: %s",
             state.entity_id,
+            candidates or "none",
         )
         return ()
 

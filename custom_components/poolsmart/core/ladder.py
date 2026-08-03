@@ -79,6 +79,26 @@ def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
     return False, f"price {state.price_total:.3f}/kWh exceeds the limit of {limit:.3f}"
 
 
+def _plan_justifies_price(state: PoolState) -> bool:
+    """Whether the plan is grounds for heating above the price limit.
+
+    Only when the plan actually compared prices. Without a forecast the planner
+    falls back to "heat on demand", and treating that fallback as a plan turned
+    a missing price feed into a licence to ignore the price limit entirely --
+    heating at 0.338 against a ceiling of 0.200 while stating in the same
+    sentence that no forecast was available.
+
+    A fallback means "heat when allowed", not "heat regardless". Only Boost, a
+    negative price, and a genuine cheapest-slot plan override the ceiling.
+    """
+    if not state.plan_price_informed:
+        return False
+    return state.heating_session_active or (
+        state.heating_session_planned_start is not None
+        and state.heating_session_planned_start <= state.now
+    )
+
+
 def _needs_heat(state: PoolState, config: PoolConfig) -> bool:
     """Whether the pool is below target, with hysteresis on the start side.
 
@@ -155,10 +175,7 @@ def _augment_with_heating(
         why = "Boost is on, so price is ignored"
     else:
         acceptable, reason = _price_acceptable(state, config)
-        planned = state.heating_session_active or (
-            state.heating_session_planned_start is not None
-            and state.heating_session_planned_start <= state.now
-        )
+        planned = _plan_justifies_price(state)
         if not (acceptable or planned):
             return decision
         why = (
@@ -365,10 +382,7 @@ def _walk(
             )
         else:
             acceptable, why = _price_acceptable(state, config)
-            planned = state.heating_session_active or (
-                state.heating_session_planned_start is not None
-                and state.heating_session_planned_start <= state.now
-            )
+            planned = _plan_justifies_price(state)
             if acceptable:
                 return win(
                     Decision(
@@ -380,47 +394,39 @@ def _walk(
                     )
                 )
             if planned:
-                # The plan outranks the price limit here, and what to say about
-                # that depends on whether the plan actually compared prices.
-                #
-                # With a forecast, it picked the cheapest intervals available
-                # before the deadline, and saying so is fair. Without one, it
-                # simply fell back to heating on demand -- and claiming that
-                # fallback was a chosen cheap moment, which is what this used to
-                # do, is worse than saying nothing. A pool running at twice the
-                # day's low while insisting it found the cheapest time is exactly
-                # the kind of thing that makes people stop believing the reasons.
-                informed = state.plan_price_informed
+                # A price-informed plan picked the cheapest intervals available
+                # before the deadline. If none of them fell under the limit it
+                # takes the cheapest there are, because arriving cold at swimming
+                # time is the worse failure.
                 return win(
                     Decision(
                         pump=True,
                         heat_pump=True,
                         branch=Branch.HEATING,
                         reason=(
-                            (
-                                f"Heating to {state.target_temp:.1f} C: this interval "
-                                "is part of the plan for reaching temperature on "
-                                f"time, even though {why}. Nothing cheaper was "
-                                "available before the deadline."
-                            )
-                            if informed
-                            else (
-                                f"Heating to {state.target_temp:.1f} C on demand: "
-                                f"{why}, but no usable price forecast is available "
-                                "to wait for a cheaper moment. Check that the price "
-                                "sensor is configured and publishes a forecast."
-                            )
+                            f"Heating to {state.target_temp:.1f} C: this interval is "
+                            "part of the plan for reaching temperature on time, even "
+                            f"though {why}. Nothing cheaper was available before the "
+                            "deadline."
                         ),
                         detail={
                             "planned": True,
                             "price": state.price_total,
                             "over_limit": True,
                             "price_note": why,
-                            "price_informed": informed,
+                            "price_informed": True,
                         },
                     )
                 )
-            trace.record(Branch.HEATING, Verdict.PRICE, why)
+            detail = why
+            if state.heating_session_active and not state.plan_price_informed:
+                detail = (
+                    f"{why}. There is no usable price forecast, so heating waits for "
+                    "the price to come down rather than running regardless. Check "
+                    "that the price sensor publishes a forecast, or use the cheap "
+                    "period signal."
+                )
+            trace.record(Branch.HEATING, Verdict.PRICE, detail)
 
     # -- 7. Scheduled filtration block ------------------------------------
     if permitted(Branch.FILTRATION_BLOCK):

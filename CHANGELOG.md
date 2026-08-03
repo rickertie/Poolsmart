@@ -4,6 +4,34 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.13.2] - 2026-08-03
+
+### Added
+- Regression tests covering Eco mode at an expensive moment. Eco tightens the
+  ceiling to 70% of the configured limit, and a system reported heating at
+  0.317/kWh against an effective ceiling of 0.14 — the fallback-plan bug fixed
+  in 0.13.1. Eco is the mode people choose precisely to avoid that, so it is
+  now pinned by tests rather than only by the fix
+
+## [0.13.1] - 2026-08-02
+
+### Fixed
+- **A missing price forecast was licensing heating at any price.** Without a
+  forecast the planner falls back to "heat on demand", and the ladder treated
+  that fallback as a plan, which overrides the price limit. The result was
+  heating at 0.338 against a ceiling of 0.200 while the reason line said in the
+  same breath that no forecast was available. A fallback now means "heat when
+  allowed", not "heat regardless" — only Boost, a negative price, the cheap
+  period signal, or a genuine cheapest-slot plan override the limit
+
+### Added
+- More attribute shapes recognised when reading a price forecast, and a warning
+  naming the list attributes actually present when none is recognised. The
+  difference between "no price sensor" and "a shape I do not know" is the
+  difference between a setup mistake and a gap in that list
+- The status sensor reports whether price optimisation is active and how many
+  forecast intervals were read
+
 ## [0.13.0] - 2026-08-02
 
 ### Changed
@@ -241,6 +269,8 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[0.13.2]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.2
+[0.13.1]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.1
 [0.13.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.0
 [0.12.6]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.6
 [0.12.5]: https://github.com/rickertie/Poolsmart/releases/tag/v0.12.5
