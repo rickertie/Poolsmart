@@ -1,179 +1,124 @@
 # 🏊 PoolSmart
 
 ![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)
-![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Integration-41BDF5.svg)
 
-> Smart swimming pool automation for Home Assistant.
-> Smarter filtration, cheaper heating, and a lot less manual tinkering.
+> **Smart swimming pool automation for Home Assistant.**  
+> Smarter filtration, cheaper heating, and zero manual tinkering.
 
-PoolSmart is a Home Assistant integration that runs your swimming pool for
-you. It continuously balances filtration, heating, electricity prices,
-weather and how often you actually swim so the pool is ready when you want
-it, using as little energy as possible.
+PoolSmart is a Home Assistant integration that automates your swimming pool management. It continuously balances filtration, heat pump efficiency, electricity prices, weather forecasts, and your personal swimming habits to keep your pool perfectly ready — using as little energy as possible.
 
-Whether you have a small inflatable pool or a 30,000 litre in-ground pool
-with a heat pump, PoolSmart adapts to your setup instead of making you edit
-YAML every time something changes.
+Whether you run a small inflatable setup or a 30,000-liter in-ground pool with a heat pump, PoolSmart dynamically adapts to your hardware without requiring endless YAML tweaks.
 
 ---
 
-> ⚠️ **AI Notice**
->
-> PoolSmart was developed with significant assistance from AI. The
-> architecture, algorithms and safety logic have been designed, reviewed and
-> tested by the project maintainer, but bugs may still exist.
->
-> If you find an issue or have an improvement in mind, please open an Issue
-> or Pull Request it's genuinely welcome.
+> ⚠️ **AI Notice**  
+> PoolSmart was developed with significant assistance from AI. The architecture, algorithms, and safety logic have been designed, reviewed, and tested by the project maintainer, but bugs may still exist.  
+> 
+> Found an issue or have an improvement in mind? Opening an **Issue** or **Pull Request** is genuinely appreciated!
 
-## ✨ Features
+---
 
-✔ Intelligent filtration scheduling
-✔ Heat pump optimisation
-✔ Dynamic electricity price optimisation
-✔ Weather-aware heating
-✔ Self-learning heating model
-✔ Automatic runtime calculation
-✔ Frost protection
-✔ Safety-first decision engine
-✔ Optional AI recommendations
-✔ Zero YAML automations
+## ✨ Key Features
 
-## Why PoolSmart?
+* **🧠 Smart Decision Engine** — Prioritizes safety, frost protection, and schedules without race conditions.
+* **📈 Self-Learning Heating Model** — Predicts heat loss and measures actual thermal efficiency over time.
+* **⚡ Dynamic Electricity Optimization** — Automatically heats during cheap or solar-rich hours.
+* **🌡️ Weather-Aware Operation** — Adapts runtimes based on outdoor temperatures and solar gains.
+* **❄️ Smart Frost Protection** — Drops back to safe circulation if air temperatures dip too low for heat pumps.
+* **🤖 Optional AI Recommendations** — Get high-level advice on filtration, cover usage, and heating windows.
+* **🛠️ Zero YAML Required** — Fully configurable via the UI with comprehensive helper text and worked examples.
 
-Most pool automations are built from dozens of separate YAML automations.
+---
 
-That works... until Home Assistant restarts.
-...until a timer gets lost.
-...until heating and filtration start fighting each other.
-...until you find yourself wondering:
+## 🤔 Why PoolSmart?
 
-> "Why did the pump suddenly turn on?"
+Most pool automations consist of dozens of loose YAML rules and timers.
 
-PoolSmart solves that by replacing dozens of independent automations with a
-single decision engine that always knows **why** it made a decision and
-can tell you.
+That works... until Home Assistant restarts, a timer gets lost, or heating and filtration fight each other over control. You're often left wondering: *"Why did the pump just turn on?"*
 
-## How it works
+PoolSmart replaces fragmented automations with a **single, deterministic decision engine**. It evaluates system state every 30 seconds and always provides a clear, traceable reason for every action.
 
-Every 30 seconds, PoolSmart checks a fixed priority ladder from emergency
-stop and frost protection at the top, down to scheduled filtration and idle
-at the bottom. The first rule that applies wins, and nothing below it runs.
-No fighting automations, no race conditions, no mysterious pump starts.
+┌─────────────────────────────────────────────────────────────┐
+│                   PRIORITY DECISION LADDER                   │
+├─────────────────────────────────────────────────────────────┤
+│  1. Emergency Stop & Safety Flags                            │
+│  2. Frost Protection (Circulation fallback)                 │
+│  3. Heating Sessions (Dynamic price & COP windows)          │
+│  4. Scheduled Filtration                                    │
+│  5. Idle / Off                                              │
+└─────────────────────────────────────────────────────────────┘
 
-A gate in front of the heating branches also checks the heat pump's
-operating envelope: below its minimum air temperature, nothing can heat the
-pool not a negative price, not even frost protection, which falls back to
-simple circulation instead. Moving water doesn't freeze.
+> 📖 **Deep Dive:** Full details on the decision ladder, mathematical formulas, and parameters live in [`docs/architecture.md`](docs/architecture.md).
 
-Filtration time, heating sessions and the energy budget are all calculated
-from your pool's own volume, pump flow and heat pump specs not hardcoded,
-so a small inflatable pool and a large in-ground pool both just work.
+---
 
-📖 Full details on the decision ladder, filtration formula and configuration
-options live in [`docs/architecture.md`](docs/architecture.md).
+## 🚀 Installation
 
-## Installation
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=JOUW_GITHUB_GEBRUIKERSNAAM&repository=PoolSmart&category=integration)
 
-1. Add this repository to HACS as a custom repository and install PoolSmart.
-2. Restart Home Assistant.
-3. Settings → Devices & Services → Add Integration → PoolSmart.
-4. Work through the five setup steps. Only the last two ask for entities,
-   and only three of those are actually required.
+1. Click the **HACS** button above (or add this repository manually in HACS as a custom repository).
+2. Install **PoolSmart** and restart Home Assistant.
+3. Go to **Settings** → **Devices & Services** → **Add Integration** → **PoolSmart**.
+4. Follow the setup wizard (only 3 entity fields are strictly required!).
 
-Every field has a help line with a worked example. Nothing is locked in
-afterwards — everything can be changed later under **Configure**, including
-entities, pool and equipment specs, prices, and swimming times.
+> 💡 **Tip:** Every configuration step includes inline help and realistic examples. Everything — including pool volume, equipment specs, dynamic price sensors, and swim schedules — can be edited later via **Configure**.
 
-## 🔧 Example setup
+---
 
-PoolSmart doesn't care what's measuring your pool, as long as the entities
-exist in Home Assistant but here's a real one, so you have something
-concrete to start from.
+## 🔧 Real-World Hardware Example
 
-The author runs it on an **Intex Metal Frame pool (3,834 L)** with a
-**Bestway Flowclear** filter pump and a **W'eau Mini** heat pump, all fed by
-a single **Seeed XIAO ESP32C6** running ESPHome: five Dallas temperature
-sensors (pool, pump in/out, heat pump in/out, outdoor) and a pulse-based
-flow meter. The ESP32 does the light, fast local math delta-T, measured
-and predicted COP, heating rate and hands clean numbers to Home Assistant,
-where PoolSmart takes it from there.
+PoolSmart works with any standard Home Assistant entities. You don't need fancy sensors to get started, but to give you an idea of a real setup:
 
-📖 The full ESPHome configuration, wiring notes and calibration steps live in
-[`docs/esphome.md`](docs/esphome.md) — parts list, wiring and photos of the
-build are in [`docs/hardware.md`](docs/hardware.md).
+> **Example Setup:**
+> * **Pool:** Intex Metal Frame (3,834 L)
+> * **Pump:** Bestway Flowclear filter pump
+> * **Heating:** W'eau Mini heat pump
+> * **Controller:** Single Seeed XIAO ESP32-C6 running ESPHome with 5x Dallas temperature sensors (Pool, Pump In/Out, Heat Pump In/Out, Ambient) + a pulse flow meter.
 
-## 📸 Dashboard
+The ESP32 processes high-frequency local metrics ($\Delta T$, predicted COP, thermal rate) and feeds clean data to Home Assistant, where PoolSmart handles the high-level orchestration.
 
-![Dashboard](docs/images/dashboard.png)
+📖 **Hardware Guides:**  
+* [`docs/esphome.md`](docs/esphome.md) — ESPHome configuration, sensor setup, and calibration steps.
+* [`docs/hardware.md`](docs/hardware.md) — Parts list, wiring diagrams, and build photos.
 
-The dashboard shows:
+---
 
-- Current operating mode
-- Today's filtration progress
-- Planned heating sessions
-- Energy usage
-- AI recommendations
-- Diagnostics
+## 📸 Dashboard & Panel
 
-A sidebar panel at `/poolsmart` gives you six tabs overview, planning,
-sessions, learning, settings and diagnostics for anyone who wants to dig
-deeper than the dashboard shows.
+PoolSmart includes UI components to give you full visibility over your pool's state:
 
-## Designed for
+- **Current Operating Mode & Priority Reason**
+- **Daily Filtration Progress Tracker**
+- **Planned Heating Sessions & Price Matrix**
+- **Energy Usage & Efficiency Metrics**
+- **AI Advisor Suggestions**
 
-🏡 Home Assistant users
-⚡ Dynamic energy prices
-🌞 Solar owners
-❄️ Cold climates
-🏊 Heat pump pools
-❤️ People who are tired of maintaining twenty automations
+A dedicated sidebar panel (`/poolsmart`) offers 6 detailed views: **Overview**, **Planning**, **Sessions**, **Learning**, **Settings**, and **Diagnostics**.
+
+---
 
 ## 📚 Documentation
 
-The README stays high-level on purpose. For the technical deep dives:
-
-- [`docs/architecture.md`](docs/architecture.md) — the decision ladder, filtration
-  formula, entities and configuration options, and developer/test setup
-- [`docs/planning.md`](docs/planning.md) — how maintenance vs. seasonal heating
-  planning works
-- [`docs/learning.md`](docs/learning.md) — how the self-learning heating model
-  works and stays honest
-- [`docs/esphome.md`](docs/esphome.md) — a real ESPHome hardware example, sensors
-  and calibration steps
-- [`docs/hardware.md`](docs/hardware.md) — parts list, wiring and installation
-  photos
-
-## Status
-
-| Work package | State |
-|---|---|
-| Foundation: config flow, storage, models | done |
-| Control core: coordinator, ladder, filtration, safety, entities | done |
-| Planning and learning: optimizer, session recorder, COP curve | done |
-| Notifications and Lovelace page | done |
-| Sidebar management panel | done |
-| AI advisor, chemistry and cover modules | done |
-
-## Contributing
-
-Ideas, bug reports and Pull Requests are always welcome.
-
-If PoolSmart saves you time — or simply keeps your pool warm without you
-thinking about it — consider starring the repository. It really helps the
-project grow.
-
-## FAQ
-
-**Do I need a flow meter, power sensors, or a price sensor?**
-No — every optional entity can be left blank. The matching feature just
-switches itself off and shows up clearly in diagnostics instead of failing.
-
-## Licence
-
-GNU General Public License v3.0
+* [`docs/architecture.md`](docs/architecture.md) — Decision engine, priority ladder, formulas, and dev setup.
+* [`docs/planning.md`](docs/planning.md) — Maintenance vs. seasonal heating planning logic.
+* [`docs/learning.md`](docs/learning.md) — Self-learning COP and heat loss algorithms.
+* [`docs/esphome.md`](docs/esphome.md) — ESPHome configuration and calibration.
+* [`docs/hardware.md`](docs/hardware.md) — Bill of Materials (BOM) and physical installation photos.
 
 ---
 
-*Built for the Home Assistant community ❤️*
+## ❓ FAQ
+
+**Do I need a flow meter, power sensors, or smart price sensors?**  
+**No.** All optional entities can be left blank during setup. PoolSmart will automatically disable features tied to missing sensors and fall back to estimated models without breaking or throwing errors.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+<p center><i>Built for the Home Assistant community ❤️</i></p>
