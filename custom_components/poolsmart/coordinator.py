@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from . import const as c
+from .core import chemistry as chem
 from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
 from .core.trace import Trace
@@ -121,6 +122,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._last_obstacle_at: datetime | None = None
         self._active_faults: dict[str, datetime] = {}
         self._device_id_cache: str | None = None
+        self._last_good: dict[str, tuple[float, datetime]] = {}
+        #: Roles currently running on a carried-forward reading.
+        self.bridged_roles: set[str] = set()
 
     # -- Configuration -----------------------------------------------------
 
@@ -293,7 +297,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         state: State | None = self.hass.states.get(entity_id)
         if state is None or state.state in UNAVAILABLE:
-            return SensorReading(None, None, role)
+            return self._bridge(role)
         try:
             value = float(state.state)
         except (TypeError, ValueError):
@@ -428,6 +432,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     def _build_state(self, now: datetime, config: PoolConfig) -> PoolState:
         self.disabled_capabilities = set()
+        self.bridged_roles = set()
         price_total, price_energy = self._read_price()
 
         solar = self._read(c.CONF_SOLAR_POWER_SENSOR, "solar")
@@ -622,6 +627,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             (deadline - now).total_seconds() / 3600.0 if deadline else None
         )
 
+        learned = self.store.learned
         self.estimate = heating.estimate(
             config,
             water_temp=state.water_temp.value,
@@ -629,6 +635,21 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             air_temp=state.air_temp.value,
             hours_available=hours_available,
             heat_loss_c_per_h=state.heat_loss_c_per_h,
+            learned_cop=(
+                learning.cop_for(
+                    learned.cop_by_air_bucket,
+                    learned.cop_sessions_by_bucket,
+                    state.air_temp.value,
+                )
+                if config.learning.enabled
+                else None
+            ),
+            learned_rate_c_per_h=(
+                learned.heating_rate_c_per_h
+                if config.learning.enabled
+                and learned.heating_rate_sessions >= learning.COP_CONFIDENCE_SESSIONS
+                else None
+            ),
         )
 
         self._price_slots = self._read_price_forecast()
@@ -782,9 +803,17 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 ),
                 4,
             )
+        before = dict(self.store.learned.cop_by_air_bucket)
         self.store.learned.cop_by_air_bucket = learning.update_cop_curve(
-            self.store.learned.cop_by_air_bucket, record, config
+            before, record, config
         )
+        if record.air_avg is not None and record.measured_cop is not None:
+            key = learning.bucket_key(record.air_avg)
+            counts = dict(self.store.learned.cop_sessions_by_bucket)
+            counts[key] = counts.get(key, 0) + 1
+            self.store.learned.cop_sessions_by_bucket = counts
+        if record.heating_rate is not None:
+            self.store.learned.heating_rate_sessions += 1
         self.store.learned.session_count += 1
 
     # -- Idle observation, for heat loss -----------------------------------
@@ -994,6 +1023,115 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
     async def async_set_manual_pump(self, enabled: bool) -> None:
         self._manual_pump_request = enabled
         await self.async_request_refresh()
+
+    # -- Water chemistry ---------------------------------------------------
+
+    def _reading(self, key: str) -> float | None:
+        entity_id = self._conf(key)
+        if not entity_id:
+            return None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in UNAVAILABLE:
+            return None
+        try:
+            return float(state.state)
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def water_chemistry(self) -> dict:
+        """Current readings, the dose they call for, and when to test next."""
+        config = self.pool_config
+        ph = self._reading(c.CONF_PH_SENSOR)
+        chlorine = self._reading(c.CONF_CHLORINE_SENSOR)
+
+        state = self.data.get("state") if self.data else None
+        water_temp = (
+            state.water_temp.value if state and state.water_temp.available else None
+        )
+
+        records = [chem.DoseRecord.from_dict(r) for r in self.store.dose_log]
+        acid_product = chem.Product(self._conf(c.CONF_ACID_PRODUCT, "acid_15"))
+        chlorine_product = chem.Product(
+            self._conf(c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70")
+        )
+
+        ph_dose = (
+            chem.dose_for_ph(
+                ph,
+                config.pool.volume_l,
+                acid_product,
+                chem.learn_correction(records, acid_product.value),
+            )
+            if ph is not None
+            else None
+        )
+        chlorine_dose = (
+            chem.dose_for_chlorine(
+                chlorine,
+                config.pool.volume_l,
+                chlorine_product,
+                chem.learn_correction(records, chlorine_product.value),
+            )
+            if chlorine is not None
+            else None
+        )
+
+        due_at, overdue, why = chem.next_test_due(
+            self.store.last_water_test, water_temp, dt_util.now()
+        )
+        interval, _ = chem.test_interval_days(water_temp)
+
+        return {
+            "ph": ph,
+            "chlorine": chlorine,
+            "ph_dose": ph_dose.as_dict() if ph_dose else None,
+            "chlorine_dose": chlorine_dose.as_dict() if chlorine_dose else None,
+            "test_interval_days": interval,
+            "test_interval_reason": why,
+            "test_due_at": due_at.isoformat() if due_at else None,
+            "test_overdue": overdue,
+            "dose_log": list(reversed(self.store.dose_log)),
+            "corrections": {
+                acid_product.value: chem.learn_correction(records, acid_product.value),
+                chlorine_product.value: chem.learn_correction(
+                    records, chlorine_product.value
+                ),
+            },
+        }
+
+    async def async_record_dose(
+        self, product: str, amount: float, unit: str, measured_before: float
+    ) -> None:
+        """Log a dose and circulate so it disperses."""
+        record = chem.DoseRecord(
+            at=dt_util.now(),
+            product=product,
+            amount=amount,
+            unit=unit,
+            measured_before=measured_before,
+        )
+        self.store.log_dose(record.as_dict())
+        await self.async_start_chemistry()
+
+    async def async_record_test(self) -> None:
+        """Mark the water as tested just now, and close off any open dose."""
+        now = dt_util.now()
+        self.store.last_water_test = now
+
+        chemistry = self.water_chemistry
+        if self.store.dose_log:
+            latest = self.store.dose_log[-1]
+            if latest.get("measured_after") is None:
+                reading = (
+                    chemistry["ph"]
+                    if "acid" in latest["product"] or "ph" in latest["product"]
+                    else chemistry["chlorine"]
+                )
+                if reading is not None:
+                    latest["measured_after"] = reading
+        await self.store.async_save()
+        self.async_update_listeners()
 
     async def async_start_chemistry(self, minutes: int | None = None) -> None:
         duration = minutes or int(self._conf(c.CONF_CHEMISTRY_MINUTES, 30))

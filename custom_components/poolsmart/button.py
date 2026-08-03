@@ -25,6 +25,7 @@ async def async_setup_entry(
             PoolSmartResetLearning(coordinator),
             PoolSmartRunAdvisor(coordinator),
             PoolSmartAcceptSuggestion(coordinator),
+            PoolSmartRecordWaterTest(coordinator),
         ]
     )
 
@@ -103,3 +104,20 @@ class PoolSmartAcceptSuggestion(PoolSmartEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         await self.coordinator.async_accept_suggestion(0)
+
+
+class PoolSmartRecordWaterTest(PoolSmartEntity, ButtonEntity):
+    """Mark the water as tested just now.
+
+    Also closes off the most recent dose by recording what the reading became,
+    which is how the correction factor gets its data. Without that follow-up
+    reading a dose log is a list of guesses with no outcomes.
+    """
+
+    _entity_domain = "button"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "record_water_test")
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_record_test()

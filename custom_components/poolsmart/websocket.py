@@ -25,6 +25,97 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_clear_log)
 
 
+def _learning_insight(coordinator) -> list[dict]:
+    """Each learned value with its confidence and, crucially, what reads it.
+
+    A value nobody reads is not knowledge, it is storage — and for two of these
+    that was literally the case until 1.0. Naming the consumer keeps it honest.
+    """
+    from .core import learning
+
+    learned = coordinator.store.learned
+    config = coordinator.pool_config
+    state = coordinator.data.get("state") if coordinator.data else None
+    air = state.air_temp.value if state and state.air_temp.available else None
+
+    cop_in_use = learning.cop_for(
+        learned.cop_by_air_bucket, learned.cop_sessions_by_bucket, air
+    )
+    rate_sessions = learned.heating_rate_sessions
+
+    return [
+        {
+            "key": "heat_loss",
+            "value": learned.heat_loss_c_per_h,
+            "unit": "°C/h",
+            "sessions": learned.session_count,
+            "in_use": learned.heat_loss_c_per_h is not None,
+            "used_for": "how long heating takes, and whether the target is reachable",
+            "fallback": config.learning.initial_heat_loss_c_per_h,
+        },
+        {
+            "key": "measured_flow",
+            "value": learned.measured_flow_m3h,
+            "unit": "m³/h",
+            "in_use": learned.measured_flow_m3h is not None,
+            "used_for": "how many hours of filtration the pool needs each day",
+            "fallback": round(config.pump.effective_flow_m3h, 3),
+        },
+        {
+            "key": "cop",
+            "value": cop_in_use,
+            "unit": "",
+            "sessions": sum(learned.cop_sessions_by_bucket.values()),
+            "in_use": cop_in_use is not None,
+            "used_for": "the heating time and cost estimate",
+            "fallback": round(config.heat_pump.cop_at(air), 2) if air else None,
+            "confidence": learning.rate_confidence(
+                max(learned.cop_sessions_by_bucket.values(), default=0)
+            ),
+            "by_bucket": learned.cop_by_air_bucket,
+        },
+        {
+            "key": "heating_rate",
+            "value": learned.heating_rate_c_per_h,
+            "unit": "°C/h",
+            "sessions": rate_sessions,
+            "in_use": rate_sessions >= learning.COP_CONFIDENCE_SESSIONS,
+            "used_for": "the heating time estimate, ahead of any COP calculation",
+            "confidence": learning.rate_confidence(rate_sessions),
+        },
+    ]
+
+
+def _branch_time_today(coordinator) -> list[dict]:
+    """How much of today each branch spent in charge.
+
+    Reconstructed from the decision log rather than tracked separately, so it
+    cannot drift away from what was actually recorded.
+    """
+    from datetime import datetime
+
+    entries = coordinator.store.decision_log
+    totals: dict[str, float] = {}
+    for item in entries:
+        branch = item.get("branch")
+        seconds = item.get("duration_seconds") or 0
+        if branch:
+            totals[branch] = totals.get(branch, 0) + seconds
+
+    grand = sum(totals.values()) or 1
+    return sorted(
+        (
+            {
+                "branch": branch,
+                "seconds": round(seconds),
+                "share": round(seconds / grand, 3),
+            }
+            for branch, seconds in totals.items()
+        ),
+        key=lambda row: -row["seconds"],
+    )
+
+
 def _coordinator(hass: HomeAssistant, entry_id: str | None) -> PoolSmartCoordinator | None:
     entries: dict[str, PoolSmartCoordinator] = hass.data.get(DOMAIN, {})
     if entry_id:
@@ -186,6 +277,10 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             "last_error": coordinator.last_error,
             "subsystem_errors": coordinator.subsystem_errors,
             "learned": coordinator.store.learned.as_dict(),
+            "learning_insight": _learning_insight(coordinator),
+            "chemistry": coordinator.water_chemistry,
+            "branch_time_today": _branch_time_today(coordinator),
+            "bridged_roles": sorted(coordinator.bridged_roles),
             "energy": {
                 "today_kwh": round(coordinator.store.energy_today_kwh, 3),
                 "cost_today": round(coordinator.store.cost_today, 3),

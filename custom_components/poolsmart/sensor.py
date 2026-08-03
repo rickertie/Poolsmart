@@ -23,6 +23,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
+from homeassistant.util import dt as dt_util
+
 from .core import safety
 from .coordinator import PoolSmartCoordinator
 from .entity import PoolSmartEntity
@@ -323,6 +325,25 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         value_fn=lambda c: round(c.store.cost_today, 3),
     ),
     PoolSensorDescription(
+        key="water_test_due",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda c: (
+            dt_util.parse_datetime(c.water_chemistry["test_due_at"])
+            if c.water_chemistry["test_due_at"]
+            else None
+        ),
+        attributes_fn=lambda c: {
+            k: v
+            for k, v in c.water_chemistry.items()
+            if k in ("test_interval_days", "test_interval_reason", "test_overdue")
+        },
+    ),
+    PoolSensorDescription(
+        key="dose_advice",
+        value_fn=lambda c: _dose_summary(c),
+        attributes_fn=lambda c: c.water_chemistry,
+    ),
+    PoolSensorDescription(
         key="ai_suggestion",
         value_fn=lambda c: (
             len(c.advisor.last_result.suggestions) if c.advisor.last_result else 0
@@ -364,6 +385,24 @@ def _readable_hours(hours: float | None) -> str | None:
     if total % 60 == 0:
         return f"{total // 60} h"
     return f"{total // 60} h {total % 60} min"
+
+
+def _dose_summary(coordinator: PoolSmartCoordinator) -> str:
+    """One line saying what, if anything, the water needs.
+
+    "Balanced" is a real answer and worth stating, not an empty state.
+    """
+    chemistry = coordinator.water_chemistry
+    parts = []
+    for key in ("ph_dose", "chlorine_dose"):
+        dose = chemistry.get(key)
+        if dose:
+            parts.append(f"{dose['amount']:.0f} {dose['unit']} {dose['label']}")
+    if parts:
+        return " and ".join(parts)
+    if chemistry["ph"] is None and chemistry["chlorine"] is None:
+        return "no readings"
+    return "balanced"
 
 
 def _flow_adequacy(coordinator: PoolSmartCoordinator):

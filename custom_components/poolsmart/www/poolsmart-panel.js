@@ -12,6 +12,7 @@
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "planning", label: "Planning" },
+  { id: "water", label: "Water" },
   { id: "sessions", label: "Sessions" },
   { id: "learning", label: "Learning" },
   { id: "settings", label: "Settings" },
@@ -177,6 +178,8 @@ class PoolSmartPanel extends HTMLElement {
     switch (this._tab) {
       case "planning":
         return this._planning(s);
+      case "water":
+        return this._water(s);
       case "sessions":
         return this._sessions(s);
       case "learning":
@@ -308,6 +311,72 @@ class PoolSmartPanel extends HTMLElement {
     `;
   }
 
+  _water(s) {
+    const w = s.chemistry;
+    if (!w) return `<div class="card muted">No water chemistry configured.</div>`;
+    const dose = (d) =>
+      d
+        ? `<div class="card">
+             <div class="big" style="font-size:24px">${d.amount} ${esc(d.unit)}</div>
+             <div class="muted">${esc(d.label)}</div>
+             <div class="reason">${esc(d.reason)}</div>
+             ${
+               d.partial
+                 ? `<div class="reason" style="color:#ef6c00">Aiming for ${d.aiming_for}
+                    first — a correction this large overshoots if done in one go.
+                    Measure again after an hour.</div>`
+                 : ""
+             }
+             <div class="reason muted">${esc(d.instructions)}</div>
+           </div>`
+        : "";
+
+    return `
+      <div class="card">
+        <div class="row"><span>pH</span><span>${w.ph ?? "—"}</span></div>
+        <div class="row"><span>Free chlorine</span><span>${
+          w.chlorine ?? "—"
+        } mg/L</span></div>
+        <div class="row"><span>Test every</span><span>${w.test_interval_days} days</span></div>
+        <div class="row"><span>Next test</span><span>${
+          w.test_overdue ? "overdue" : fmtDateTime(w.test_due_at)
+        }</span></div>
+        <div class="reason muted">${esc(w.test_interval_reason)}</div>
+      </div>
+      ${dose(w.ph_dose)}
+      ${dose(w.chlorine_dose)}
+      ${
+        !w.ph_dose && !w.chlorine_dose && (w.ph || w.chlorine)
+          ? `<div class="card"><strong>Balanced</strong>
+             <div class="reason muted">Nothing to add.</div></div>`
+          : ""
+      }
+      ${
+        (w.dose_log || []).length
+          ? `<div class="card"><strong>Dose log</strong>
+             <div class="reason muted">What was added, and what it did. Without
+               this, dosing is guessing.</div>
+             <table>
+               <tr><th>When</th><th>Added</th><th>Before</th><th>After</th><th>Effect</th></tr>
+               ${w.dose_log
+                 .map(
+                   (d) => `<tr>
+                   <td>${fmtDateTime(d.at)}</td>
+                   <td>${d.amount} ${esc(d.unit)} ${esc(d.product)}</td>
+                   <td>${d.measured_before ?? "—"}</td>
+                   <td>${d.measured_after ?? "pending"}</td>
+                   <td>${
+                     d.actual_change !== null && d.actual_change !== undefined
+                       ? `${d.actual_change > 0 ? "+" : ""}${d.actual_change}`
+                       : "—"
+                   }</td></tr>`
+                 )
+                 .join("")}
+             </table></div>`
+          : ""
+      }`;
+  }
+
   _sessions(s) {
     if (!s.session_log.length)
       return `<div class="card muted">No finished heating sessions yet.</div>`;
@@ -332,6 +401,48 @@ class PoolSmartPanel extends HTMLElement {
   }
 
   _learning(s) {
+    const insight = s.learning_insight || [];
+    if (insight.length) {
+      return `
+        <div class="card">
+          <strong>What has been learned, and what reads it</strong>
+          <div class="reason muted">A value nobody reads is not knowledge, it is
+            storage. Each line names the decision that uses it.</div>
+        </div>
+        ${insight
+          .map(
+            (v) => `<div class="card">
+            <div class="row"><span><b>${esc(v.key.replace(/_/g, " "))}</b></span>
+              <span class="badge" style="background:${
+                v.in_use ? "#2e7d32" : "#78909c"
+              }">${v.in_use ? "in use" : "not yet used"}</span></div>
+            <div class="row"><span>Value</span><span>${
+              v.value === null || v.value === undefined
+                ? "not learned yet"
+                : `${v.value} ${esc(v.unit || "")}`
+            }</span></div>
+            ${
+              v.fallback !== null && v.fallback !== undefined
+                ? `<div class="row"><span>Falls back to</span><span>${v.fallback}</span></div>`
+                : ""
+            }
+            ${
+              v.sessions !== undefined
+                ? `<div class="row"><span>Sessions behind it</span><span>${v.sessions}${
+                    v.confidence ? ` — ${esc(v.confidence)}` : ""
+                  }</span></div>`
+                : ""
+            }
+            <div class="reason muted">Used for ${esc(v.used_for)}.</div>
+          </div>`
+          )
+          .join("")}
+        ${this._legacyLearning(s)}`;
+    }
+    return this._legacyLearning(s);
+  }
+
+  _legacyLearning(s) {
     const l = s.learned;
     const buckets = Object.entries(l.cop_by_air_bucket || {});
     return `
@@ -470,6 +581,23 @@ class PoolSmartPanel extends HTMLElement {
           : ""
       }
       ${this._traceCard(s)}
+      ${
+        (s.branch_time_today || []).length
+          ? `<div class="card"><strong>Today, by branch</strong>
+             <div class="reason muted">How much of the day each branch spent in
+               charge. One branch taking most of it usually points at a
+               measurement, not a setting.</div>
+             ${s.branch_time_today
+               .map(
+                 (b) => `<div class="row"><span>${esc(
+                   b.branch.replace(/_/g, " ").toLowerCase()
+                 )}</span><span>${fmtHours(b.seconds / 3600)} · ${(
+                   b.share * 100
+                 ).toFixed(0)}%</span></div>`
+               )
+               .join("")}</div>`
+          : ""
+      }
       ${
         s.last_error || Object.keys(s.subsystem_errors || {}).length
           ? `<div class="card"><strong class="warn">Errors</strong>

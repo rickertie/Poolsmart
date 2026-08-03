@@ -63,6 +63,11 @@ def _reading_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
         age = reading.age_seconds
         if age <= warn_after:
             continue
+        # A probe that only matters while the heat pump runs is allowed to go
+        # quiet while it is off: nothing is changing, so nothing is reported.
+        # Warning about that trains people to ignore warnings.
+        if reading.role in config.safety.conditional_roles and not state.heat_pump_on:
+            continue
 
         code = f"stale_{reading.role or label.replace(' ', '_')}"
         minutes = age / 60
@@ -253,6 +258,15 @@ def _calibration_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
         return []
     if state.heat_pump_on:
         # The heat pump is adding heat; the two probes are legitimately apart.
+        return []
+
+    # Standing water stratifies: warm at the surface where the pool probe sits,
+    # cooler at the intake. That is physics, not a fault, and comparing the two
+    # before the pump has mixed the water measures the stratification rather
+    # than the calibration. The check only means anything after a decent run.
+    if not state.pump_on:
+        return []
+    if state.pump_runtime_seconds < config.safety.mixing_minutes * 60:
         return []
 
     difference = abs(state.water_temp.value - state.pump_inlet.value)

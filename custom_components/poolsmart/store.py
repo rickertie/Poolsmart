@@ -16,7 +16,13 @@ from datetime import date, datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import DECISION_LOG_SIZE, SESSION_LOG_SIZE, STORAGE_KEY, STORAGE_VERSION
+from .const import (
+    DECISION_LOG_SIZE,
+    DOSE_LOG_SIZE,
+    SESSION_LOG_SIZE,
+    STORAGE_KEY,
+    STORAGE_VERSION,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,6 +62,10 @@ class LearnedValues:
     heat_loss_c_per_h: float | None = None
     measured_flow_m3h: float | None = None
     cop_by_air_bucket: dict[str, float] = field(default_factory=dict)
+    #: Sessions behind each bucket, so a single measurement is not mistaken for
+    #: a settled figure.
+    cop_sessions_by_bucket: dict[str, int] = field(default_factory=dict)
+    heating_rate_sessions: int = 0
     session_count: int = 0
 
     def as_dict(self) -> dict:
@@ -64,6 +74,8 @@ class LearnedValues:
             "heat_loss_c_per_h": self.heat_loss_c_per_h,
             "measured_flow_m3h": self.measured_flow_m3h,
             "cop_by_air_bucket": self.cop_by_air_bucket,
+            "cop_sessions_by_bucket": self.cop_sessions_by_bucket,
+            "heating_rate_sessions": self.heating_rate_sessions,
             "session_count": self.session_count,
         }
 
@@ -74,6 +86,8 @@ class LearnedValues:
             heat_loss_c_per_h=raw.get("heat_loss_c_per_h"),
             measured_flow_m3h=raw.get("measured_flow_m3h"),
             cop_by_air_bucket=raw.get("cop_by_air_bucket", {}),
+            cop_sessions_by_bucket=raw.get("cop_sessions_by_bucket", {}),
+            heating_rate_sessions=raw.get("heating_rate_sessions", 0),
             session_count=raw.get("session_count", 0),
         )
 
@@ -94,6 +108,8 @@ class PoolStore:
         self.target_temp: float | None = None
         self.decision_log: list[dict] = []
         self.session_log: list[dict] = []
+        self.dose_log: list[dict] = []
+        self.last_water_test: datetime | None = None
         self.energy_today_kwh: float = 0.0
         self.cost_today: float = 0.0
         self.cost_baseline_today: float = 0.0
@@ -120,6 +136,9 @@ class PoolStore:
             self.target_temp = raw.get("target_temp")
             self.decision_log = raw.get("decision_log", [])
             self.session_log = raw.get("session_log", [])
+            self.dose_log = raw.get("dose_log", [])
+            if raw.get("last_water_test"):
+                self.last_water_test = datetime.fromisoformat(raw["last_water_test"])
             self.energy_today_kwh = raw.get("energy_today_kwh", 0.0)
             self.cost_today = raw.get("cost_today", 0.0)
             self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
@@ -165,6 +184,10 @@ class PoolStore:
                 "target_temp": self.target_temp,
                 "decision_log": self.decision_log[-DECISION_LOG_SIZE:],
                 "session_log": self.session_log[-SESSION_LOG_SIZE:],
+                "dose_log": self.dose_log[-DOSE_LOG_SIZE:],
+                "last_water_test": (
+                    self.last_water_test.isoformat() if self.last_water_test else None
+                ),
                 "energy_today_kwh": self.energy_today_kwh,
                 "cost_today": self.cost_today,
                 "cost_baseline_today": self.cost_baseline_today,
@@ -216,6 +239,12 @@ class PoolStore:
         self.decision_log.append(payload)
         if len(self.decision_log) > DECISION_LOG_SIZE:
             self.decision_log = self.decision_log[-DECISION_LOG_SIZE:]
+
+    def log_dose(self, payload: dict) -> None:
+        """Record a dose that was applied."""
+        self.dose_log.append(payload)
+        if len(self.dose_log) > DOSE_LOG_SIZE:
+            self.dose_log = self.dose_log[-DOSE_LOG_SIZE:]
 
     def log_session(self, payload: dict) -> None:
         """Record a finished heating session, usable or not.

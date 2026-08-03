@@ -203,6 +203,8 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+        vol.Optional(c.CONF_PH_SENSOR): ANY_SENSOR,
+        vol.Optional(c.CONF_CHLORINE_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
         ),
@@ -373,6 +375,8 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+                field(c.CONF_PH_SENSOR): ANY_SENSOR,
+                field(c.CONF_CHLORINE_SENSOR): ANY_SENSOR,
                 field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
                     selector.EntitySelectorConfig(
                         domain=["binary_sensor", "input_boolean"]
@@ -600,6 +604,32 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     c.CONF_ECO_PRICE_FACTOR,
                     default=current.get(c.CONF_ECO_PRICE_FACTOR, 0.7),
                 ): _positive(0.1, 1.0, 0.05),
+                vol.Optional(
+                    c.CONF_ACID_PRODUCT,
+                    default=current.get(c.CONF_ACID_PRODUCT, "acid_15"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            "acid_15", "acid_37", "ph_plus",
+                            "chlorine_granules_70", "chlorine_liquid_15",
+                        ],
+                        translation_key="chem_product",
+                    )
+                ),
+                vol.Optional(
+                    c.CONF_CHLORINE_PRODUCT,
+                    default=current.get(
+                        c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70"
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            "acid_15", "acid_37", "ph_plus",
+                            "chlorine_granules_70", "chlorine_liquid_15",
+                        ],
+                        translation_key="chem_product",
+                    )
+                ),
                 vol.Optional(
                     c.CONF_CHEMISTRY_MINUTES,
                     default=current.get(c.CONF_CHEMISTRY_MINUTES, 30),

@@ -1015,12 +1015,14 @@ def test_t48b_unplanned_over_limit_still_waits():
 # T49 - never claim a cheap moment that was not chosen
 # ---------------------------------------------------------------------------
 
-def test_t49_no_forecast_does_not_claim_cheapest():
-    """Regression: running at twice the day's low while calling it the cheapest.
+def test_t49_no_forecast_does_not_override_the_price_limit():
+    """Regression: heating at 0.338 against a ceiling of 0.200.
 
-    Without a forecast the planner falls back to heating on demand. That is a
-    reasonable fallback and emphatically not a chosen cheap moment. Dressing it
-    up as one is how people stop believing the reasons.
+    Without a forecast the planner falls back to "heat on demand". Treating that
+    fallback as a plan turned a missing price feed into a licence to ignore the
+    price limit entirely — and the reason line said so in the same breath, which
+    is how it was spotted. A fallback means "heat when allowed", not "heat
+    regardless".
     """
     config = make_config(energy=EnergySettings(max_price=0.20))
     now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
@@ -1028,7 +1030,7 @@ def test_t49_no_forecast_does_not_claim_cheapest():
         now,
         water_temp=SensorReading(24.0, 10, "water"),
         target_temp=28.0,
-        price_total=0.2484,
+        price_total=0.338,
         solar_power_w=0.0,
         heating_session_active=True,
         plan_price_informed=False,   # no forecast was parsed
@@ -1036,10 +1038,45 @@ def test_t49_no_forecast_does_not_claim_cheapest():
     )
     decision = run_tick(state, config, done_h=20.0)
 
-    assert decision.heat_pump is True
-    assert "no usable price forecast" in decision.reason.lower()
+    assert decision.heat_pump is False, decision.reason
     assert "cheapest" not in decision.reason.lower()
-    assert decision.detail.get("price_informed") is False
+
+
+def test_t49c_cheap_signal_still_gets_it_heating():
+    """The way out of a missing forecast is the cheap period sensor."""
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.338,
+        solar_power_w=0.0,
+        heating_session_active=True,
+        plan_price_informed=False,
+        cheap_price_now=True,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+    assert "cheap period" in decision.reason
+
+
+def test_t49d_boost_still_overrides_everything():
+    """Boost is the deliberate way to say "I do not care what it costs"."""
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.BOOST,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.338,
+        plan_price_informed=False,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
 
 
 def test_t49b_with_a_forecast_the_claim_is_fair():
@@ -1239,3 +1276,60 @@ def test_t52c_verifying_the_site_silences_the_datasheet_warning():
         f.code == "flow_below_heat_pump_minimum"
         for f in safety.evaluate(state, verified)
     )
+
+
+# ---------------------------------------------------------------------------
+# T53 - Eco mode does not heat at an expensive moment
+# ---------------------------------------------------------------------------
+
+def test_t53_eco_does_not_heat_when_expensive():
+    """Reported from a live system: Eco, 0.317/kWh, heating anyway.
+
+    Eco tightens the ceiling to 0.14 (0.20 x 0.7), so 0.317 is more than twice
+    the limit. It heated because a forecast-less fallback plan was being treated
+    as grounds to ignore the ceiling. Eco is the mode people pick precisely to
+    avoid this.
+    """
+    config = make_config(
+        energy=EnergySettings(max_price=0.20, eco_price_factor=0.7)
+    )
+    now = datetime(2026, 8, 3, 8, 28, tzinfo=TZ)
+    state = make_state(
+        now,
+        mode=Mode.ECO,
+        water_temp=SensorReading(26.0, 10, "water"),
+        air_temp=SensorReading(20.0, 10, "air"),
+        target_temp=28.0,
+        price_total=0.317,
+        solar_power_w=0.0,
+        heating_session_active=True,
+        plan_price_informed=False,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=4.0)
+    assert decision.heat_pump is False, decision.reason
+
+    # Sun is the way Eco is meant to heat, and it still does.
+    sunny = state.replace(solar_power_w=3000.0)
+    decision = run_tick(sunny, config, done_h=4.0)
+    assert decision.heat_pump is True, decision.reason
+    assert "solar" in decision.reason
+
+
+def test_t53b_eco_is_stricter_than_auto():
+    """The whole point of Eco is a tighter ceiling than Auto."""
+    config = make_config(
+        energy=EnergySettings(max_price=0.20, eco_price_factor=0.7)
+    )
+    now = datetime(2026, 8, 3, 12, 0, tzinfo=TZ)
+    base = make_state(
+        now,
+        water_temp=SensorReading(26.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.17,          # under Auto's 0.20, over Eco's 0.14
+        solar_power_w=0.0,
+        measured_flow_m3h=1.02,
+    )
+
+    assert run_tick(base, config, done_h=20.0).heat_pump is True
+    assert run_tick(base.replace(mode=Mode.ECO), config, done_h=20.0).heat_pump is False

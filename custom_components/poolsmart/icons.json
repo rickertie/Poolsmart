@@ -57,6 +57,12 @@
       },
       "flow_adequacy": {
         "default": "mdi:water-check"
+      },
+      "water_test_due": {
+        "default": "mdi:test-tube"
+      },
+      "dose_advice": {
+        "default": "mdi:beaker-outline"
       }
     },
     "binary_sensor": {
@@ -144,6 +150,9 @@
       },
       "accept_suggestion": {
         "default": "mdi:check-decagram"
+      },
+      "record_water_test": {
+        "default": "mdi:test-tube-empty"
       }
     }
   }

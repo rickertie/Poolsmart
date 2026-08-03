@@ -137,6 +137,9 @@ class SensorReading:
     age_seconds: float | None = None
     #: Logical role, used for alias-aware plausibility checks.
     role: str = ""
+    #: Set when the value is the last known reading carried through a brief
+    #: outage rather than a fresh measurement.
+    bridged: bool = False
 
     @property
     def available(self) -> bool:

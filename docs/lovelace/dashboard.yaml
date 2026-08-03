@@ -638,48 +638,72 @@ views:
             color: "#f59e0b"
 
   # =========================================================================
-  # 3. WATER - chemie blijft handwerk, dat doet de integratie niet
+  # 3. WATER — nu gevoed door de integratie
   # =========================================================================
   - title: Water
     path: water
     icon: mdi:water-check
     cards:
-      - type: horizontal-stack
-        cards:
-          - type: custom:mushroom-template-card
-            primary: "pH {{ states('input_number.zwembad_meting_ph') | float(7.2) | round(1) }}"
-            secondary: >-
-              {% set ph = states('input_number.zwembad_meting_ph') | float(7.2) %}
-              {% if ph < 7.0 %}⚠️ Te laag — pH-plus toevoegen
-              {% elif ph < 7.2 %}🟡 Licht laag — beetje pH-plus
-              {% elif ph <= 7.6 %}✅ Perfect (7,2–7,6)
-              {% elif ph <= 7.8 %}🟡 Licht hoog — beetje pH-min
-              {% else %}⚠️ Te hoog — pH-min toevoegen{% endif %}
-            icon: mdi:ph
-            icon_color: >-
-              {% set ph = states('input_number.zwembad_meting_ph') | float(7.2) %}
-              {% if ph < 7.0 or ph > 7.8 %}red
-              {% elif ph < 7.2 or ph > 7.6 %}orange{% else %}green{% endif %}
-            tap_action:
-              action: none
-          - type: custom:mushroom-template-card
-            primary: >-
-              Chloor {{ states('input_number.zwembad_meting_chloor') | float(1.5) | round(1) }}
-            secondary: >-
-              {% set cl = states('input_number.zwembad_meting_chloor') | float(1.5) %}
-              {% if cl < 0.5 %}⚠️ Te laag — chloor doseren
-              {% elif cl < 1.0 %}🟡 Licht laag — kleine dosis
-              {% elif cl <= 3.0 %}✅ Perfect (1,0–3,0 mg/L)
-              {% elif cl <= 5.0 %}🟡 Hoog — even wachten
-              {% else %}⚠️ Veel te hoog — water verversen{% endif %}
-            icon: mdi:chemical-weapon
-            icon_color: >-
-              {% set cl = states('input_number.zwembad_meting_chloor') | float(1.5) %}
-              {% if cl < 0.5 or cl > 5.0 %}red
-              {% elif cl < 1.0 or cl > 3.0 %}orange{% else %}green{% endif %}
-            tap_action:
-              action: none
+      - type: custom:mushroom-template-card
+        primary: "{{ states('sensor.pool_dose_advice') }}"
+        secondary: >-
+          {%- set d = states('sensor.pool_water_test_due') -%}
+          {%- if state_attr('sensor.pool_water_test_due','test_overdue') -%}
+            Meting is aan de beurt · elke
+            {{ state_attr('sensor.pool_water_test_due','test_interval_days') }} dagen
+          {%- elif d not in ['unknown','unavailable'] -%}
+            Volgende meting {{ (d | as_datetime | as_local).strftime('%a %H:%M') }} ·
+            elke {{ state_attr('sensor.pool_water_test_due','test_interval_days') }} dagen
+          {%- else -%}
+            Nog geen meting vastgelegd
+          {%- endif -%}
+        icon: >-
+          {% if states('sensor.pool_dose_advice') in ['balanced','no readings']
+          %}mdi:water-check{% else %}mdi:beaker-alert{% endif %}
+        icon_color: >-
+          {% if state_attr('sensor.pool_water_test_due','test_overdue') %}orange
+          {% elif states('sensor.pool_dose_advice') == 'balanced' %}green
+          {% else %}blue{% endif %}
+        multiline_secondary: true
+        tap_action:
+          action: more-info
+          entity: sensor.pool_dose_advice
 
+      # ---- Doseeradvies ----------------------------------------------------
+      - type: conditional
+        conditions:
+          - condition: template
+            value_template: >-
+              {{ state_attr('sensor.pool_dose_advice','ph_dose') is not none }}
+        card:
+          type: markdown
+          content: >
+            {%- set d = state_attr('sensor.pool_dose_advice','ph_dose') -%}
+            ### {{ d.amount }} {{ d.unit }} {{ d.label }}
+
+            {{ d.reason }}
+
+            {% if d.partial %}⚠️ Eerst naar {{ d.aiming_for }} — een correctie van
+            deze grootte schiet in één keer door. Meet na een uur opnieuw.{% endif %}
+
+            _{{ d.instructions }}_
+
+      - type: conditional
+        conditions:
+          - condition: template
+            value_template: >-
+              {{ state_attr('sensor.pool_dose_advice','chlorine_dose') is not none }}
+        card:
+          type: markdown
+          content: >
+            {%- set d = state_attr('sensor.pool_dose_advice','chlorine_dose') -%}
+            ### {{ d.amount }} {{ d.unit }} {{ d.label }}
+
+            {{ d.reason }}
+
+            _{{ d.instructions }}_
+
+      # ---- Meting invoeren -------------------------------------------------
       - type: entities
         title: 📝 Meting invoeren
         entities:
@@ -689,15 +713,17 @@ views:
           - entity: input_number.zwembad_meting_chloor
             name: Chloor — gemeten waarde (mg/L)
             secondary_info: "Ideaal: 1,0–3,0 mg/L"
-          - entity: input_datetime.zwembad_laatste_water_meting
-            name: Tijdstip meting
+          - entity: button.pool_record_water_test
+            name: Zojuist gemeten
+            secondary_info: Legt ook vast wat de vorige dosering opleverde
 
       - type: markdown
         title: 💡 Doseren
         content: >
-          Na het doseren zet je het systeem op **🔄 POMP** of druk je op
-          **Chemie** op de eerste pagina — dan draait de pomp door zodat het
-          middel zich verdeelt.
+          Druk na het doseren op **Chemie** op de eerste pagina, of roep de
+          service `poolsmart.record_dose` aan met de hoeveelheid. Dan draait de
+          pomp door én wordt vastgelegd wat je hebt toegevoegd — zonder dat
+          laatste blijft doseren gokken.
 
           **Nooit tegelijk:** chloor en pH-middel altijd apart, minstens een uur
           ertussen. Altijd het middel **in** het water, nooit andersom.

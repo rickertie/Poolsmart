@@ -95,7 +95,9 @@
           "cover_entity": "Afdekhoes (optioneel)",
           "flow_unit": "Eenheid debietmeter",
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
-          "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)"
+          "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)",
+          "ph_sensor": "pH-meting",
+          "chlorine_sensor": "Meting vrij chloor (mg/L)"
         },
         "data_description": {
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
@@ -111,7 +113,9 @@
           "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
           "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
-          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is."
+          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is.",
+          "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
+          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L."
         }
       }
     }
@@ -187,7 +191,9 @@
           "solar_margin_w": "Marge boven het verbruik van de apparatuur (W)",
           "compressor_min_off_minutes": "Minimale stilstand compressor (minuten)",
           "compressor_min_on_minutes": "Minimale draaitijd compressor (minuten)",
-          "calibration_tolerance": "Toegestaan verschil tussen voelers (°C)"
+          "calibration_tolerance": "Toegestaan verschil tussen voelers (°C)",
+          "acid_product": "pH-middel dat je gebruikt",
+          "chlorine_product": "Chloormiddel dat je gebruikt"
         },
         "data_description": {
           "turnover_factor": "Hoe vaak het hele bad per dag door het filter moet. Gefilterd water mengt terug, dus één ronde reinigt ongeveer 63% van het bad, twee 86%, drie 95%. Bij drie vlakt de winst af.",
@@ -246,7 +252,9 @@
           "cover_entity": "Afdekhoes (optioneel)",
           "flow_unit": "Eenheid debietmeter",
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
-          "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)"
+          "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)",
+          "ph_sensor": "pH-meting",
+          "chlorine_sensor": "Meting vrij chloor (mg/L)"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
@@ -265,7 +273,9 @@
           "cover_entity": "Een sensor of schakelaar die aangeeft of de hoes erop ligt. Leeg laten als je die niet hebt.",
           "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
-          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is."
+          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is.",
+          "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
+          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L."
         }
       },
       "hardware": {
@@ -340,6 +350,15 @@
         "L/s": "L/s",
         "GPM": "GPM"
       }
+    },
+    "chem_product": {
+      "options": {
+        "acid_15": "pH-min, 15% zoutzuur",
+        "acid_37": "pH-min, 37% zoutzuur",
+        "ph_plus": "pH-plus, natriumcarbonaat",
+        "chlorine_granules_70": "Chloorgranulaat, 70%",
+        "chlorine_liquid_15": "Vloeibaar chloor, 15%"
+      }
     }
   },
   "entity": {
@@ -403,6 +422,12 @@
       },
       "flow_adequacy": {
         "name": "Doorstroming toereikend"
+      },
+      "water_test_due": {
+        "name": "Watermeting nodig"
+      },
+      "dose_advice": {
+        "name": "Doseeradvies"
       }
     },
     "binary_sensor": {
@@ -472,6 +497,9 @@
       },
       "accept_suggestion": {
         "name": "Aanbeveling overnemen"
+      },
+      "record_water_test": {
+        "name": "Zojuist gemeten"
       }
     }
   }

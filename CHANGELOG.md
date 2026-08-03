@@ -4,7 +4,56 @@ All notable changes to PoolSmart. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows
 [Semantic Versioning](https://semver.org/).
 
-## [0.13.2] - 2026-08-03
+Every release gets a title naming what it was actually about. Read from the
+bottom up, they tell the story of a system slowly learning to stop believing its
+own paperwork.
+
+## [1.0.0] — Knowledge, Not Storage — 2026-08-03
+
+First stable release.
+
+### Fixed
+- **Two learned values were never used.** The measured COP curve and the heating
+  rate were recorded after every session, stored, displayed — and read by no
+  calculation. Planning ran on the datasheet instead. On the installation this
+  was found on, that meant estimating 1h29 per degree where the measurements
+  said 2h17: 54% optimistic, so heating started too late and the pool was cold at
+  swimming time. Both are now used, in order of directness: measured heating rate
+  first, then measured COP, then the datasheet
+- A brief sensor outage no longer stops heating. An ESP reboot takes ten seconds
+  and made every probe on it unavailable; the last reading is now carried
+  forward for up to three minutes, which is far closer to the truth than no
+  reading at all
+- Probes that only matter while the heat pump runs no longer report staleness
+  while it is off. "The heat pump outlet has not been reported for 37 minutes"
+  was true and uninteresting: nothing was changing, so nothing was published
+- The probe calibration check waits for the pump to have mixed the water.
+  Standing water stratifies — warm at the surface, cool at the intake — and that
+  is physics, not a miscalibrated probe
+
+### Added
+- **Learning tab that names the consumer.** Each learned value shows its
+  confidence, how many sessions are behind it, what it falls back to, and which
+  decision reads it
+- A confidence gate on learned COP: three sessions in a temperature band before
+  it is trusted for planning, because a wrong learned value is harder to spot
+  than a wrong published one
+- **Water chemistry.** Dosing calculated from your pool volume, a test interval
+  that follows water temperature, and a dose log that learns how your pool
+  actually responds. A `poolsmart.record_dose` service and a "tested just now"
+  button close the loop
+- Expanded diagnostics: the numbers behind each branch verdict, what would have
+  to change for a branch to win, and how much of the day each branch spent in
+  charge
+- Heartbeat filters throughout the example ESPHome configuration, so silence
+  from a probe means the probe really has stopped
+
+### Notes
+- For saturation indices, alkalinity and calcium hardness, use
+  [ha-poolchem](https://github.com/joyfulhouse/ha-poolchem). PoolSmart
+  deliberately does not reimplement it
+
+## [0.13.2] — Eco Means Eco — 2026-08-03
 
 ### Added
 - Regression tests covering Eco mode at an expensive moment. Eco tightens the
@@ -13,7 +62,7 @@ All notable changes to PoolSmart. Format based on
   in 0.13.1. Eco is the mode people choose precisely to avoid that, so it is
   now pinned by tests rather than only by the fix
 
-## [0.13.1] - 2026-08-02
+## [0.13.1] — No Forecast Is Not a Blank Cheque — 2026-08-02
 
 ### Fixed
 - **A missing price forecast was licensing heating at any price.** Without a
@@ -32,7 +81,7 @@ All notable changes to PoolSmart. Format based on
 - The status sensor reports whether price optimisation is active and how many
   forecast intervals were read
 
-## [0.13.0] - 2026-08-02
+## [0.13.0] — Stop Chasing the Datasheet — 2026-08-02
 
 ### Changed
 - Flow is judged by the temperature rise across the heat pump rather than
@@ -52,7 +101,7 @@ All notable changes to PoolSmart. Format based on
 - A "verified for this installation" setting that silences the datasheet warning
   once the owner has confirmed the system moves heat properly below it
 
-## [0.12.6] - 2026-08-01
+## [0.12.6] — The Fifth Probe Earns Its Keep — 2026-08-01
 
 ### Added
 - Optional pump inlet probe, used as a calibration cross-check. It measures the
@@ -62,7 +111,7 @@ All notable changes to PoolSmart. Format based on
 - Configurable tolerance for that check, defaulting to 0.6 °C, a little above
   the accuracy of a DS18B20
 
-## [0.12.5] - 2026-08-01
+## [0.12.5] — Do Not Claim What You Cannot Prove — 2026-08-01
 
 ### Fixed
 - The system claimed "it is the cheapest time still available" while running at
@@ -79,7 +128,7 @@ All notable changes to PoolSmart. Format based on
 - The plan records the lowest and highest prices it actually saw, so a claim
   about cheapness can be checked rather than taken on trust
 
-## [0.12.4] - 2026-08-01
+## [0.12.4] — The Sentence That Read Backwards — 2026-08-01
 
 ### Fixed
 - "Heating because price 0.248/kWh exceeds the limit of 0.200" read as though
@@ -94,7 +143,7 @@ All notable changes to PoolSmart. Format based on
   paying a couple of cents over a self-imposed ceiling, but it should not happen
   silently either way
 
-## [0.12.3] - 2026-08-01
+## [0.12.3] — The Board Measures, Nothing More — 2026-08-01
 
 ### Changed
 - The example ESPHome configuration no longer calculates delta-T, thermal power
@@ -118,7 +167,7 @@ All notable changes to PoolSmart. Format based on
   arithmetic behind the datasheet figure written out and a sanity check for
   spotting a wrong one
 
-## [0.12.2] - 2026-08-01
+## [0.12.2] — Forty-Seven Minutes, Not 0.78 Hours — 2026-08-01
 
 ### Changed
 - Durations read as hours and minutes instead of decimal hours. "0.78 h" is a
@@ -128,7 +177,7 @@ All notable changes to PoolSmart. Format based on
 - The filtration card on the Energy tab shows the window pressure warning when
   the daily requirement fills nearly the whole window
 
-## [0.12.1] - 2026-08-01
+## [0.12.1] — Let the Compressor Breathe — 2026-08-01
 
 ### Fixed
 - **Short cycling.** Priority branches are allowed to break an ordinary hold,
@@ -151,7 +200,7 @@ All notable changes to PoolSmart. Format based on
 - Solar on the dashboard: a chip, a card explaining how far off the threshold
   is, and a 24 hour graph
 
-## [0.12.0] - 2026-08-01
+## [0.12.0] — Off Means Off — 2026-08-01
 
 ### Changed
 - **Off now means off.** Frost protection no longer runs in this mode; it lives
@@ -177,7 +226,7 @@ All notable changes to PoolSmart. Format based on
   setting is out of date, which is what it actually detected
 - Dashboard templates carry defaults on every int and float filter
 
-## [0.11.0] - 2026-08-01
+## [0.11.0] — Why Is It Not Heating? — 2026-08-01
 
 ### Added
 - Decisions, obstacles and faults now appear in the Home Assistant logbook,
@@ -191,7 +240,7 @@ All notable changes to PoolSmart. Format based on
 - Faults log both when they appear and when they clear, so duration is visible
 - Diagnostics export gained the trace and a plain-sentence timeline
 
-## [0.10.0] - 2026-08-01
+## [0.10.0] — The Pump Was Running Anyway — 2026-08-01
 
 ### Fixed
 - The filtration deadline branch switched the heat pump off, so on a pool
@@ -207,7 +256,7 @@ All notable changes to PoolSmart. Format based on
   of the configured windows, since the deadline branch then dominates everything
   below it in the ladder
 
-## [0.9.0] - 2026-08-01
+## [0.9.0] — Measure It, Do Not Assume It — 2026-08-01
 
 ### Fixed
 - The filter service warning compared measured flow against the configured
@@ -226,7 +275,7 @@ All notable changes to PoolSmart. Format based on
   sensors, both roles pointing at the same entity, no price source, nothing
   learned yet
 
-## [0.8.0] - 2026-08-01
+## [0.8.0] — First Contact With Water — 2026-08-01
 
 First public release. Versions below this were development iterations and were
 never published, so everything listed there is part of this release.
@@ -269,6 +318,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.0.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.0
 [0.13.2]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.2
 [0.13.1]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.1
 [0.13.0]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.0

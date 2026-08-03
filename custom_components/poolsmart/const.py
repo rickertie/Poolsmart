@@ -164,6 +164,13 @@ CONF_SWIM_TIME_2 = "swim_time_2"
 CONF_SWIM_DAYS = "swim_days"
 CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
+CONF_PH_SENSOR = "ph_sensor"
+CONF_CHLORINE_SENSOR = "chlorine_sensor"
+CONF_ACID_PRODUCT = "acid_product"
+CONF_CHLORINE_PRODUCT = "chlorine_product"
+
+#: Dose records kept, which is plenty to learn a correction factor from.
+DOSE_LOG_SIZE = 40
 
 DEFAULT_CHEMISTRY_MINUTES = 30
 

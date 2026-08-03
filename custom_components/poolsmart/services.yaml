@@ -1,0 +1,38 @@
+record_dose:
+  name: Record a dose
+  description: >-
+    Log a chemical dose and start circulating so it disperses. The reading before
+    dosing is stored so the next water test can show what the dose achieved,
+    which is how the recommendation learns this pool's own response.
+  fields:
+    product:
+      name: Product
+      required: true
+      selector:
+        select:
+          options:
+            - label: pH-minus (15% hydrochloric acid)
+              value: acid_15
+            - label: pH-minus (37% hydrochloric acid)
+              value: acid_37
+            - label: pH-plus (sodium carbonate)
+              value: ph_plus
+            - label: Chlorine granules (70%)
+              value: chlorine_granules_70
+            - label: Liquid chlorine (15%)
+              value: chlorine_liquid_15
+    amount:
+      name: Amount
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 5000
+          step: 1
+          mode: box
+    unit:
+      name: Unit
+      required: true
+      selector:
+        select:
+          options: [ml, g]

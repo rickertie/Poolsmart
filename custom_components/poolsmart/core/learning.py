@@ -205,3 +205,54 @@ def heat_loss_from_idle(
         # The pool warmed up on its own: sunshine, not heat loss.
         return None
     return drop / duration_h
+
+
+#: Sessions needed in a bucket before its measured COP is trusted for planning.
+#: One session is an anecdote; three is a pattern.
+COP_CONFIDENCE_SESSIONS = 3
+
+
+def cop_for(
+    curve: dict[str, float],
+    counts: dict[str, int],
+    air_temp: float | None,
+    neighbours: bool = True,
+) -> float | None:
+    """The measured COP to plan with at this outdoor temperature.
+
+    Returns ``None`` until enough sessions have been recorded in the relevant
+    band, because planning from a single measurement is not obviously better than
+    planning from the datasheet -- and a wrong learned value is harder to spot
+    than a wrong published one.
+
+    With ``neighbours``, an adjacent band is used when the exact one is empty.
+    Efficiency changes gradually with air temperature, so the band next door is a
+    much better guess than a datasheet written for a different installation.
+    """
+    if air_temp is None or not curve:
+        return None
+
+    key = bucket_key(air_temp)
+    if curve.get(key) is not None and counts.get(key, 0) >= COP_CONFIDENCE_SESSIONS:
+        return curve[key]
+
+    if not neighbours:
+        return None
+
+    low = int(air_temp // COP_BUCKET_WIDTH * COP_BUCKET_WIDTH)
+    for offset in (-COP_BUCKET_WIDTH, COP_BUCKET_WIDTH):
+        near = f"{int(low + offset)}-{int(low + offset + COP_BUCKET_WIDTH)}"
+        if curve.get(near) is not None and counts.get(near, 0) >= COP_CONFIDENCE_SESSIONS:
+            return curve[near]
+    return None
+
+
+def rate_confidence(sessions: int) -> str:
+    """How much weight a learned figure deserves, in words."""
+    if sessions >= 8:
+        return "reliable"
+    if sessions >= COP_CONFIDENCE_SESSIONS:
+        return "usable"
+    if sessions > 0:
+        return "provisional"
+    return "not learned yet"

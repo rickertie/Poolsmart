@@ -10,7 +10,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import slugify
 
@@ -123,9 +123,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001 -- the panel is a convenience, not a dependency
         _LOGGER.warning("Could not register the PoolSmart panel; control is unaffected")
 
+    _async_register_services(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     return True
+
+
+@callback
+def _async_register_services(hass: HomeAssistant) -> None:
+    """Register the dose-recording service once."""
+    if hass.services.has_service(DOMAIN, "record_dose"):
+        return
+
+    async def _record(call) -> None:
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            chemistry = coordinator.water_chemistry
+            product = call.data["product"]
+            before = (
+                chemistry["ph"]
+                if product in ("acid_15", "acid_37", "ph_plus")
+                else chemistry["chlorine"]
+            )
+            await coordinator.async_record_dose(
+                product=product,
+                amount=float(call.data["amount"]),
+                unit=call.data["unit"],
+                measured_before=before if before is not None else 0.0,
+            )
+
+    hass.services.async_register(DOMAIN, "record_dose", _record)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

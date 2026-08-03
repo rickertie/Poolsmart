@@ -272,12 +272,29 @@ class SafetySettings:
     #: blocked. Circulation continues: the pool still needs filtering, and
     #: moving water is never the unsafe option.
     stale_blocking_seconds: int = 3600
+
+    #: How long a sensor may be *unavailable* before its last known value is
+    #: discarded.
+    #:
+    #: An ESP reboot takes ten seconds and makes every sensor on it unavailable.
+    #: Treating that as a dead probe stops a heating session over a gap shorter
+    #: than the time it takes to notice. Within this window the last reading is
+    #: carried forward, which is far closer to the truth than having no reading
+    #: at all -- pool water does not change temperature in twenty seconds.
+    bridge_outage_seconds: int = 180
     #: Plausible water temperature range.
     water_temp_min: float = -5.0
     water_temp_max: float = 45.0
     #: Expected delta-T range across the heat pump while it is running.
     delta_t_min: float = 0.2
     delta_t_max: float = 8.0
+
+    #: Roles whose silence only matters while the heat pump is running.
+    #:
+    #: A probe on the heat pump outlet reports nothing while the appliance is
+    #: off because nothing is changing, and that is correct behaviour rather than
+    #: a fault. Warning about it trains people to ignore warnings.
+    conditional_roles: frozenset[str] = frozenset({"hp_inlet", "hp_outlet"})
 
     #: Delta-T bands used to judge whether flow is adequate.
     #:
@@ -299,6 +316,10 @@ class SafetySettings:
     #: Flow decline relative to the commissioned value that triggers a service
     #: notification rather than a fault.
     filter_service_flow_ratio: float = 0.75
+    #: How long the pump must have run before two probes are worth comparing.
+    #: Standing water stratifies, and a stratified pool is not a miscalibrated
+    #: probe.
+    mixing_minutes: int = 20
     #: How far two probes measuring the same water may disagree before it is
     #: worth mentioning. DS18B20s are accurate to about +/- 0.5 C, so anything
     #: under that is the sensors rather than the pool.
