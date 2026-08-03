@@ -34,23 +34,28 @@ Whether you run a small inflatable setup or a 30,000-liter in-ground pool with a
 
 ## 🤔 Why PoolSmart?
 
-Most pool automations consist of dozens of loose YAML rules and timers.
+Most traditional pool setups rely on dozens of fragile YAML rules and loose timers.
 
-That works... until Home Assistant restarts, a timer gets lost, or heating and filtration fight each other over control. You're often left wondering: *"Why did the pump just turn on?"*
+That works... until Home Assistant restarts, a timer fails, or heating and filtration fight for control—leaving you wondering: *"Why on earth did the pump just turn on?"*
 
-PoolSmart replaces fragmented automations with a **single, deterministic decision engine**. It evaluates system state every 30 seconds and always provides a clear, traceable reason for every action.
+PoolSmart replaces fragmented rules with a **single, deterministic decision engine**. Every 30 seconds, it steps down a strict priority ladder. The first rule that matches takes control—no fighting, no race conditions.
 
-┌─────────────────────────────────────────────────────────────┐
-│                   PRIORITY DECISION LADDER                   │
-├─────────────────────────────────────────────────────────────┤
-│  1. Emergency Stop & Safety Flags                            │
-│  2. Frost Protection (Circulation fallback)                 │
-│  3. Heating Sessions (Dynamic price & COP windows)          │
-│  4. Scheduled Filtration                                    │
-│  5. Idle / Off                                              │
-└─────────────────────────────────────────────────────────────┘
+> 🚨 **1. Emergency Stop & Safety Flags**  
+> └─ Hard overrides and manual safety cut-offs.
+> 
+> ❄️ **2. Frost Protection**  
+> └─ Circulates water automatically when ambient temps drop.
+> 
+> 🔥 **3. Smart Heating Sessions**  
+> └─ Runs heat pump during optimal COP and lowest energy price windows.
+> 
+> 🌀 **4. Daily Filtration**  
+> └─ Ensures clean water based on pool volume and temperature.
+> 
+> 💤 **5. Idle / Off**  
+> └─ System enters standby when no active demands exist.
 
-> 📖 **Deep Dive:** Full details on the decision ladder, mathematical formulas, and parameters live in [`docs/architecture.md`](docs/architecture.md).
+📖 *Deep Dive:* Full details on the decision ladder, formulas, and parameters live in [`docs/architecture.md`](docs/architecture.md)
 
 ---
 
