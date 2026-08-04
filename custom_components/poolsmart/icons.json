@@ -63,6 +63,18 @@
       },
       "dose_advice": {
         "default": "mdi:beaker-outline"
+      },
+      "session_elapsed": {
+        "default": "mdi:timer-play-outline"
+      },
+      "session_gain": {
+        "default": "mdi:thermometer-plus"
+      },
+      "session_energy": {
+        "default": "mdi:lightning-bolt-outline"
+      },
+      "heat_balance": {
+        "default": "mdi:home-thermometer-outline"
       }
     },
     "binary_sensor": {
@@ -94,6 +106,12 @@
         "default": "mdi:air-filter",
         "state": {
           "on": "mdi:alert-octagon-outline"
+        }
+      },
+      "covered": {
+        "default": "mdi:pool",
+        "state": {
+          "on": "mdi:layers"
         }
       }
     },

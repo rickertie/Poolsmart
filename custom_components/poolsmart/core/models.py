@@ -175,6 +175,9 @@ class PoolState:
     #: Cheapest upcoming intervals, as (start, end, all-in price) tuples.
     price_forecast: tuple[tuple[datetime, datetime, float], ...] = ()
     solar_power_w: float | None = None
+    #: Whether the cover is on. ``None`` when no cover entity is configured.
+    covered: bool | None = None
+
     #: An external "this is a good moment to use power" signal, if configured.
     #:
     #: Integrations that publish dynamic tariffs often expose one, and it knows
@@ -217,6 +220,12 @@ class PoolState:
 
     # -- Learned values ----------------------------------------------------
     heat_loss_c_per_h: float = 0.08
+
+    # -- Live session, for the dashboard -----------------------------------
+    session_started_at: datetime | None = None
+    session_start_temp: float | None = None
+    session_energy_kwh: float = 0.0
+    session_cost: float = 0.0
     measured_flow_m3h: float | None = None
 
     # -- Derived -----------------------------------------------------------

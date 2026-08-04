@@ -130,6 +130,8 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._session: learning.SessionRecord | None = None
         self._idle_since: datetime | None = None
         self._idle_water_temp: float | None = None
+        self._idle_covered: bool | None = None
+        self._session_cost: float = 0.0
         self._price_slots: tuple = ()
         self._last_obstacle: tuple | None = None
         self._last_obstacle_at: datetime | None = None
@@ -462,6 +464,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         solar = self._read(c.CONF_SOLAR_POWER_SENSOR, "solar")
         cheap_now = self._read_binary(c.CONF_CHEAP_PRICE_SENSOR)
+        covered = self._read_binary(c.CONF_COVER_ENTITY)
         pump_on = self._switch_is_on(c.CONF_PUMP_SWITCH)
         heat_pump_on = self._switch_is_on(c.CONF_HP_SWITCH)
 
@@ -515,6 +518,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             price_energy=price_energy,
             solar_power_w=solar.value,
             cheap_price_now=cheap_now,
+            covered=covered,
             target_temp=self._target_temp,
             filtration_done_h=self.store.runtime_hours(now),
             heat_pump_runtime_seconds=runtime,
@@ -523,11 +527,15 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             heat_pump_started_at=self.store.heat_pump_started_at,
             chemistry_until=self.store.chemistry_until,
             manual_pump_request=self._manual_pump_request,
-            heat_loss_c_per_h=(
-                self.store.learned.heat_loss_c_per_h
-                if self.store.learned.heat_loss_c_per_h is not None
-                else 0.08
+            heat_loss_c_per_h=self._heat_loss_for(covered),
+            session_started_at=self._session.start if self._session else None,
+            session_start_temp=(
+                self._session.water_start if self._session else None
             ),
+            session_energy_kwh=(
+                self._session.energy_kwh if self._session else 0.0
+            ),
+            session_cost=self._session_cost,
             measured_flow_m3h=self.store.learned.measured_flow_m3h,
         )
 
@@ -704,6 +712,25 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._device_id_cache = device.id if device else None
         return self._device_id_cache
 
+    def _heat_loss_for(self, covered: bool | None) -> float:
+        """The heat loss figure matching the current cover state.
+
+        Kept separate rather than averaged. A cover typically halves the loss or
+        better, and on a pool losing two thirds of its input to the air that is
+        the difference between a two degree rise taking fourteen hours and taking
+        five. One averaged number would be wrong in both states.
+
+        Until the covered figure has been measured, the open-air one is used:
+        over-estimating the loss makes the system start early, which is the safe
+        direction to be wrong in.
+        """
+        learned = self.store.learned
+        if covered and learned.heat_loss_covered_c_per_h is not None:
+            return learned.heat_loss_covered_c_per_h
+        if learned.heat_loss_c_per_h is not None:
+            return learned.heat_loss_c_per_h
+        return self.pool_config.learning.initial_heat_loss_c_per_h
+
     # -- Flow baseline -----------------------------------------------------
 
     def _track_flow(self, now: datetime, state: PoolState, config: PoolConfig) -> None:
@@ -770,6 +797,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         heating_now = state.heat_pump_on
 
         if heating_now and self._session is None:
+            self._session_cost = 0.0
             self._session = learning.SessionRecord(
                 start=now,
                 water_start=state.water_temp.value if state.water_temp.available else None,
@@ -783,7 +811,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 hours = (now - self._last_tick).total_seconds() / 3600.0
                 if 0 < hours <= 0.5:
                     if state.hp_power_w.available:
-                        self._session.energy_kwh += state.hp_power_w.value / 1000.0 * hours
+                        used = state.hp_power_w.value / 1000.0 * hours
+                        self._session.energy_kwh += used
+                        if state.price_total is not None:
+                            self._session_cost += used * state.price_total
                     thermal = self._thermal_kw(state, config)
                     if thermal is not None:
                         self._session.thermal_kwh += thermal * hours
@@ -860,25 +891,43 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if hours < 6:
             return
 
+        covered = state.covered
         rate = learning.heat_loss_from_idle(
             self._idle_water_temp,
             state.water_temp.value,
             hours,
-            covered=bool(self.cover.state().covered),
+            covered=bool(covered),
         )
+        started_covered = self._idle_covered
         self._idle_since = now
         self._idle_water_temp = state.water_temp.value
+        self._idle_covered = covered
 
         if rate is None or not config.learning.enabled:
             return
-        self.store.learned.heat_loss_c_per_h = round(
-            learning.capped_update(
-                self.store.learned.heat_loss_c_per_h,
-                rate,
-                config.learning.max_step_ratio,
-            ),
-            4,
-        )
+        # Only learn from a period where the cover did not change, or the figure
+        # belongs to neither state.
+        if started_covered is not None and started_covered != covered:
+            _LOGGER.debug("Cover changed during the idle period; not learning from it")
+            return
+
+        learned = self.store.learned
+        if covered:
+            learned.heat_loss_covered_c_per_h = round(
+                learning.capped_update(
+                    learned.heat_loss_covered_c_per_h, rate, config.learning.max_step_ratio
+                ),
+                4,
+            )
+            learned.heat_loss_covered_samples += 1
+        else:
+            learned.heat_loss_c_per_h = round(
+                learning.capped_update(
+                    learned.heat_loss_c_per_h, rate, config.learning.max_step_ratio
+                ),
+                4,
+            )
+            learned.heat_loss_samples += 1
 
     # -- Execution ---------------------------------------------------------
 

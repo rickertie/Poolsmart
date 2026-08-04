@@ -49,6 +49,20 @@ BINARY_SENSORS: tuple[PoolBinaryDescription, ...] = (
         },
     ),
     PoolBinaryDescription(
+        key="covered",
+        value_fn=lambda c: (
+            c.data["state"].covered if c.data else None
+        ),
+        attributes_fn=lambda c: (
+            {
+                "loss_open_c_per_h": c.store.learned.heat_loss_c_per_h,
+                "loss_covered_c_per_h": c.store.learned.heat_loss_covered_c_per_h,
+                "samples_open": c.store.learned.heat_loss_samples,
+                "samples_covered": c.store.learned.heat_loss_covered_samples,
+            }
+        ),
+    ),
+    PoolBinaryDescription(
         key="filter_service_needed",
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda c: any(f.code == "filter_service_needed" for f in c.faults),

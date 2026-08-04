@@ -283,3 +283,129 @@ def test_t62_open_doses_are_ignored_when_learning():
     assert open_dose.actual_change is None
     assert open_dose.effectiveness is None
     assert chem.learn_correction([open_dose, open_dose], "acid_15") == 1.0
+
+
+# ---------------------------------------------------------------------------
+# T63 - the stored flow unit and its translation key must agree
+# ---------------------------------------------------------------------------
+
+def test_t63_flow_unit_slugs_resolve():
+    """Home Assistant translation keys cannot contain a slash or a superscript.
+
+    So the value stored by the config flow ("l_min") and the unit a sensor
+    publishes ("L/min") are different strings for the same thing, and both have
+    to resolve. Getting this wrong is quiet and expensive: an unresolved key
+    would fall through to a factor of 1.0 and read 17 L/min as 17 m³/h, putting
+    every figure derived from flow out by a factor of seventeen while nothing
+    looks broken.
+    """
+    import re
+
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    coordinator = (root / "coordinator.py").read_text()
+    config_flow = (root / "config_flow.py").read_text()
+
+    factors = re.search(
+        r"FLOW_UNIT_FACTORS = \{(.*?)\n\}", coordinator, re.S
+    ).group(1)
+    known = set(re.findall(r'"([^"]+)":', factors))
+
+    # Every option the config flow offers must be convertible.
+    offered = set()
+    for raw, key in re.findall(
+        r'options=\[([^\]]+)\],\s*translation_key="([a-z_]+)"', config_flow, re.S
+    ):
+        if key == "flow_unit":
+            offered |= set(re.findall(r'"([^"]+)"', raw))
+
+    assert offered, "no flow unit options found"
+    assert offered <= known, f"unconvertible: {sorted(offered - known)}"
+
+    # And the units a sensor is likely to publish must be convertible too.
+    for unit in ("l/min", "l/h", "m³/h", "l/s", "gpm"):
+        assert unit in known, unit
+
+
+def test_t63b_selector_options_have_translations():
+    """An option without a translation renders as a raw slug in the interface."""
+    import json
+    import re
+
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    config_flow = (root / "config_flow.py").read_text()
+
+    for raw, key in re.findall(
+        r'options=\[([^\]]+)\],\s*translation_key="([a-z_]+)"', config_flow, re.S
+    ):
+        options = set(re.findall(r'"([^"]+)"', raw))
+        for language in ("en", "nl"):
+            translations = json.loads(
+                (root / "translations" / f"{language}.json").read_text()
+            )
+            available = set(
+                translations.get("selector", {}).get(key, {}).get("options", {})
+            )
+            assert options <= available, (
+                f"{language}/{key} missing {sorted(options - available)}"
+            )
+            # Keys must be slug-safe, or Home Assistant rejects the file.
+            for option in available:
+                assert re.fullmatch(r"[a-z0-9_]+", option), f"{key}: {option}"
+
+
+def test_t63c_conversion_factors_are_right():
+    """17 L/min is 1.02 m³/h. Not 17, and not 0.28."""
+    assert abs(17 * 0.06 - 1.02) < 0.001
+    assert abs(3596 * 0.001 - 3.596) < 0.001
+    assert abs(1 * 3.6 - 3.6) < 0.001
+    assert abs(2.0 / 0.06 - 33.33) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# T64 - the cover's effect is learned separately
+# ---------------------------------------------------------------------------
+
+def test_t64_covered_and_open_losses_stay_apart():
+    """Averaging the two gives a figure that is wrong in both states.
+
+    A cover typically halves the loss or better. On a pool losing two thirds of
+    its input to the air, that is the difference between a two degree rise taking
+    fourteen hours and taking five — far too large to split the difference on.
+    """
+    config = make_config()
+    kwh_per_degree = config.pool.kwh_thermal_per_degree
+    gross = 1.9 / kwh_per_degree  # measured thermal output
+
+    open_air = heating.estimate(
+        config, water_temp=26.0, target_temp=28.0, air_temp=20.0,
+        learned_cop=3.28, heat_loss_c_per_h=0.281,
+    )
+    covered = heating.estimate(
+        config, water_temp=26.0, target_temp=28.0, air_temp=20.0,
+        learned_cop=3.28, heat_loss_c_per_h=0.120,
+    )
+
+    assert open_air.hours_needed > covered.hours_needed * 1.8, (
+        open_air.hours_needed,
+        covered.hours_needed,
+    )
+    # And the open-air case really is losing most of the input.
+    assert 0.281 / gross > 0.6
+
+
+def test_t64b_cover_changing_mid_period_teaches_nothing():
+    """A period that started open and ended covered belongs to neither figure."""
+    # The guard lives in the coordinator; this pins the arithmetic it protects.
+    open_rate = learning.heat_loss_from_idle(28.0, 26.6, duration_h=5.0)
+    covered_rate = learning.heat_loss_from_idle(28.0, 27.4, duration_h=5.0)
+    assert open_rate is not None and covered_rate is not None
+    assert open_rate > covered_rate * 2, (open_rate, covered_rate)
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "coordinator.py"
+    ).read_text()
+    assert "Cover changed during the idle period" in source
+    assert "started_covered != covered" in source

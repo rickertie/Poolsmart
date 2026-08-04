@@ -25,6 +25,18 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_clear_log)
 
 
+def _live_session(coordinator) -> dict:
+    from .sensor import _session
+
+    return _session(coordinator)
+
+
+def _heat_balance_snapshot(coordinator) -> dict:
+    from .sensor import _heat_balance
+
+    return _heat_balance(coordinator)
+
+
 def _learning_insight(coordinator) -> list[dict]:
     """Each learned value with its confidence and, crucially, what reads it.
 
@@ -278,6 +290,8 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             "subsystem_errors": coordinator.subsystem_errors,
             "learned": coordinator.store.learned.as_dict(),
             "learning_insight": _learning_insight(coordinator),
+            "session": _live_session(coordinator),
+            "heat_balance": _heat_balance_snapshot(coordinator),
             "chemistry": coordinator.water_chemistry,
             "branch_time_today": _branch_time_today(coordinator),
             "bridged_roles": sorted(coordinator.bridged_roles),

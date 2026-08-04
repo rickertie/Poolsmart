@@ -59,7 +59,17 @@ class LearnedValues:
     """Values the system improves after each session."""
 
     heating_rate_c_per_h: float | None = None
+    #: Heat loss with the pool open to the air.
     heat_loss_c_per_h: float | None = None
+    #: Heat loss with the cover on, learned separately.
+    #:
+    #: Averaging the two would produce a figure that is wrong in both states, and
+    #: wrong by a lot: a cover typically halves the loss or better. On a pool
+    #: losing two thirds of its input to the air, that is the difference between
+    #: a two degree rise taking fourteen hours and taking five.
+    heat_loss_covered_c_per_h: float | None = None
+    heat_loss_samples: int = 0
+    heat_loss_covered_samples: int = 0
     measured_flow_m3h: float | None = None
     cop_by_air_bucket: dict[str, float] = field(default_factory=dict)
     #: Sessions behind each bucket, so a single measurement is not mistaken for
@@ -72,6 +82,9 @@ class LearnedValues:
         return {
             "heating_rate_c_per_h": self.heating_rate_c_per_h,
             "heat_loss_c_per_h": self.heat_loss_c_per_h,
+            "heat_loss_covered_c_per_h": self.heat_loss_covered_c_per_h,
+            "heat_loss_samples": self.heat_loss_samples,
+            "heat_loss_covered_samples": self.heat_loss_covered_samples,
             "measured_flow_m3h": self.measured_flow_m3h,
             "cop_by_air_bucket": self.cop_by_air_bucket,
             "cop_sessions_by_bucket": self.cop_sessions_by_bucket,
@@ -84,6 +97,9 @@ class LearnedValues:
         return cls(
             heating_rate_c_per_h=raw.get("heating_rate_c_per_h"),
             heat_loss_c_per_h=raw.get("heat_loss_c_per_h"),
+            heat_loss_covered_c_per_h=raw.get("heat_loss_covered_c_per_h"),
+            heat_loss_samples=raw.get("heat_loss_samples", 0),
+            heat_loss_covered_samples=raw.get("heat_loss_covered_samples", 0),
             measured_flow_m3h=raw.get("measured_flow_m3h"),
             cop_by_air_bucket=raw.get("cop_by_air_bucket", {}),
             cop_sessions_by_bucket=raw.get("cop_sessions_by_bucket", {}),

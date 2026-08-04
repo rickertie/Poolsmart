@@ -8,6 +8,26 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.1.0] — Where The Heat Goes — 2026-08-03
+
+### Added
+- **Live session figures.** Elapsed time, temperature gained, energy and cost
+  while the session runs, with the achieved rise per hour set against the
+  expected one. The recorder was already collecting all of it and keeping it to
+  itself until the session finished, which is precisely when nobody needs it
+- **Heat balance.** How much of the heat pump's output the pool actually keeps.
+  On the installation this was built for: 0.427 °C/h in, 0.281 °C/h straight
+  back out to the air, so two thirds is lost and a two degree rise takes
+  fourteen hours instead of five. No amount of price optimisation changes that
+  — a cover does, and the figure says so
+- **Cover support.** Point the integration at a cover sensor, switch or
+  input_boolean. Heat loss is then learned separately for covered and uncovered,
+  because a cover typically halves it and one averaged number would be wrong in
+  both states. An idle period during which the cover changed is discarded rather
+  than attributed to either
+- Live measurements on the dashboard's energy tab, and a session card plus heat
+  balance card in the panel
+
 ## [1.0.1] — Slash-Free Slugs — 2026-08-03
 
 ### Fixed
@@ -334,6 +354,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.1.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.0
 [1.0.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.0
 [0.13.2]: https://github.com/rickertie/Poolsmart/releases/tag/v0.13.2

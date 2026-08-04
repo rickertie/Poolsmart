@@ -214,6 +214,8 @@ class PoolSmartPanel extends HTMLElement {
         <div class="row"><span>Held until</span><span>${fmtTime(d.hold_until)}</span></div>
       </div>
 
+      ${this._sessionCard(s)}
+      ${this._balanceCard(s)}
       ${
         !s.heat_pump_available
           ? `<div class="card"><strong class="warn">Heating unavailable</strong>
@@ -255,6 +257,57 @@ class PoolSmartPanel extends HTMLElement {
         <div class="row"><span>Saved by timing</span><span>${s.energy.saved_today}</span></div>
       </div>
     `;
+  }
+
+  _sessionCard(s) {
+    const x = s.session;
+    if (!x || !x.running) return "";
+    const span = x.target_temp - x.start_temp;
+    const done = span > 0 ? ((x.current_temp - x.start_temp) / span) * 100 : 100;
+    const verdictColour = (x.verdict || "").startsWith("behind")
+      ? "#c62828"
+      : "#2e7d32";
+    return `<div class="card">
+      <strong>Running for ${esc(x.elapsed_readable)}</strong>
+      <div class="bar" style="margin-top:10px"><div style="width:${Math.max(
+        0,
+        Math.min(100, done)
+      )}%"></div></div>
+      <div class="row"><span>${x.start_temp} → ${x.target_temp} °C</span>
+        <span>${x.current_temp} °C (${x.gain > 0 ? "+" : ""}${x.gain})</span></div>
+      <div class="row"><span>Used</span><span>${x.energy_kwh} kWh · ${x.cost}</span></div>
+      ${
+        x.actual_rate_c_per_h
+          ? `<div class="row"><span>Rise per hour</span><span>${
+              x.actual_rate_c_per_h
+            } vs ${x.expected_rate_c_per_h} expected</span></div>
+             <div class="reason" style="color:${verdictColour}">${esc(x.verdict)}</div>`
+          : `<div class="reason muted">Too early to judge the rate.</div>`
+      }
+    </div>`;
+  }
+
+  _balanceCard(s) {
+    const b = s.heat_balance;
+    if (!b || !b.gross_rise_c_per_h) return "";
+    return `<div class="card">
+      <strong>Where the heat goes</strong>
+      <div class="bar" style="margin-top:10px;display:flex">
+        <div style="width:${b.kept_percent}%;background:#2e7d32"></div>
+        <div style="width:${b.lost_percent}%;background:#c62828"></div>
+      </div>
+      <div class="row"><span>Heat pump adds</span><span>${b.gross_rise_c_per_h} °C/h</span></div>
+      <div class="row"><span>Pool loses</span><span>${b.loss_c_per_h} °C/h</span></div>
+      <div class="row"><span><b>Net</b></span><span><b>${b.net_rise_c_per_h} °C/h</b></span></div>
+      <div class="row"><span>Cover</span><span>${
+        b.covered === null || b.covered === undefined
+          ? "not configured"
+          : b.covered
+          ? "on"
+          : "off"
+      }</span></div>
+      ${b.advice ? `<div class="reason">${esc(b.advice)}</div>` : ""}
+    </div>`;
   }
 
   _planning(s) {

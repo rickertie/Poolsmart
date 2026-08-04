@@ -222,6 +222,36 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         attributes_fn=lambda c: _why_unknown(c, "thermal_power"),
     ),
     PoolSensorDescription(
+        key="session_elapsed",
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        suggested_display_precision=2,
+        value_fn=lambda c: _session(c).get("elapsed_h"),
+        attributes_fn=lambda c: _session(c),
+    ),
+    PoolSensorDescription(
+        key="session_gain",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=2,
+        value_fn=lambda c: _session(c).get("gain"),
+        attributes_fn=lambda c: _session(c),
+    ),
+    PoolSensorDescription(
+        key="session_energy",
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=2,
+        value_fn=lambda c: _session(c).get("energy_kwh"),
+        attributes_fn=lambda c: _session(c),
+    ),
+    PoolSensorDescription(
+        key="heat_balance",
+        native_unit_of_measurement="%",
+        suggested_display_precision=0,
+        value_fn=lambda c: _heat_balance(c).get("kept_percent"),
+        attributes_fn=lambda c: _heat_balance(c),
+    ),
+    PoolSensorDescription(
         key="flow_adequacy",
         value_fn=lambda c: _flow_adequacy(c)[0],
         attributes_fn=lambda c: {
@@ -403,6 +433,124 @@ def _dose_summary(coordinator: PoolSmartCoordinator) -> str:
     if chemistry["ph"] is None and chemistry["chlorine"] is None:
         return "no readings"
     return "balanced"
+
+
+def _session(coordinator: PoolSmartCoordinator) -> dict:
+    """How the running session is going, against what was expected.
+
+    Published while the session runs rather than after it finishes. The recorder
+    was already collecting all of this; it just kept it to itself until the end,
+    which is precisely when nobody needs it any more.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None or state.session_started_at is None:
+        return {"running": False}
+
+    elapsed_h = (state.now - state.session_started_at).total_seconds() / 3600.0
+    start_temp = state.session_start_temp
+    now_temp = state.water_temp.value if state.water_temp.available else None
+    gain = (
+        round(now_temp - start_temp, 2)
+        if now_temp is not None and start_temp is not None
+        else None
+    )
+
+    result = {
+        "running": True,
+        "started_at": state.session_started_at.isoformat(),
+        "elapsed_h": round(elapsed_h, 3),
+        "elapsed_readable": _readable_hours(elapsed_h),
+        "start_temp": start_temp,
+        "current_temp": now_temp,
+        "target_temp": state.target_temp,
+        "gain": gain,
+        "energy_kwh": round(state.session_energy_kwh, 3),
+        "cost": round(state.session_cost, 3),
+        "covered": state.covered,
+    }
+
+    # The comparison is the point. A rate on its own says nothing about whether
+    # the session is going well.
+    estimate = coordinator.estimate
+    if estimate and estimate.hours_needed and elapsed_h > 0.25 and gain is not None:
+        expected_rate = (
+            estimate.degrees_needed / estimate.hours_needed
+            if estimate.hours_needed not in (0, float("inf"))
+            else None
+        )
+        actual_rate = gain / elapsed_h
+        result["actual_rate_c_per_h"] = round(actual_rate, 3)
+        if expected_rate:
+            result["expected_rate_c_per_h"] = round(expected_rate, 3)
+            ratio = actual_rate / expected_rate
+            result["on_schedule_ratio"] = round(ratio, 2)
+            if ratio >= 1.05:
+                result["verdict"] = "ahead of schedule"
+            elif ratio >= 0.75:
+                result["verdict"] = "on schedule"
+            else:
+                result["verdict"] = (
+                    "behind schedule — check the flow, the cover, or whether "
+                    "something is drawing heat away"
+                )
+    return result
+
+
+def _heat_balance(coordinator: PoolSmartCoordinator) -> dict:
+    """How much of the heat pump's output the pool actually keeps.
+
+    The single most explanatory number on a poorly insulated pool. A system
+    losing two thirds of its input to the air takes three times as long to warm
+    up as the appliance rating suggests, and no amount of price optimisation
+    changes that — a cover does.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    estimate = coordinator.estimate
+    if state is None or estimate is None or not estimate.thermal_kw:
+        return {}
+
+    config = coordinator.pool_config
+    gross = estimate.thermal_kw / config.pool.kwh_thermal_per_degree
+    loss = state.heat_loss_c_per_h
+    net = gross - loss
+    if gross <= 0:
+        return {}
+
+    learned = coordinator.store.learned
+    result = {
+        "gross_rise_c_per_h": round(gross, 3),
+        "loss_c_per_h": round(loss, 3),
+        "net_rise_c_per_h": round(net, 3),
+        "kept_percent": round(max(0.0, net / gross) * 100, 1),
+        "lost_percent": round(min(100.0, loss / gross * 100), 1),
+        "covered": state.covered,
+        "loss_open": learned.heat_loss_c_per_h,
+        "loss_covered": learned.heat_loss_covered_c_per_h,
+    }
+
+    if state.covered is None:
+        result["advice"] = (
+            "No cover entity is configured, so the effect of a cover cannot be "
+            "measured."
+        )
+    elif (
+        not state.covered
+        and learned.heat_loss_covered_c_per_h is not None
+        and learned.heat_loss_c_per_h is not None
+    ):
+        saved = learned.heat_loss_c_per_h - learned.heat_loss_covered_c_per_h
+        if saved > 0:
+            result["advice"] = (
+                f"The cover is off. With it on this pool loses {saved:.2f} °C/h "
+                "less, measured on this installation."
+            )
+    elif result["lost_percent"] > 50:
+        result["advice"] = (
+            "More than half the heat pump's output is going straight back into "
+            "the air. Reducing that loss is worth more than any change to "
+            "heating times or prices."
+        )
+    return result
 
 
 def _flow_adequacy(coordinator: PoolSmartCoordinator):

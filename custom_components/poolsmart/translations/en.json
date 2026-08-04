@@ -92,7 +92,7 @@
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
-          "cover_entity": "Pool cover (optional)",
+          "cover_entity": "Pool cover",
           "flow_unit": "Flow meter unit",
           "cheap_price_sensor": "Cheap price period signal",
           "pump_inlet_sensor": "Pump inlet temperature (optional)",
@@ -110,7 +110,7 @@
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
-          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
+          "cover_entity": "A cover sensor, a switch, or an input_boolean you flip yourself. Heat loss is then learned separately for covered and uncovered, because averaging the two produces a figure that is wrong in both states — a cover typically halves the loss or better.",
           "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
           "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
           "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong.",
@@ -249,7 +249,7 @@
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
           "weather_entity": "Weather",
-          "cover_entity": "Pool cover (optional)",
+          "cover_entity": "Pool cover",
           "flow_unit": "Flow meter unit",
           "cheap_price_sensor": "Cheap price period signal",
           "pump_inlet_sensor": "Pump inlet temperature (optional)",
@@ -270,7 +270,7 @@
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
-          "cover_entity": "A sensor or switch reporting whether the cover is on. Leave blank if you have none.",
+          "cover_entity": "A cover sensor, a switch, or an input_boolean you flip yourself. Heat loss is then learned separately for covered and uncovered, because averaging the two produces a figure that is wrong in both states — a cover typically halves the loss or better.",
           "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
           "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
           "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong.",
@@ -348,7 +348,7 @@
         "l_h": "L/h",
         "m3_h": "m³/h",
         "l_s": "L/s",
-        "gpm": "GPM (US gallons per minute)"
+        "gpm_": "GPM (US gallons per minute)"
       }
     },
     "chem_product": {
@@ -428,6 +428,18 @@
       },
       "dose_advice": {
         "name": "Dose advice"
+      },
+      "session_elapsed": {
+        "name": "Session elapsed"
+      },
+      "session_gain": {
+        "name": "Session gain"
+      },
+      "session_energy": {
+        "name": "Session energy"
+      },
+      "heat_balance": {
+        "name": "Heat kept"
       }
     },
     "binary_sensor": {
@@ -445,6 +457,9 @@
       },
       "filter_service_needed": {
         "name": "Filter service needed"
+      },
+      "covered": {
+        "name": "Cover on"
       }
     },
     "select": {
