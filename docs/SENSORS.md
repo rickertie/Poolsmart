@@ -1,10 +1,10 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Defaults](defaults.md)
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • **Learning** • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Defaults](defaults.md)
 ***
 
 # Sensors and ESPHome
 
 PoolSmart does not require ESPHome. It reads whatever temperature, flow and
-power sensors you point it at Shelly, Zigbee, Tasmota, a template sensor
+power sensors you point it at — Shelly, Zigbee, Tasmota, a template sensor
 fed from somewhere else. `pool_sensors.yaml` is a worked example for people
 building their own board, not a dependency.
 
@@ -35,7 +35,7 @@ DS18B20s are accurate to roughly ±0.5 °C. Fine for a room. Not fine here.
 
 A heat pump moving 3 kW through 1 m³/h of water produces about 2.5 °C of rise.
 Two probes off by 0.4 °C in opposite directions turn that into 1.7 °C, and the
-COP calculated from it is out by a third  which then feeds the learning model
+COP calculated from it is out by a third — which then feeds the learning model
 and stays wrong.
 
 1. Put all five probes in one glass of water. Stir it. Wait five minutes.
@@ -71,7 +71,7 @@ all shift the figure.
 nowhere near that, the divisor is wrong.
 
 This is worth being fussy about. A divisor of 12 against a true 30 reports
-17 L/min where the reality is under 7  and the daily filtration requirement
+17 L/min where the reality is under 7 — and the daily filtration requirement
 that follows from it would be more than twice too short, while looking entirely
 plausible on the dashboard.
 
@@ -88,30 +88,65 @@ meter signal ──[ 10 kΩ ]──┬── GPIO
 ```
 
 That lands at 3.3 V. Connecting 5 V directly works for a while, then destroys
-the pin. have done that :-)
+the pin.
 
 ## Pointing the integration at the sensors
 
 Settings → Devices & services → PoolSmart → Configure → Entities.
 
-| Field | Sensor |
-|---|---|
-| Pool water temperature | `sensor.<device>_pool_water_temperature` |
-| Outdoor temperature | `sensor.<device>_outdoor_temperature` |
-| Heat pump inlet | `sensor.<device>_pump_outlet_temperature` |
-| Heat pump outlet | `sensor.<device>_heat_pump_outlet_temperature` |
-| Flow meter | `sensor.<device>_flow` |
+| Field | Sensor | Purpose |
+|---|---|---|
+| Pool water temperature | `sensor.<device>_pool_water_temperature` | Required |
+| Outdoor temperature | `sensor.<device>_outdoor_temperature` | Operating envelope, frost |
+| Pump inlet | `sensor.<device>_pump_inlet_temperature` | Calibration check |
+| Pump outlet | `sensor.<device>_pump_outlet_temperature` | Delta-T, COP |
+| Heat pump inlet | *depends on your plumbing, see below* | Delta-T, COP |
+| Heat pump outlet | `sensor.<device>_heat_pump_outlet_temperature` | Delta-T, COP |
+| Flow meter | `sensor.<device>_flow` | Flow protection, filtration timing |
+| Electricity price | your tariff integration | Price optimisation |
+| Cheap price period | your tariff integration's binary sensor | Beats the price ceiling |
 
-The inlet mapping surprises people. If the plumbing runs pool → pump → heat pump
-→ pool, then the pump *outlet* is physically the heat pump *inlet*. Using it
-means delta-T works without fitting a fifth probe.
+Pump inlet, pump outlet, heat pump inlet and heat pump outlet are four separate
+fields on purpose, because plumbing differs between installations. A pool with a
+filter housing, a longer run, or anything else between the circulation pump and
+the heat pump has four real points to measure, and forcing two of them into one
+field would be wrong for that installation even though it happened to be right
+for the one this integration was first built on.
 
-Do not point inlet and outlet at the same entity. The integration detects that
-and refuses to report a permanent zero difference as a real measurement, but it
-also cannot give you delta-T or COP until they are two distinct probes.
+**If your plumbing runs pool → pump → heat pump → pool with nothing in
+between**, and you only fitted one probe at that junction, the pump outlet and
+the heat pump inlet are physically the same point. Point both fields at that one
+entity rather than leaving either blank. The integration recognises two fields
+sharing an entity as one measurement — it will not compare a probe against
+itself and report a fault that is not one, and every calculation that needs a
+heat pump inlet reading gets it either way. This is the case in the example
+ESPHome configuration in `docs/esphome/`, which publishes one "Pump outlet
+temperature" sensor and expects it mapped into both fields.
+
+**If your heat pump sits further from the pump**, with its own dedicated inlet
+probe, configure that probe under "Heat pump inlet" and leave "Pump outlet" as
+the separate reading it is. Nothing about the calculations changes; they simply
+read from four distinct sensors instead of three.
+
+**The pump inlet probe is worth wiring up on its own merits.** It measures the
+same water as the pool probe, a metre apart, so the two should agree. When they
+do not, one of three things is true: a probe needs calibrating, the pool is
+stratified from too little circulation, or a probe is not actually in the water.
+It is the only check in the system able to notice that a temperature reading is
+simply wrong
+rather than merely surprising — and a miscalibrated probe quietly corrupts
+delta-T and every COP figure that follows from it.
+
+Leave it blank and nothing breaks; you just lose that check.
+
+**Heat pump inlet and heat pump outlet must stay two distinct entities.**
+Pointing them at the same one, unlike pump outlet and heat pump inlet above,
+gets refused: the integration will not report a permanent zero difference as a
+real measurement, but it also cannot give you delta-T or COP until they are two
+separate probes either side of the appliance.
 
 ## Without ESPHome
 
-Point the integration at whatever you have. Only three entities are required 
+Point the integration at whatever you have. Only three entities are required —
 the two switches and a water temperature. Everything else is optional and
 switches off cleanly when left blank, with the reason visible in the panel.
