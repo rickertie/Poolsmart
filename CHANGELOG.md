@@ -8,6 +8,41 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.1.2] — Where Does This Sensor Go — 2026-08-04
+
+### Fixed
+- The pH and chlorine entity pickers were restricted to `domain="sensor"`,
+  which hid every `input_number` helper from the list. A water test strip has
+  no sensor of its own, so those readings are as often a manually-updated
+  helper as a real sensor — the helper existed, the picker just would not show
+  it. Both pickers now accept `sensor` and `input_number`
+- **Pump outlet is now its own field**, separate from heat pump inlet. The
+  first attempt at this fix only reworded the "Heat pump inlet temperature"
+  label to mention "your pump outlet sensor" — but that assumed everyone's
+  plumbing folds the two into one physical point, which is only true for a
+  pool with nothing between the pump and the heat pump. A filter housing, a
+  longer run, or any other layout has two real points to measure, and forcing
+  them into one field was wrong for that installation regardless of how
+  clearly it was labelled. There are four distinct optional fields now — pump
+  inlet, pump outlet, heat pump inlet, heat pump outlet — and alias detection,
+  already used for water/pump-inlet, was generalised to cover all of them: an
+  installation where pump outlet and heat pump inlet genuinely are one probe
+  configures the same entity in both fields, and the integration recognises
+  that as one measurement rather than comparing a probe against itself
+
+## [1.1.1] — Sorted, Not Underscored — 2026-08-04
+
+### Fixed
+- hassfest CI failed on two things at once: `manifest.json` keys were not
+  sorted (domain, name, then alphabetical is their rule, not a suggestion), and
+  the `gpm_` translation key ended in an underscore, which their validator
+  rejects even though it matched the broader pattern this project's own checks
+  used. The trailing underscore existed only to avoid colliding with an
+  already-present `gpm` key in the same lookup table; both now simply share that
+  key, since they mapped to the same conversion factor anyway
+- Two tests added pinning hassfest's actual rules, not an approximation of them,
+  since the approximation is exactly what let this through
+
 ## [1.1.0] — Where The Heat Goes — 2026-08-03
 
 ### Added
@@ -354,6 +389,8 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.1.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.2
+[1.1.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.1
 [1.1.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.0
 [1.0.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.0

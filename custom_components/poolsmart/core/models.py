@@ -157,6 +157,16 @@ class PoolState:
     water_temp: SensorReading
     air_temp: SensorReading
     pump_inlet: SensorReading
+    #: Water leaving the circulation pump, as distinct from the heat pump inlet.
+    #:
+    #: Kept separate rather than folded into hp_inlet, because that folding
+    #: assumed one particular plumbing layout (pool -> pump -> heat pump -> pool,
+    #: where the two are physically one point). Someone with a filter, a longer
+    #: run, or a different loop between the pump and the heat pump has two real
+    #: points to measure. Installations where they genuinely are the same point
+    #: simply configure the same entity for both fields; alias detection then
+    #: treats them as one measurement rather than two.
+    pump_outlet: SensorReading
     hp_inlet: SensorReading
     hp_outlet: SensorReading
     flow_m3h: SensorReading

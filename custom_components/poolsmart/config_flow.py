@@ -31,6 +31,14 @@ TEMP_SENSOR = selector.EntitySelector(
     selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
 )
 ANY_SENSOR = selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor"))
+#: For readings people commonly enter by hand -- a water test strip has no
+#: sensor of its own, so pH and chlorine are as often an input_number helper
+#: updated manually as they are a real sensor. Restricting the picker to
+#: domain="sensor" hid every such helper from the list, which is what point 1
+#: below was: the helper existed, the picker just would not show it.
+MANUAL_OR_SENSOR = selector.EntitySelector(
+    selector.EntitySelectorConfig(domain=["sensor", "input_number"])
+)
 POWER_SENSOR = selector.EntitySelector(
     selector.EntitySelectorConfig(domain="sensor", device_class="power")
 )
@@ -191,20 +199,21 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
     {
         vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
+        vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_FLOW_UNIT, default="l_min"): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=["l_min", "l_h", "m3_h", "l_s", "gpm_"],
+                        options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
                         translation_key="flow_unit",
                     )
                 ),
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
-        vol.Optional(c.CONF_PH_SENSOR): ANY_SENSOR,
-        vol.Optional(c.CONF_CHLORINE_SENSOR): ANY_SENSOR,
+        vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
         ),
@@ -360,6 +369,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
                 field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
                 field(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
+                field(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
                 field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
@@ -368,15 +378,15 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     default=current.get(c.CONF_FLOW_UNIT, "l_min"),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=["l_min", "l_h", "m3_h", "l_s", "gpm_"],
+                        options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
                         translation_key="flow_unit",
                     )
                 ),
                 field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
-                field(c.CONF_PH_SENSOR): ANY_SENSOR,
-                field(c.CONF_CHLORINE_SENSOR): ANY_SENSOR,
+                field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
                 field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
                     selector.EntitySelectorConfig(
                         domain=["binary_sensor", "input_boolean"]

@@ -97,11 +97,12 @@
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
           "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)",
           "ph_sensor": "pH-meting",
-          "chlorine_sensor": "Meting vrij chloor (mg/L)"
+          "chlorine_sensor": "Meting vrij chloor (mg/L)",
+          "pump_outlet_sensor": "Uitlaattemperatuur circulatiepomp"
         },
         "data_description": {
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
-          "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Loopt je leiding bad → pomp → warmtepomp, dan is de sensor op de pompuitlaat de juiste keuze.",
+          "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Zit er niets tussen de pomp en de warmtepomp in je leidingwerk, dan is dit vaak hetzelfde fysieke punt als “Uitlaattemperatuur circulatiepomp” hierboven — wijs in dat geval beide velden naar die ene entiteit in plaats van dit leeg te laten.",
           "hp_outlet_sensor": "Water dat de warmtepomp uit komt. Samen met de inlaat geeft dit delta-T en COP.",
           "flow_sensor": "Een debietmeter in m³/u. Maakt flowbeveiliging mogelijk en laat de filtratieblokken zichzelf corrigeren als het filter vervuilt.",
           "pump_power_sensor": "Opgenomen vermogen van de pomp, als je stekker dat meet.",
@@ -115,7 +116,8 @@
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
           "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is.",
           "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
-          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L."
+          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L.",
+          "pump_outlet_sensor": "Water dat de circulatiepomp verlaat, op weg naar de warmtepomp. Apart gehouden van de warmtepompinlaat hieronder, want die aanname geldt maar voor één leidingopstelling: zit er een filter, een langer traject, of iets anders tussen pomp en warmtepomp, dan zijn dit twee echte meetpunten. Loopt je leiding bad → pomp → warmtepomp → bad zonder iets ertussen, en heb je daar maar één voeler hangen, wijs dit veld en “Inlaattemperatuur warmtepomp” dan naar dezelfde entiteit — de integratie herkent dat het één meting is en vergelijkt ze niet met elkaar alsof het twee losse metingen zijn."
         }
       }
     }
@@ -254,14 +256,15 @@
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
           "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)",
           "ph_sensor": "pH-meting",
-          "chlorine_sensor": "Meting vrij chloor (mg/L)"
+          "chlorine_sensor": "Meting vrij chloor (mg/L)",
+          "pump_outlet_sensor": "Uitlaattemperatuur circulatiepomp"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
           "heat_pump_switch": "De schakelaar of slimme stekker die de warmtepomp voedt.",
           "water_temp_sensor": "De sensor die het zwembadwater zelf meet. Kies zorgvuldig; je kunt dit later aanpassen onder Configureren.",
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
-          "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Loopt je leiding bad → pomp → warmtepomp, dan is de sensor op de pompuitlaat de juiste keuze.",
+          "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Zit er niets tussen de pomp en de warmtepomp in je leidingwerk, dan is dit vaak hetzelfde fysieke punt als “Uitlaattemperatuur circulatiepomp” hierboven — wijs in dat geval beide velden naar die ene entiteit in plaats van dit leeg te laten.",
           "hp_outlet_sensor": "Water dat de warmtepomp uit komt. Samen met de inlaat geeft dit delta-T en COP.",
           "flow_sensor": "Een debietmeter in m³/u. Maakt flowbeveiliging mogelijk en laat de filtratieblokken zichzelf corrigeren als het filter vervuilt.",
           "pump_power_sensor": "Opgenomen vermogen van de pomp, als je stekker dat meet.",
@@ -275,7 +278,8 @@
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
           "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is.",
           "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
-          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L."
+          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L.",
+          "pump_outlet_sensor": "Water dat de circulatiepomp verlaat, op weg naar de warmtepomp. Apart gehouden van de warmtepompinlaat hieronder, want die aanname geldt maar voor één leidingopstelling: zit er een filter, een langer traject, of iets anders tussen pomp en warmtepomp, dan zijn dit twee echte meetpunten. Loopt je leiding bad → pomp → warmtepomp → bad zonder iets ertussen, en heb je daar maar één voeler hangen, wijs dit veld en “Inlaattemperatuur warmtepomp” dan naar dezelfde entiteit — de integratie herkent dat het één meting is en vergelijkt ze niet met elkaar alsof het twee losse metingen zijn."
         }
       },
       "hardware": {
@@ -348,7 +352,7 @@
         "l_h": "L/h",
         "m3_h": "m³/h",
         "l_s": "L/s",
-        "gpm_": "GPM (Amerikaanse gallons per minuut)"
+        "gpm": "GPM (Amerikaanse gallons per minuut)"
       }
     },
     "chem_product": {

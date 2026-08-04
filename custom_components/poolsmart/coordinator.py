@@ -68,13 +68,12 @@ FLOW_UNIT_FACTORS = {
     "l/u": 0.001,
     "lph": 0.001,
     "l/s": 3.6,
-    "gpm": 0.2271,
+    "gpm": 0.2271,  # both the published unit and the stored slug
     # As stored by the config flow
     "m3_h": 1.0,
     "l_min": 0.06,
     "l_h": 0.001,
     "l_s": 3.6,
-    "gpm_": 0.2271,
 }
 
 
@@ -198,11 +197,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         outlet = self._conf(c.CONF_HP_OUTLET_SENSOR)
         water = self._conf(c.CONF_WATER_TEMP_SENSOR)
         pump_inlet = self._conf(c.CONF_PUMP_INLET_SENSOR)
+        pump_outlet = self._conf(c.CONF_PUMP_OUTLET_SENSOR)
+        # Every configured temperature role is compared against every other.
+        # This is what lets someone whose pump outlet and heat pump inlet really
+        # are the same physical probe just point both fields at it: the two
+        # roles are recognised as one measurement rather than compared as if
+        # they were independent, which would otherwise report a permanent
+        # zero-difference "fault" that is not one.
         roles = (
             ("hp_inlet", inlet),
             ("hp_outlet", outlet),
             ("water", water),
             ("pump_inlet", pump_inlet),
+            ("pump_outlet", pump_outlet),
         )
         for role_a, entity_a in roles:
             for role_b, entity_b in roles:
@@ -507,6 +514,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             water_temp=self._read(c.CONF_WATER_TEMP_SENSOR, "water"),
             air_temp=self._read(c.CONF_AIR_TEMP_SENSOR, "air"),
             pump_inlet=self._read(c.CONF_PUMP_INLET_SENSOR, "pump_inlet"),
+            pump_outlet=self._read(c.CONF_PUMP_OUTLET_SENSOR, "pump_outlet"),
             hp_inlet=self._read(c.CONF_HP_INLET_SENSOR, "hp_inlet"),
             hp_outlet=self._read(c.CONF_HP_OUTLET_SENSOR, "hp_outlet"),
             flow_m3h=self._read_flow(),

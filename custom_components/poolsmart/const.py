@@ -88,6 +88,7 @@ CONF_WATER_TEMP_SENSOR = "water_temp_sensor"
 # -- Step 5: optional entities --------------------------------------------
 CONF_AIR_TEMP_SENSOR = "air_temp_sensor"
 CONF_PUMP_INLET_SENSOR = "pump_inlet_sensor"
+CONF_PUMP_OUTLET_SENSOR = "pump_outlet_sensor"
 CONF_HP_INLET_SENSOR = "hp_inlet_sensor"
 CONF_HP_OUTLET_SENSOR = "hp_outlet_sensor"
 CONF_FLOW_SENSOR = "flow_sensor"
@@ -104,6 +105,7 @@ CONF_COVER_ENTITY = "cover_entity"
 OPTIONAL_ENTITY_KEYS = (
     CONF_AIR_TEMP_SENSOR,
     CONF_PUMP_INLET_SENSOR,
+    CONF_PUMP_OUTLET_SENSOR,
     CONF_HP_INLET_SENSOR,
     CONF_HP_OUTLET_SENSOR,
     CONF_FLOW_SENSOR,
@@ -122,6 +124,7 @@ OPTIONAL_ENTITY_KEYS = (
 CAPABILITY_BY_ENTITY = {
     CONF_AIR_TEMP_SENSOR: "operating_envelope",
     CONF_PUMP_INLET_SENSOR: "calibration_check",
+    CONF_PUMP_OUTLET_SENSOR: "delta_t_and_cop",
     CONF_HP_INLET_SENSOR: "delta_t_and_cop",
     CONF_HP_OUTLET_SENSOR: "delta_t_and_cop",
     CONF_FLOW_SENSOR: "flow_protection",

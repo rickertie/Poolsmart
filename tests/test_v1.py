@@ -7,6 +7,7 @@ using what was learned, and the chemistry module.
 
 from __future__ import annotations
 
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -409,3 +410,152 @@ def test_t64b_cover_changing_mid_period_teaches_nothing():
     ).read_text()
     assert "Cover changed during the idle period" in source
     assert "started_covered != covered" in source
+
+
+# ---------------------------------------------------------------------------
+# T65 - hassfest's exact rules, pinned after a real CI failure
+# ---------------------------------------------------------------------------
+
+def test_t65_manifest_keys_sorted_hassfest_style():
+    """hassfest wants domain, name, then the rest alphabetical.
+
+    Not our own convention -- theirs, and it fails CI silently until you look.
+    """
+    import json
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "manifest.json"
+    )
+    manifest = json.loads(path.read_text())
+    keys = list(manifest.keys())
+
+    assert keys[0] == "domain"
+    assert keys[1] == "name"
+    rest = keys[2:]
+    assert rest == sorted(rest), f"not alphabetical after domain/name: {rest}"
+
+
+def test_t65b_translation_selector_keys_match_hassfest_regex():
+    """The exact rule from the CI failure: [a-z0-9-_]+, no leading/trailing _ or -.
+
+    "gpm_" passed our own looser check and still failed hassfest. This is their
+    rule, not an approximation of it.
+    """
+    import json
+    import re
+
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    pattern = re.compile(r"[a-z0-9-_]+")
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (root / "translations" / f"{language}.json").read_text()
+        )
+        for selector_key, selector in translations.get("selector", {}).items():
+            for option in selector.get("options", {}):
+                assert pattern.fullmatch(option), f"{language}/{selector_key}: {option}"
+                assert not option.startswith(("_", "-")), (
+                    f"{language}/{selector_key}: {option} starts with _/-"
+                )
+                assert not option.endswith(("_", "-")), (
+                    f"{language}/{selector_key}: {option} ends with _/-"
+                )
+
+
+# ---------------------------------------------------------------------------
+# T66 - pH and chlorine pickers accept a manually-updated helper
+# ---------------------------------------------------------------------------
+
+def test_t66_ph_chlorine_pickers_allow_input_number():
+    """A water test strip has no sensor of its own.
+
+    pH and chlorine are as often an input_number helper someone updates by hand
+    after a test as they are a real sensor. Restricting the picker to
+    domain="sensor" hid every such helper from the list entirely -- the helper
+    existed, the field just would not show it.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "config_flow.py"
+    ).read_text()
+
+    assert "field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR" in source
+    assert "field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR" in source
+    assert 'vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR' in source
+    assert 'vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR' in source
+
+    # And the selector itself must actually include input_number.
+    definition = re.search(
+        r"MANUAL_OR_SENSOR = selector\.EntitySelector\(.*?domain=(\[[^\]]+\])",
+        source,
+        re.S,
+    )
+    assert definition is not None, "MANUAL_OR_SENSOR definition not found"
+    assert '"input_number"' in definition.group(1)
+    assert '"sensor"' in definition.group(1)
+
+
+# ---------------------------------------------------------------------------
+# T67 - pump outlet and heat pump inlet are separate, aliasable fields
+# ---------------------------------------------------------------------------
+
+def test_t67_pump_outlet_is_its_own_field():
+    """A user with different plumbing than the one this was built for.
+
+    Folding "pump outlet" into "heat pump inlet" assumed one particular layout:
+    pool -> pump -> heat pump -> pool, where the two are physically one point.
+    Someone with a filter, a longer run, or anything else between the pump and
+    the heat pump has two real points to measure, and needed two real fields.
+    """
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    const_source = (root / "const.py").read_text()
+    flow_source = (root / "config_flow.py").read_text()
+
+    assert 'CONF_PUMP_OUTLET_SENSOR = "pump_outlet_sensor"' in const_source
+
+    # Present in both the initial wizard and the later options flow, not just one.
+    assert flow_source.count("field(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR") == 1
+    assert flow_source.count("vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR") == 1
+
+    import json
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (root / "translations" / f"{language}.json").read_text()
+        )
+        for section in (
+            translations["config"]["step"]["optional"],
+            translations["options"]["step"]["entities"],
+        ):
+            assert "pump_outlet_sensor" in section["data"]
+            assert "pump_outlet_sensor" in section["data_description"]
+
+
+def test_t67b_shared_probe_installations_alias_cleanly():
+    """Rick's own plumbing has one probe doing both jobs.
+
+    Pointing both fields at the same entity must not be treated as two
+    disagreeing measurements -- the general alias mechanism, already used for
+    water/pump_inlet, covers pump_outlet the same way.
+    """
+    config = make_config(
+        sensor_aliases=frozenset({frozenset({"pump_outlet", "hp_inlet"})})
+    )
+    assert config.is_aliased("pump_outlet", "hp_inlet")
+    assert config.is_aliased("hp_inlet", "pump_outlet")
+    assert not config.is_aliased("pump_outlet", "hp_outlet")
+
+
+def test_t67c_coordinator_builds_the_pump_outlet_alias(monkeypatch=None):
+    """The coordinator's role list must include pump_outlet, or aliasing a
+    shared probe silently stops working the moment someone configures one."""
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    source = (root / "coordinator.py").read_text()
+    roles_block = source[source.index("roles = (") : source.index("for role_a")]
+    assert '"pump_outlet"' in roles_block
+    assert '"hp_inlet"' in roles_block
