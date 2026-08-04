@@ -559,3 +559,95 @@ def test_t67c_coordinator_builds_the_pump_outlet_alias(monkeypatch=None):
     roles_block = source[source.index("roles = (") : source.index("for role_a")]
     assert '"pump_outlet"' in roles_block
     assert '"hp_inlet"' in roles_block
+
+
+# ---------------------------------------------------------------------------
+# T68 - the panel reload actually reaches the browser
+# ---------------------------------------------------------------------------
+
+def test_t68_panel_url_is_cache_busted():
+    """A new tab appeared in the source and not in the browser.
+
+    The panel is served as a static file with no version in its URL, so the
+    browser kept the cached copy indefinitely. The integration updated, the
+    panel did not, and it looked like the update had silently failed.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "__init__.py"
+    ).read_text()
+
+    assert "_panel_version" in source
+    assert "poolsmart-panel.js?v=" in source, "no cache-busting query on the panel URL"
+    # The version must come from the manifest, not be hardcoded next to it.
+    assert 'manifest.read_text()' in source or 'manifest.json' in source
+
+
+def test_t68b_bridge_method_exists_on_the_coordinator():
+    """Regression: `_read` called `self._bridge` and the method was not there.
+
+    Setup failed with an AttributeError the first time any sensor went
+    unavailable -- which, on a system whose probes live on an ESP that
+    occasionally reboots, is a matter of when rather than whether.
+    """
+    import ast
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "coordinator.py"
+    ).read_text()
+    tree = ast.parse(source)
+
+    methods = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == "PoolSmartCoordinator":
+            methods = {
+                n.name
+                for n in node.body
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+
+    # Every self._x(...) call inside the class must resolve to a real method.
+    called = set(re.findall(r"self\.(_[a-z_]+)\(", source))
+    known = methods | {
+        "_conf",  # defined on the class, matched above, listed for clarity
+    }
+    missing = {name for name in called if name not in known}
+    assert not missing, f"called but not defined: {sorted(missing)}"
+
+
+# ---------------------------------------------------------------------------
+# T69 - the panel follows the user's language
+# ---------------------------------------------------------------------------
+
+def test_t69_panel_is_translatable():
+    """Entity names follow Home Assistant's language; the panel did not.
+
+    That gap is the real inconsistency -- not the translated entity names, which
+    are what appear on dashboards, in automations and in the logbook, and should
+    stay translated. So the panel was localised rather than the entities being
+    un-translated.
+    """
+    panel = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "www"
+        / "poolsmart-panel.js"
+    ).read_text()
+
+    assert "const STRINGS = {" in panel
+    assert "en:" in panel and "nl:" in panel
+    assert "this._hass.language" in panel
+
+    # Every key present in English must exist in Dutch, or the fallback quietly
+    # leaves half the panel in the wrong language.
+    english = re.search(r"\ben:\s*\{(.*?)\n  \},", panel, re.S).group(1)
+    dutch = re.search(r"\bnl:\s*\{(.*?)\n  \},", panel, re.S).group(1)
+    en_keys = set(re.findall(r"(\w+):", english))
+    nl_keys = set(re.findall(r"(\w+):", dutch))
+    assert en_keys <= nl_keys, f"untranslated: {sorted(en_keys - nl_keys)}"

@@ -331,7 +331,33 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         # measure of liveness; it falls back for older Home Assistant versions.
         reported = getattr(state, "last_reported", None) or state.last_updated
         age = (dt_util.utcnow() - reported).total_seconds()
+        self._last_good[role] = (value, dt_util.utcnow())
         return SensorReading(value, age, role)
+
+    def _bridge(self, role: str) -> SensorReading:
+        """Carry the last reading through a brief outage.
+
+        An ESP reboot takes ten seconds and makes every sensor on it
+        unavailable. Treating that as a dead probe stops a heating session over
+        a gap shorter than the time it takes to notice -- and pool water does
+        not change temperature in twenty seconds, so the last reading is far
+        closer to the truth than no reading at all.
+
+        Past the bridge window the value is dropped and the normal fault
+        handling takes over, because at that point something really is wrong.
+        """
+        remembered = self._last_good.get(role)
+        if remembered is None:
+            return SensorReading(None, None, role)
+
+        value, seen_at = remembered
+        gap = (dt_util.utcnow() - seen_at).total_seconds()
+        if gap > self.pool_config.safety.bridge_outage_seconds:
+            self._last_good.pop(role, None)
+            return SensorReading(None, None, role)
+
+        self.bridged_roles.add(role)
+        return SensorReading(value, gap, role, bridged=True)
 
     def _read_binary(self, key: str) -> bool | None:
         """Read an optional on/off signal.

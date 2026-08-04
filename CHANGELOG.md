@@ -11,6 +11,21 @@ own paperwork.
 ## [1.1.2] — Where Does This Sensor Go — 2026-08-04
 
 ### Fixed
+- **Setup failed with `AttributeError: no attribute '_bridge'`.** `_read` called
+  a method that was never actually written — an edit that reported success and
+  landed nowhere. It only surfaced the first time a sensor went unavailable,
+  which on a system whose probes live on an ESP is a matter of when rather than
+  whether. A test now checks every `self._x()` call in the coordinator against
+  the methods that genuinely exist
+- **The panel never updated in the browser.** It is served as a static file
+  with no version in its URL, so the cached copy was kept indefinitely: the
+  Water tab was in the code and not on screen, and the integration looked like
+  it had silently failed to update. The URL now carries the manifest version
+- **The panel is now translated.** Entity names follow Home Assistant's
+  language, the panel was hardcoded English, and that gap was the real
+  inconsistency — not the Dutch entity names, which are what appear on
+  dashboards, in automations and in the logbook and should stay translated. So
+  the panel was localised rather than the entities un-translated
 - The pH and chlorine entity pickers were restricted to `domain="sensor"`,
   which hid every `input_number` helper from the list. A water test strip has
   no sensor of its own, so those readings are as often a manually-updated

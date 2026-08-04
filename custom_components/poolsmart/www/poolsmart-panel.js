@@ -9,6 +9,70 @@
  * is for everyone else, and the two are deliberately not the same thing.
  */
 
+
+/**
+ * Panel wording, by language.
+ *
+ * Entity names are translated by Home Assistant from translations/*.json, so on
+ * a Dutch system everything outside this file already reads Dutch. A hardcoded
+ * English panel next to Dutch entity names is the actual inconsistency, and the
+ * fix is to translate the panel rather than to stop translating the entities:
+ * the entity names are what appear on dashboards, in automations and in the
+ * logbook, and those should follow the user's language.
+ *
+ * English is the fallback for any language not listed here, and for any key a
+ * translation happens to be missing.
+ */
+const STRINGS = {
+  en: {
+    overview: "Overview", planning: "Planning", water: "Water",
+    sessions: "Sessions", learning: "Learning", settings: "Settings",
+    diagnostics: "Diagnostics",
+    ph: "pH", chlorine: "Free chlorine", testEvery: "Test every",
+    nextTest: "Next test", overdue: "overdue", days: "days",
+    balanced: "Balanced", nothingToAdd: "Nothing to add.",
+    doseLog: "Dose log",
+    doseLogNote: "What was added, and what it did. Without this, dosing is guessing.",
+    when: "When", added: "Added", before: "Before", after: "After",
+    effect: "Effect", pending: "pending",
+    noChemistry: "No water chemistry configured.",
+    aimFirst: (v) =>
+      `Aiming for ${v} first — a correction this large overshoots if done in ` +
+      `one go. Measure again after an hour.`,
+    runningFor: (t) => `Running for ${t}`,
+    used: "Used", risePerHour: "Rise per hour", expected: "expected",
+    tooEarly: "Too early to judge the rate.",
+    whereHeatGoes: "Where the heat goes",
+    heatPumpAdds: "Heat pump adds", poolLoses: "Pool loses", net: "Net",
+    cover: "Cover", coverOn: "on", coverOff: "off",
+    notConfigured: "not configured",
+  },
+  nl: {
+    overview: "Overzicht", planning: "Planning", water: "Water",
+    sessions: "Sessies", learning: "Leren", settings: "Instellingen",
+    diagnostics: "Diagnose",
+    ph: "pH", chlorine: "Vrij chloor", testEvery: "Meten elke",
+    nextTest: "Volgende meting", overdue: "te laat", days: "dagen",
+    balanced: "In balans", nothingToAdd: "Niets toe te voegen.",
+    doseLog: "Doseerlogboek",
+    doseLogNote:
+      "Wat er is toegevoegd, en wat het deed. Zonder dit blijft doseren gokken.",
+    when: "Wanneer", added: "Toegevoegd", before: "Voor", after: "Na",
+    effect: "Effect", pending: "nog niet gemeten",
+    noChemistry: "Geen waterchemie ingesteld.",
+    aimFirst: (v) =>
+      `Eerst naar ${v} — een correctie van deze grootte schiet in één keer ` +
+      `door. Meet na een uur opnieuw.`,
+    runningFor: (t) => `${t} bezig`,
+    used: "Verbruikt", risePerHour: "Stijging per uur", expected: "verwacht",
+    tooEarly: "Nog te vroeg om de stijging te beoordelen.",
+    whereHeatGoes: "Waar de warmte blijft",
+    heatPumpAdds: "Warmtepomp levert", poolLoses: "Bad verliest", net: "Netto",
+    cover: "Afdekhoes", coverOn: "ligt erop", coverOff: "eraf",
+    notConfigured: "niet ingesteld",
+  },
+};
+
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "planning", label: "Planning" },
@@ -77,6 +141,15 @@ const esc = (s) =>
   );
 
 class PoolSmartPanel extends HTMLElement {
+  /** Translate one key, falling back to English per key. */
+  t(key, ...args) {
+    const lang = (this._hass && this._hass.language ? this._hass.language : "en")
+      .split("-")[0];
+    const table = STRINGS[lang] || STRINGS.en;
+    const value = table[key] !== undefined ? table[key] : STRINGS.en[key];
+    return typeof value === "function" ? value(...args) : value;
+  }
+
   constructor() {
     super();
     this._tab = "overview";
@@ -155,7 +228,9 @@ class PoolSmartPanel extends HTMLElement {
       }</div>
       <nav>${TABS.map(
         (t) =>
-          `<button data-tab="${t.id}" class="${this._tab === t.id ? "active" : ""}">${t.label}</button>`
+          `<button data-tab="${t.id}" class="${
+            this._tab === t.id ? "active" : ""
+          }">${esc(this.t(t.id) || t.label)}</button>`
       ).join("")}</nav>
       <div id="content">${s ? this._renderTab(s) : ""}</div>
     `;
@@ -268,21 +343,21 @@ class PoolSmartPanel extends HTMLElement {
       ? "#c62828"
       : "#2e7d32";
     return `<div class="card">
-      <strong>Running for ${esc(x.elapsed_readable)}</strong>
+      <strong>${esc(this.t("runningFor", x.elapsed_readable))}</strong>
       <div class="bar" style="margin-top:10px"><div style="width:${Math.max(
         0,
         Math.min(100, done)
       )}%"></div></div>
       <div class="row"><span>${x.start_temp} → ${x.target_temp} °C</span>
         <span>${x.current_temp} °C (${x.gain > 0 ? "+" : ""}${x.gain})</span></div>
-      <div class="row"><span>Used</span><span>${x.energy_kwh} kWh · ${x.cost}</span></div>
+      <div class="row"><span>${esc(this.t("used"))}</span><span>${x.energy_kwh} kWh · ${x.cost}</span></div>
       ${
         x.actual_rate_c_per_h
-          ? `<div class="row"><span>Rise per hour</span><span>${
+          ? `<div class="row"><span>${esc(this.t("risePerHour"))}</span><span>${
               x.actual_rate_c_per_h
-            } vs ${x.expected_rate_c_per_h} expected</span></div>
+            } / ${x.expected_rate_c_per_h} ${esc(this.t("expected"))}</span></div>
              <div class="reason" style="color:${verdictColour}">${esc(x.verdict)}</div>`
-          : `<div class="reason muted">Too early to judge the rate.</div>`
+          : `<div class="reason muted">${esc(this.t("tooEarly"))}</div>`
       }
     </div>`;
   }
@@ -291,21 +366,21 @@ class PoolSmartPanel extends HTMLElement {
     const b = s.heat_balance;
     if (!b || !b.gross_rise_c_per_h) return "";
     return `<div class="card">
-      <strong>Where the heat goes</strong>
+      <strong>${esc(this.t("whereHeatGoes"))}</strong>
       <div class="bar" style="margin-top:10px;display:flex">
         <div style="width:${b.kept_percent}%;background:#2e7d32"></div>
         <div style="width:${b.lost_percent}%;background:#c62828"></div>
       </div>
-      <div class="row"><span>Heat pump adds</span><span>${b.gross_rise_c_per_h} °C/h</span></div>
-      <div class="row"><span>Pool loses</span><span>${b.loss_c_per_h} °C/h</span></div>
-      <div class="row"><span><b>Net</b></span><span><b>${b.net_rise_c_per_h} °C/h</b></span></div>
-      <div class="row"><span>Cover</span><span>${
+      <div class="row"><span>${esc(this.t("heatPumpAdds"))}</span><span>${b.gross_rise_c_per_h} °C/h</span></div>
+      <div class="row"><span>${esc(this.t("poolLoses"))}</span><span>${b.loss_c_per_h} °C/h</span></div>
+      <div class="row"><span><b>${esc(this.t("net"))}</b></span><span><b>${b.net_rise_c_per_h} °C/h</b></span></div>
+      <div class="row"><span>${esc(this.t("cover"))}</span><span>${esc(
         b.covered === null || b.covered === undefined
-          ? "not configured"
+          ? this.t("notConfigured")
           : b.covered
-          ? "on"
-          : "off"
-      }</span></div>
+          ? this.t("coverOn")
+          : this.t("coverOff")
+      )}</span></div>
       ${b.advice ? `<div class="reason">${esc(b.advice)}</div>` : ""}
     </div>`;
   }
@@ -366,7 +441,7 @@ class PoolSmartPanel extends HTMLElement {
 
   _water(s) {
     const w = s.chemistry;
-    if (!w) return `<div class="card muted">No water chemistry configured.</div>`;
+    if (!w) return `<div class="card muted">${esc(this.t("noChemistry"))}</div>`;
     const dose = (d) =>
       d
         ? `<div class="card">
@@ -375,9 +450,9 @@ class PoolSmartPanel extends HTMLElement {
              <div class="reason">${esc(d.reason)}</div>
              ${
                d.partial
-                 ? `<div class="reason" style="color:#ef6c00">Aiming for ${d.aiming_for}
-                    first — a correction this large overshoots if done in one go.
-                    Measure again after an hour.</div>`
+                 ? `<div class="reason" style="color:#ef6c00">${esc(
+                     this.t("aimFirst", d.aiming_for)
+                   )}</div>`
                  : ""
              }
              <div class="reason muted">${esc(d.instructions)}</div>
@@ -386,13 +461,17 @@ class PoolSmartPanel extends HTMLElement {
 
     return `
       <div class="card">
-        <div class="row"><span>pH</span><span>${w.ph ?? "—"}</span></div>
-        <div class="row"><span>Free chlorine</span><span>${
+        <div class="row"><span>${esc(this.t("ph"))}</span><span>${
+          w.ph ?? "—"
+        }</span></div>
+        <div class="row"><span>${esc(this.t("chlorine"))}</span><span>${
           w.chlorine ?? "—"
         } mg/L</span></div>
-        <div class="row"><span>Test every</span><span>${w.test_interval_days} days</span></div>
-        <div class="row"><span>Next test</span><span>${
-          w.test_overdue ? "overdue" : fmtDateTime(w.test_due_at)
+        <div class="row"><span>${esc(this.t("testEvery"))}</span><span>${
+          w.test_interval_days
+        } ${esc(this.t("days"))}</span></div>
+        <div class="row"><span>${esc(this.t("nextTest"))}</span><span>${
+          w.test_overdue ? esc(this.t("overdue")) : fmtDateTime(w.test_due_at)
         }</span></div>
         <div class="reason muted">${esc(w.test_interval_reason)}</div>
       </div>
@@ -400,24 +479,27 @@ class PoolSmartPanel extends HTMLElement {
       ${dose(w.chlorine_dose)}
       ${
         !w.ph_dose && !w.chlorine_dose && (w.ph || w.chlorine)
-          ? `<div class="card"><strong>Balanced</strong>
-             <div class="reason muted">Nothing to add.</div></div>`
+          ? `<div class="card"><strong>${esc(this.t("balanced"))}</strong>
+             <div class="reason muted">${esc(this.t("nothingToAdd"))}</div></div>`
           : ""
       }
       ${
         (w.dose_log || []).length
-          ? `<div class="card"><strong>Dose log</strong>
-             <div class="reason muted">What was added, and what it did. Without
-               this, dosing is guessing.</div>
+          ? `<div class="card"><strong>${esc(this.t("doseLog"))}</strong>
+             <div class="reason muted">${esc(this.t("doseLogNote"))}</div>
              <table>
-               <tr><th>When</th><th>Added</th><th>Before</th><th>After</th><th>Effect</th></tr>
+               <tr><th>${esc(this.t("when"))}</th><th>${esc(
+                 this.t("added")
+               )}</th><th>${esc(this.t("before"))}</th><th>${esc(
+                 this.t("after")
+               )}</th><th>${esc(this.t("effect"))}</th></tr>
                ${w.dose_log
                  .map(
                    (d) => `<tr>
                    <td>${fmtDateTime(d.at)}</td>
                    <td>${d.amount} ${esc(d.unit)} ${esc(d.product)}</td>
                    <td>${d.measured_before ?? "—"}</td>
-                   <td>${d.measured_after ?? "pending"}</td>
+                   <td>${d.measured_after ?? esc(this.t("pending"))}</td>
                    <td>${
                      d.actual_change !== null && d.actual_change !== undefined
                        ? `${d.actual_change > 0 ? "+" : ""}${d.actual_change}`

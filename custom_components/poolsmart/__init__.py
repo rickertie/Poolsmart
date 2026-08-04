@@ -6,7 +6,10 @@ decision comes from a single priority ladder in :mod:`core.ladder`.
 
 from __future__ import annotations
 
+import json
 import logging
+import time
+from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -30,6 +33,21 @@ PLATFORMS: list[Platform] = [
 ]
 
 
+def _panel_version(hass: HomeAssistant) -> str:
+    """The integration version, used to bust the browser cache on the panel.
+
+    Read from the manifest rather than hardcoded, so bumping the version in one
+    place is enough. If it cannot be read the current timestamp is used, which
+    is heavy-handed but always correct -- a panel that reloads too often is a
+    far smaller problem than one that never reloads.
+    """
+    try:
+        manifest = Path(__file__).parent / "manifest.json"
+        return json.loads(manifest.read_text())["version"]
+    except (OSError, ValueError, KeyError):
+        return str(int(time.time()))
+
+
 async def _async_register_panel(hass: HomeAssistant) -> None:
     """Register the sidebar panel once, no matter how many pools exist."""
     if hass.data.get(f"{DOMAIN}_panel"):
@@ -46,7 +64,11 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
         hass,
         webcomponent_name="poolsmart-panel",
         frontend_url_path=PANEL_URL,
-        module_url=f"/{DOMAIN}_panel/poolsmart-panel.js",
+        # The version query is what makes an update actually visible. Without it
+        # the browser keeps serving the cached copy of the panel, so a new tab or
+        # a fixed card silently does not appear and the integration looks like it
+        # did not update at all.
+        module_url=f"/{DOMAIN}_panel/poolsmart-panel.js?v={_panel_version(hass)}",
         sidebar_title="Pool",
         sidebar_icon="mdi:pool",
         require_admin=False,
