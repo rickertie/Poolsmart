@@ -292,15 +292,15 @@ class PoolStore:
         value exists, not enough to trust it for planning, which is the honest
         position for a number whose provenance was lost.
         """
-        if not self.cop_by_air_bucket:
+        if not self.learned.cop_by_air_bucket:
             return False
-        if self.cop_sessions_by_bucket:
+        if self.learned.cop_sessions_by_bucket:
             return False
 
         from .core.learning import recover_cop_counts
 
-        self.cop_sessions_by_bucket = recover_cop_counts(
-            self.cop_by_air_bucket, self.session_log
+        self.learned.cop_sessions_by_bucket = recover_cop_counts(
+            self.learned.cop_by_air_bucket, self.session_log
         )
         return True
 

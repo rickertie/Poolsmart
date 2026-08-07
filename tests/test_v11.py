@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 import sys
 from datetime import datetime, timedelta, timezone
@@ -209,6 +210,60 @@ def test_t74_cop_counts_are_backfilled():
     # better guess than a datasheet written for a different installation.
     assert learning.cop_for(curve, counts, 32.0) == 3.362
     assert learning.cop_for(curve, counts, 32.0, neighbours=False) is None
+
+
+def test_t74c_backfill_reads_the_right_object():
+    """Regression: the backfill reached for `self.cop_by_air_bucket`.
+
+    Those values live on the store's `learned` object, not on the store itself,
+    so setup crashed with an AttributeError the moment anyone restarted. The
+    original test for this built a stand-in with the fields hung directly off it
+    — encoding the same wrong mental model that produced the bug, and passing
+    for exactly that reason. Reading the real source is the only check that
+    would have caught it.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "store.py"
+    ).read_text()
+
+    tree = ast.parse(source)
+    learned_fields: set[str] = set()
+    store_fields: set[str] = set()
+    store_class = None
+
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == "LearnedValues":
+            for item in node.body:
+                if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+                    learned_fields.add(item.target.id)
+        if isinstance(node, ast.ClassDef) and node.name == "PoolStore":
+            store_class = node
+            for item in ast.walk(node):
+                if (
+                    isinstance(item, ast.Assign)
+                    and isinstance(item.targets[0], ast.Attribute)
+                    and isinstance(item.targets[0].value, ast.Name)
+                    and item.targets[0].value.id == "self"
+                ):
+                    store_fields.add(item.targets[0].attr)
+
+    assert store_class is not None
+    misplaced = {
+        (item.lineno, item.attr)
+        for item in ast.walk(store_class)
+        if isinstance(item, ast.Attribute)
+        and isinstance(item.value, ast.Name)
+        and item.value.id == "self"
+        and item.attr in learned_fields
+        and item.attr not in store_fields
+    }
+    assert not misplaced, (
+        "PoolStore reaching for LearnedValues fields on self: "
+        f"{sorted(misplaced)}"
+    )
 
 
 def test_t74b_backfill_ignores_unusable_sessions():
@@ -526,3 +581,100 @@ def test_t83b_forward_references_in_const():
                 f"line {number + 1} uses {name}, defined later at line "
                 f"{defined_at[name] + 1}"
             )
+
+
+# ---------------------------------------------------------------------------
+# T84 - the storage layer is executed, not merely parsed
+# ---------------------------------------------------------------------------
+
+def test_t84_store_methods_run_against_the_real_class():
+    """Regression, twice over.
+
+    A method that called one that was never written, and a method that read
+    fields off the wrong object. Both parsed cleanly, both broke setup on the
+    first restart, and neither could be caught by a test suite that only ever
+    executed the decision core. Running the real class with stub Home Assistant
+    modules closes that gap without pretending to simulate Home Assistant.
+    """
+    import ha_stubs
+
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    store.learned = store_module.LearnedValues(
+        cop_by_air_bucket={"25-30": 3.362, "30-35": 3.916},
+        cop_sessions_by_bucket={},
+    )
+    store.session_log = [
+        {"usable": True, "measured_cop": 3.3, "air_avg": 26.0},
+        {"usable": True, "measured_cop": 3.4, "air_avg": 27.0},
+        {"usable": True, "measured_cop": 3.5, "air_avg": 28.0},
+    ]
+
+    assert store.backfill_cop_counts() is True
+    assert store.learned.cop_sessions_by_bucket == {"25-30": 3, "30-35": 1}
+
+    # Running it twice must not double the counts.
+    assert store.backfill_cop_counts() is False
+    assert store.learned.cop_sessions_by_bucket == {"25-30": 3, "30-35": 1}
+
+
+def test_t84b_reset_runs_against_the_real_class():
+    import ha_stubs
+
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    store.learned = store_module.LearnedValues(
+        heating_rate_c_per_h=1.02,
+        heating_rate_sessions=3,
+        heat_loss_c_per_h=0.23,
+        measured_flow_m3h=1.07,
+        cop_by_air_bucket={"25-30": 3.4},
+        cop_sessions_by_bucket={"25-30": 4},
+    )
+
+    assert store.reset_learned("heating_rate") is True
+    assert store.learned.heating_rate_c_per_h is None
+    assert store.learned.heating_rate_sessions == 0
+    # Heat loss takes days of idle periods to establish; it must survive.
+    assert store.learned.heat_loss_c_per_h == 0.23
+    assert store.learned.measured_flow_m3h == 1.07
+
+    assert store.reset_learned("cop") is True
+    assert store.learned.cop_by_air_bucket == {}
+    assert store.learned.cop_sessions_by_bucket == {}
+
+    assert store.reset_learned("nonsense") is False
+
+
+def test_t84c_learned_values_round_trip():
+    """What is written must come back, or a restart quietly loses the learning."""
+    import ha_stubs
+
+    store_module = ha_stubs.load_store()
+    original = store_module.LearnedValues(
+        heating_rate_c_per_h=0.15,
+        heat_loss_c_per_h=0.23,
+        heat_loss_covered_c_per_h=0.11,
+        heat_loss_samples=14,
+        heat_loss_covered_samples=3,
+        measured_flow_m3h=1.07,
+        cop_by_air_bucket={"25-30": 3.36},
+        cop_sessions_by_bucket={"25-30": 5},
+        heating_rate_sessions=4,
+        session_count=7,
+    )
+    restored = store_module.LearnedValues.from_dict(original.as_dict())
+
+    for field in (
+        "heating_rate_c_per_h",
+        "heat_loss_c_per_h",
+        "heat_loss_covered_c_per_h",
+        "heat_loss_samples",
+        "heat_loss_covered_samples",
+        "measured_flow_m3h",
+        "cop_by_air_bucket",
+        "cop_sessions_by_bucket",
+        "heating_rate_sessions",
+        "session_count",
+    ):
+        assert getattr(restored, field) == getattr(original, field), field

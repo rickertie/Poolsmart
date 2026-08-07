@@ -8,6 +8,25 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.2.2] — Executed, Not Parsed — 2026-08-05
+
+### Fixed
+- Setup crashed on restart: the COP backfill reached for `cop_by_air_bucket` on
+  the store, while those values live on the store's `learned` object. The test
+  written for it had built a stand-in with the fields hung directly off it —
+  encoding the same wrong mental model that produced the bug, and passing for
+  exactly that reason
+
+### Added
+- The storage layer is now **executed** by the tests rather than only parsed,
+  using stub Home Assistant modules thin enough not to become their own
+  maintenance burden. Two setup-breaking bugs in three releases went through the
+  gap between "this file is grammatical" and "this file works": a method calling
+  one that was never written, and a method reading fields off the wrong object
+- A test that walks the storage source for any remaining field reached for on
+  the wrong object, and one confirming learned values survive a save and reload
+- `tools/verify_package.py` runs the storage layer against the built archive too
+
 ## [1.2.1] — Defined Before Used — 2026-08-05
 
 ### Fixed
@@ -468,6 +487,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.2.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.2
 [1.2.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.1
 [1.2.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.0
 [1.1.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.2
