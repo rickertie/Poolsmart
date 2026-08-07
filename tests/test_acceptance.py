@@ -515,17 +515,39 @@ def test_t24_dead_sensor_blocks_heating_not_circulation():
 # ---------------------------------------------------------------------------
 
 def test_t25_staleness_escalates():
+    """Water and outdoor air get four times the usual patience.
+
+    Both legitimately hold the same value for a long stretch: a heated pool
+    barely moves, and outdoor air overnight can sit still to two decimals for
+    half an hour. Warning about those on the same clock as a probe that should
+    be changing constantly produces alerts nobody can act on.
+    """
     config = make_config()
     now = datetime(2026, 7, 30, 14, 0, tzinfo=TZ)
+    slack = config.safety.slow_role_factor
 
     fresh = make_state(now, water_temp=SensorReading(27.0, 300, "water"))
     assert not safety.evaluate(fresh, config)
 
-    warning = make_state(now, water_temp=SensorReading(27.0, 1200, "water"))
+    # Under the relaxed threshold: still nothing to say.
+    quiet = make_state(now, water_temp=SensorReading(27.0, 1200, "water"))
+    assert not safety.evaluate(quiet, config)
+
+    warning = make_state(
+        now,
+        water_temp=SensorReading(
+            27.0, config.safety.stale_warning_seconds * slack + 60, "water"
+        ),
+    )
     severities = {f.severity for f in safety.evaluate(warning, config)}
     assert severities == {Severity.WARNING}
 
-    blocking = make_state(now, water_temp=SensorReading(27.0, 5000, "water"))
+    blocking = make_state(
+        now,
+        water_temp=SensorReading(
+            27.0, config.safety.stale_blocking_seconds * slack + 60, "water"
+        ),
+    )
     severities = {f.severity for f in safety.evaluate(blocking, config)}
     assert Severity.HEATING_BLOCKED in severities
     assert Severity.CRITICAL not in severities

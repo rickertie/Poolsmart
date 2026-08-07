@@ -22,8 +22,9 @@ from . import const as c
 from .core import chemistry as chem
 from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
-from .core.trace import Trace
+from .core.trace import NearMissLog, Trace
 from .core.config import (
+    display_amount,
     FILTER_MEDIA_DERATE,
     ComfortSettings,
     EnergySettings,
@@ -107,6 +108,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.plan: optimizer.HeatingPlan | None = None
         #: What the ladder considered on the last tick.
         self.trace: Trace | None = None
+        self.near_misses = NearMissLog()
         self.notifier = NotificationManager(hass, self)
         self.actions = ActionHandler(hass, self)
         self.advisor = Advisor(hass, self)
@@ -1030,6 +1032,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self.store.log_decision(payload)
             self._fire_decision(decision, duration)
 
+        self._guard("near_misses", self._track_near_misses, state, duration)
         self._log_obstacles(state)
         self._log_faults(state, duration)
 
@@ -1046,6 +1049,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 c.ATTR_DURATION: round(duration) if duration else None,
             },
         )
+
+    def _track_near_misses(self, state: PoolState, duration: float | None) -> None:
+        """Tally what stopped each branch, across the whole day.
+
+        One tick's trace answers "why not now". This answers "why not today",
+        which is the more useful question: twenty refusals on price is a setting
+        worth revisiting, one is a passing expensive hour.
+        """
+        if self.trace is None:
+            return
+        if self.near_misses.roll_day(state.now.date().isoformat()):
+            _LOGGER.debug("Near-miss tallies reset for a new day")
+        self.near_misses.record(self.trace, duration or 0.0)
 
     def _log_obstacles(self, state: PoolState) -> None:
         """Log what the ladder wanted to do but could not.
@@ -1148,40 +1164,67 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     @property
     def water_chemistry(self) -> dict:
-        """Current readings, the dose they call for, and when to test next."""
+        """Every reading, judged, with the doses and advice that follow from it."""
         config = self.pool_config
-        ph = self._reading(c.CONF_PH_SENSOR)
-        chlorine = self._reading(c.CONF_CHLORINE_SENSOR)
+        sanitiser = chem.Sanitiser(self._conf(c.CONF_SANITISER, "chlorine"))
+        relevant = chem.RELEVANT_READINGS[sanitiser]
+
+        readings = {
+            key: self._reading(conf_key)
+            for key, conf_key in c.CHEMISTRY_SENSORS.items()
+            if key in relevant
+        }
 
         state = self.data.get("state") if self.data else None
         water_temp = (
             state.water_temp.value if state and state.water_temp.available else None
         )
 
+        bands = [
+            band.as_dict()
+            for band in (chem.judge(key, value) for key, value in readings.items())
+            if band is not None
+        ]
+
         records = [chem.DoseRecord.from_dict(r) for r in self.store.dose_log]
         acid_product = chem.Product(self._conf(c.CONF_ACID_PRODUCT, "acid_15"))
         chlorine_product = chem.Product(
             self._conf(c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70")
         )
+        units = self._conf(c.CONF_UNIT_SYSTEM, "metric")
+
+        def present(dose):
+            """Convert a dose into the units the user measures with."""
+            if dose is None:
+                return None
+            payload = dose.as_dict()
+            amount, unit = display_amount(dose.amount, dose.unit, units)
+            payload["amount"] = amount
+            payload["unit"] = unit
+            payload["circulation_minutes"], payload["circulation_reason"] = (
+                chem.circulation_for(dose.product)
+            )
+            return payload
 
         ph_dose = (
             chem.dose_for_ph(
-                ph,
+                readings["ph"],
                 config.pool.volume_l,
                 acid_product,
                 chem.learn_correction(records, acid_product.value),
             )
-            if ph is not None
+            if readings.get("ph") is not None
             else None
         )
         chlorine_dose = (
             chem.dose_for_chlorine(
-                chlorine,
+                readings["free_chlorine"],
                 config.pool.volume_l,
                 chlorine_product,
                 chem.learn_correction(records, chlorine_product.value),
+                float(self._conf(c.CONF_TABLET_GRAMS, 20)),
             )
-            if chlorine is not None
+            if readings.get("free_chlorine") is not None
             else None
         )
 
@@ -1191,10 +1234,20 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         interval, _ = chem.test_interval_days(water_temp)
 
         return {
-            "ph": ph,
-            "chlorine": chlorine,
-            "ph_dose": ph_dose.as_dict() if ph_dose else None,
-            "chlorine_dose": chlorine_dose.as_dict() if chlorine_dose else None,
+            "sanitiser": sanitiser.value,
+            "unit_system": units,
+            "readings": readings,
+            "bands": bands,
+            "urgent": [b for b in bands if b["urgent"]],
+            "combined_chlorine": chem.combined_chlorine(
+                readings.get("free_chlorine"), readings.get("total_chlorine")
+            ),
+            "advice": chem.water_advice(readings),
+            # Kept for the older cards that read these directly.
+            "ph": readings.get("ph"),
+            "chlorine": readings.get("free_chlorine"),
+            "ph_dose": present(ph_dose),
+            "chlorine_dose": present(chlorine_dose),
             "test_interval_days": interval,
             "test_interval_reason": why,
             "test_due_at": due_at.isoformat() if due_at else None,
@@ -1211,7 +1264,13 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
     async def async_record_dose(
         self, product: str, amount: float, unit: str, measured_before: float
     ) -> None:
-        """Log a dose and circulate so it disperses."""
+        """Log a dose and circulate for as long as that product needs.
+
+        The duration comes from the product rather than from one setting,
+        because the products are not comparable: non-chlorine shock is done in
+        half an hour and chlorine shock wants a full night. Stopping early
+        leaves undissolved product sitting on the floor bleaching the liner.
+        """
         record = chem.DoseRecord(
             at=dt_util.now(),
             product=product,
@@ -1220,7 +1279,18 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             measured_before=measured_before,
         )
         self.store.log_dose(record.as_dict())
-        await self.async_start_chemistry()
+
+        minutes, reason = chem.circulation_for(product)
+        if minutes <= 0:
+            # A tablet dissolves over days in a floater; there is nothing to
+            # circulate now, and pretending otherwise would run the pump for no
+            # reason.
+            _LOGGER.info("Logged %s; no circulation needed: %s", product, reason)
+            await self.store.async_save()
+            self.async_update_listeners()
+            return
+
+        await self.async_start_chemistry(minutes)
 
     async def async_record_test(self) -> None:
         """Mark the water as tested just now, and close off any open dose."""
@@ -1242,7 +1312,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.async_update_listeners()
 
     async def async_start_chemistry(self, minutes: int | None = None) -> None:
-        duration = minutes or int(self._conf(c.CONF_CHEMISTRY_MINUTES, 30))
+        """Circulate for a chemical treatment.
+
+        Branch 3 sits above the filtration branches in the ladder, so a day
+        whose filtration quota is already met does not stop this: dosing in the
+        evening still gets the circulation it needs, which is the whole point of
+        having a separate branch for it rather than borrowing the filtration one.
+        """
+        duration = minutes or int(self._conf(c.CONF_CHEMISTRY_MINUTES, 60))
         request = self.chemistry.manual_cycle(dt_util.now(), duration)
         self.store.chemistry_until = request.until
         await self.notifier.async_send_chemistry(request.reason)

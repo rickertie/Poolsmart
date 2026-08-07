@@ -106,6 +106,21 @@ def _pool_schema(d: dict) -> vol.Schema:
             vol.Required(c.CONF_MAX_TEMP, default=d[c.CONF_MAX_TEMP]): _positive(
                 10, 40, 0.5
             ),
+            vol.Required(
+                c.CONF_UNIT_SYSTEM, default=d[c.CONF_UNIT_SYSTEM]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["metric", "imperial"], translation_key="unit_system"
+                )
+            ),
+            vol.Required(
+                c.CONF_SANITISER, default=d[c.CONF_SANITISER]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["chlorine", "bromine", "salt"],
+                    translation_key="sanitiser",
+                )
+            ),
         }
     )
 
@@ -214,6 +229,12 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
+        vol.Optional(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
         ),
@@ -387,6 +408,12 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
                 field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
                 field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
+                field(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
                 field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
                     selector.EntitySelectorConfig(
                         domain=["binary_sensor", "input_boolean"]
@@ -448,6 +475,24 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     c.CONF_PUMP_FLOW_MEASURED,
                     default=current.get(c.CONF_PUMP_FLOW_MEASURED, False),
                 ): bool,
+                vol.Optional(
+                    c.CONF_UNIT_SYSTEM,
+                    default=current.get(c.CONF_UNIT_SYSTEM, "metric"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["metric", "imperial"],
+                        translation_key="unit_system",
+                    )
+                ),
+                vol.Optional(
+                    c.CONF_SANITISER,
+                    default=current.get(c.CONF_SANITISER, "chlorine"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["chlorine", "bromine", "salt"],
+                        translation_key="sanitiser",
+                    )
+                ),
                 vol.Optional(
                     c.CONF_FILTER_MEDIA,
                     default=current.get(c.CONF_FILTER_MEDIA, "sand"),
@@ -622,6 +667,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         options=[
                             "acid_15", "acid_37", "ph_plus",
                             "chlorine_granules_70", "chlorine_liquid_15",
+                            "shock", "shock_non_chlorine", "algaecide", "tablet",
                         ],
                         translation_key="chem_product",
                     )
@@ -636,10 +682,15 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         options=[
                             "acid_15", "acid_37", "ph_plus",
                             "chlorine_granules_70", "chlorine_liquid_15",
+                            "shock", "shock_non_chlorine", "algaecide", "tablet",
                         ],
                         translation_key="chem_product",
                     )
                 ),
+                vol.Optional(
+                    c.CONF_TABLET_GRAMS,
+                    default=current.get(c.CONF_TABLET_GRAMS, 20),
+                ): _positive(5, 1000, 5),
                 vol.Optional(
                     c.CONF_CHEMISTRY_MINUTES,
                     default=current.get(c.CONF_CHEMISTRY_MINUTES, 30),

@@ -62,6 +62,19 @@ views:
             tap_action:
               action: none
           - type: template
+            icon: >-
+              {% if is_state('binary_sensor.pool_covered','on') %}mdi:layers
+              {% else %}mdi:layers-off{% endif %}
+            content: >-
+              {% if is_state('binary_sensor.pool_covered','on') %}Hoes erop
+              {% else %}Hoes eraf{% endif %}
+            icon_color: >-
+              {% if is_state('binary_sensor.pool_covered','on') %}green
+              {% else %}grey{% endif %}
+            tap_action:
+              action: more-info
+              entity: binary_sensor.pool_covered
+          - type: template
             icon: mdi:solar-power-variant
             content: >-
               {{ states('sensor.pool_solar_surplus') | float(0) | round(0) }}/{{
@@ -140,6 +153,70 @@ views:
           icon: mdi:clock-outline
           icon_color: orange
           multiline_secondary: true
+
+      # ---- Lopende sessie --------------------------------------------------
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.pool_heating
+            state: "on"
+        card:
+          type: markdown
+          content: >
+            {%- set s = state_attr('sensor.pool_session_elapsed','running') -%}
+            {%- if s -%}
+            {%- set gain = states('sensor.pool_session_gain') | float(0) -%}
+            {%- set start = state_attr('sensor.pool_session_gain','start_temp') | float(0) -%}
+            {%- set now_t = state_attr('sensor.pool_session_gain','current_temp') | float(0) -%}
+            {%- set target = state_attr('sensor.pool_session_gain','target_temp') | float(0) -%}
+            {%- set pct = ((now_t - start) / (target - start) * 100) if target > start else 100 -%}
+            ### 🔥 {{ state_attr('sensor.pool_session_elapsed','elapsed_readable') }} bezig
+
+            **{{ now_t | round(1) }} °C** · {{ pct | round(0) }}% van {{ start | round(1) }}
+            naar {{ target | round(1) }} °C
+
+            | | |
+            |---|---|
+            | Gewonnen | {{ '%+.2f'|format(gain) }} °C |
+            | Verbruikt | {{ states('sensor.pool_session_energy') | float(0) | round(2) }} kWh
+              · € {{ state_attr('sensor.pool_session_gain','cost') | float(0) | round(2) }} |
+            {% if state_attr('sensor.pool_session_gain','actual_rate_c_per_h') -%}
+            | Stijging | {{ state_attr('sensor.pool_session_gain','actual_rate_c_per_h') }} °C/u
+              (verwacht {{ state_attr('sensor.pool_session_gain','expected_rate_c_per_h') }}) |
+            {%- endif %}
+
+            {% set v = state_attr('sensor.pool_session_gain','verdict') -%}
+            {%- if v == 'behind schedule — check the flow, the cover, or whether something is drawing heat away' -%}
+            ⚠️ **Loopt achter op schema.** Controleer de doorstroming, de hoes, of
+            wat er warmte wegtrekt.
+            {%- elif v == 'ahead of schedule' -%}
+            ✅ Loopt voor op schema.
+            {%- elif v -%}
+            ✅ Op schema.
+            {%- endif %}
+            {%- endif -%}
+
+      # ---- Warmtebalans ----------------------------------------------------
+      - type: conditional
+        conditions:
+          - condition: numeric_state
+            entity: sensor.pool_heat_balance
+            below: 60
+        card:
+          type: markdown
+          content: >
+            ### 🌡 Waar de warmte blijft
+
+            De warmtepomp levert
+            **{{ state_attr('sensor.pool_heat_balance','gross_rise_c_per_h') }} °C/u**,
+            het bad verliest er tegelijk
+            **{{ state_attr('sensor.pool_heat_balance','loss_c_per_h') }} °C/u** aan.
+            Netto blijft **{{ state_attr('sensor.pool_heat_balance','net_rise_c_per_h') }} °C/u**
+            over — {{ states('sensor.pool_heat_balance') | round(0) }}% van wat je erin stopt.
+
+            {% if state_attr('sensor.pool_heat_balance','advice') -%}
+            💡 {{ state_attr('sensor.pool_heat_balance','advice') }}
+            {%- endif %}
 
       # ---- Waarschuwing bij storing ---------------------------------------
       - type: conditional

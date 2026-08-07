@@ -54,16 +54,30 @@ def test_t54_conditional_roles_stay_quiet_when_idle():
 # ---------------------------------------------------------------------------
 
 def test_t55_water_probe_silence_still_matters():
-    """Whatever else is running, the pool temperature must keep arriving."""
+    """Whatever else is running, the pool temperature must keep arriving.
+
+    It gets more patience than a fast-moving probe, because a heated pool
+    genuinely holds a value -- but silence is never simply ignored.
+    """
     config = make_config()
     now = datetime(2026, 8, 3, 14, 0, tzinfo=TZ)
-    state = make_state(
+    slack = config.safety.slow_role_factor
+
+    tolerated = make_state(
         now,
         water_temp=SensorReading(28.0, 40 * 60, "water"),
         heat_pump_on=False,
     )
-    faults = safety.evaluate(state, config)
-    assert any(f.code == "stale_water" for f in faults)
+    assert not any(f.code == "stale_water" for f in safety.evaluate(tolerated, config))
+
+    silent = make_state(
+        now,
+        water_temp=SensorReading(
+            28.0, config.safety.stale_warning_seconds * slack + 60, "water"
+        ),
+        heat_pump_on=False,
+    )
+    assert any(f.code == "stale_water" for f in safety.evaluate(silent, config))
 
 
 # ---------------------------------------------------------------------------

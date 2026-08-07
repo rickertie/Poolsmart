@@ -8,6 +8,111 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.2.3] — Tablets Are Counted — 2026-08-06
+
+### Fixed
+- **The panel header ignored the theme.** A fixed navy block looked right in a
+  dark mockup and wrong on a light Home Assistant, which is most installations.
+  It now tints the accent colour, giving the same emphasis either way
+- **"Add 11 g of chlorine tablet" is not an instruction anyone can follow.**
+  Tablets come in fixed sizes, cannot usefully be halved, and take days to
+  dissolve — which makes them the wrong product for a reading that is low right
+  now. The recommendation is a whole number of tablets, says how that compares
+  with the weight actually needed, and points at granules or liquid when the
+  pool needs chlorine today
+- **Staleness warnings on the outdoor probe.** Fifteen minutes is aggressive for
+  a sensor that legitimately holds the same value overnight. Outdoor air and
+  pool water now get four times the patience of a fast-moving probe. A warning
+  nobody can act on is how people learn to ignore the ones that matter
+
+### Added
+- Tablet size as a setting, since 20 g, 200 g and 500 g are all common and the
+  difference between them is the difference between one tablet and a quarter of
+  one
+
+## [1.2.2] — Executed, Not Parsed — 2026-08-05
+
+### Fixed
+- Setup crashed on restart: the COP backfill reached for `cop_by_air_bucket` on
+  the store, while those values live on the store's `learned` object. The test
+  written for it had built a stand-in with the fields hung directly off it —
+  encoding the same wrong mental model that produced the bug, and passing for
+  exactly that reason
+
+### Added
+- The storage layer is now **executed** by the tests rather than only parsed,
+  using stub Home Assistant modules thin enough not to become their own
+  maintenance burden. Two setup-breaking bugs in three releases went through the
+  gap between "this file is grammatical" and "this file works": a method calling
+  one that was never written, and a method reading fields off the wrong object
+- A test that walks the storage source for any remaining field reached for on
+  the wrong object, and one confirming learned values survive a save and reload
+- `tools/verify_package.py` runs the storage layer against the built archive too
+
+## [1.2.1] — Defined Before Used — 2026-08-05
+
+### Fixed
+- **1.2.0 would not load at all.** `const.py` built a tuple from names declared
+  seventy lines further down, and Python executes a module top to bottom. Every
+  syntax check passed, because `ast.parse` proves a file is grammatical and says
+  nothing about whether its names resolve
+- A package verification script now imports every module that carries no Home
+  Assistant dependency, rather than only parsing it, and checks manifest key
+  order, translation key format and panel string parity in the built archive
+  before it goes out
+
+## [1.2.0] — Seven Readings and a Ceiling — 2026-08-05
+
+### Fixed
+- **A learned heating rate of 1.02 °C/h on a pool whose maximum is 0.67.**
+  Nothing checked the measured rise against what the appliance can physically
+  deliver, so a session where the pump stirred stratified water read as
+  spectacular heating. Because the learned rate is trusted ahead of any COP
+  calculation, that single session drove every later estimate: two hours
+  predicted for a rise that really takes fourteen, so heating started far too
+  late. Sessions above the appliance's own ceiling are now rejected
+- **The measured COP was never used.** `cop_by_air_bucket` has existed since
+  0.9; the counter gating it arrived in 1.1, so anyone who upgraded had learned
+  values with a count of zero — sitting behind a gate that could never open no
+  matter how many sessions produced them. Counts are now recovered from the
+  session log on startup
+- The chemistry cycle ran for one fixed duration regardless of product. Adding
+  a 20 g tablet and circulating for a few minutes is not a treatment
+
+### Added
+- **Unit system.** Metric or US customary, chosen at setup, changing how volumes
+  and doses are presented. Calculation stays metric throughout
+- **Circulation time per product**, from published guidance: 30 minutes for
+  non-chlorine shock, an hour for pH adjustment, four hours for a maintenance
+  chlorine dose, ten for chlorine shock, a full day for algaecide, and none at
+  all for a tablet in a floater
+- **The whole AquaChek strip.** Total chlorine, bromine, alkalinity, cyanuric
+  acid, hardness, and salt for electrolysis systems, each judged against its
+  ideal range with two levels of wrong rather than one — a pH of 7.7 wants
+  attention this week, 8.6 wants it now
+- **Combined chlorine**, derived from total minus free. The one figure a strip
+  gives you that answers "should I shock", and it only exists if two columns are
+  subtracted
+- **Conclusions that need several readings together**: stabiliser high enough
+  that adding chlorine achieves nothing, pH and alkalinity both adrift with
+  alkalinity as the one to fix first, chlorine judged against the stabiliser
+  level rather than a fixed range
+- **Sanitiser type** at setup, so a chlorine pool is not shown bromine fields
+- **Near misses**, tallied across the day. One tick's trace answers "why not
+  now"; this answers "why not today", and twenty refusals on price is a setting
+  worth revisiting where one is a passing expensive hour
+- Expected against actual rise during a session, previous sessions to compare
+  it with, confidence bars on each learned value, and a `reset_learned` service
+  to clear one figure without discarding the rest
+- Panel restyled: the dense monospace readouts of one direction with the card
+  shell and hero block of another
+
+### Changed
+- The Pool Chem recommendation is gone; it turned out not to do what was wanted.
+  The boundary is still stated plainly — this is not a water chemistry
+  integration — but pointing at a specific alternative that did not suit is
+  worse than describing the limit
+
 ## [1.1.2] — Where Does This Sensor Go — 2026-08-04
 
 ### Fixed
@@ -404,6 +509,10 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.2.3]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.3
+[1.2.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.2
+[1.2.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.1
+[1.2.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.0
 [1.1.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.2
 [1.1.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.1
 [1.1.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.0

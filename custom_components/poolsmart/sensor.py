@@ -369,6 +369,11 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         },
     ),
     PoolSensorDescription(
+        key="water_balance",
+        value_fn=lambda c: _water_balance(c)[0],
+        attributes_fn=lambda c: _water_balance(c)[1],
+    ),
+    PoolSensorDescription(
         key="dose_advice",
         value_fn=lambda c: _dose_summary(c),
         attributes_fn=lambda c: c.water_chemistry,
@@ -415,6 +420,38 @@ def _readable_hours(hours: float | None) -> str | None:
     if total % 60 == 0:
         return f"{total // 60} h"
     return f"{total // 60} h {total % 60} min"
+
+
+def _water_balance(coordinator: PoolSmartCoordinator):
+    """One word for the whole water picture, with everything behind it.
+
+    "Balanced" is a real answer worth being able to see, and an urgent reading
+    should not have to compete for attention with a routine one -- hence two
+    levels rather than one.
+    """
+    chemistry = coordinator.water_chemistry
+    bands = chemistry.get("bands") or []
+    if not bands:
+        return "no readings", {"advice": [], "bands": []}
+
+    urgent = [b for b in bands if b["urgent"]]
+    off = [b for b in bands if b["verdict"] != "ok"]
+
+    if urgent:
+        state = "action needed"
+    elif off:
+        state = "adjust"
+    else:
+        state = "balanced"
+
+    return state, {
+        "bands": bands,
+        "off_range": [b["label"] for b in off],
+        "urgent": [b["label"] for b in urgent],
+        "combined_chlorine": chemistry.get("combined_chlorine"),
+        "advice": chemistry.get("advice", []),
+        "sanitiser": chemistry.get("sanitiser"),
+    }
 
 
 def _dose_summary(coordinator: PoolSmartCoordinator) -> str:

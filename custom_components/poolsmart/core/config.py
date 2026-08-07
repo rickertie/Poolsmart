@@ -8,6 +8,7 @@ particular pool -- the defaults are merely sensible starting points.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 from datetime import time
 
 # --------------------------------------------------------------------------
@@ -36,6 +37,49 @@ FILTER_MEDIA_DERATE = {
     "cartridge": 0.60,
     "none": 0.95,
 }
+
+
+class UnitSystem(str, Enum):
+    """Which units the user thinks in.
+
+    Home Assistant converts temperatures on its own through device_class, so
+    that part is free. Pool volume and chemical doses are not: a dose given in
+    millilitres for a pool entered in litres is unusable to someone whose pool
+    is 12,000 gallons and whose bottle is marked in fluid ounces.
+    """
+
+    METRIC = "metric"
+    IMPERIAL = "imperial"
+
+
+#: Conversions, kept in one place so a rounding choice made here is made once.
+LITRES_PER_US_GALLON = 3.785411784
+ML_PER_US_FL_OZ = 29.5735295625
+GRAMS_PER_OZ = 28.349523125
+
+
+def to_gallons(litres: float) -> float:
+    return litres / LITRES_PER_US_GALLON
+
+
+def from_gallons(gallons: float) -> float:
+    return gallons * LITRES_PER_US_GALLON
+
+
+def display_amount(amount: float, unit: str, system: str) -> tuple[float, str]:
+    """Present a dose in the units the user actually measures with.
+
+    Calculations stay metric throughout; only the presentation changes. Doing it
+    the other way round would mean two sets of formulas and two sets of rounding
+    errors to keep in step.
+    """
+    if system != UnitSystem.IMPERIAL:
+        return round(amount, 1), unit
+    if unit == "ml":
+        return round(amount / ML_PER_US_FL_OZ, 2), "fl oz"
+    if unit == "g":
+        return round(amount / GRAMS_PER_OZ, 2), "oz"
+    return round(amount, 1), unit
 
 
 class NegativePriceBasis:
@@ -289,6 +333,17 @@ class SafetySettings:
     delta_t_min: float = 0.2
     delta_t_max: float = 8.0
 
+    #: Roles that legitimately sit still for a long time.
+    #:
+    #: Outdoor air overnight can hold the same value to two decimals for half an
+    #: hour, and a probe measuring water in a heated pool barely moves either.
+    #: Warning about those on the same clock as a probe that should be changing
+    #: constantly produces alerts nobody can act on, which is how people learn to
+    #: ignore the ones that matter.
+    slow_roles: frozenset[str] = frozenset({"air", "water"})
+    #: Multiplier applied to the staleness thresholds for those roles.
+    slow_role_factor: float = 4.0
+
     #: Roles whose silence only matters while the heat pump is running.
     #:
     #: A probe on the heat pump outlet reports nothing while the appliance is
@@ -352,6 +407,9 @@ class PoolConfig:
     energy: EnergySettings = field(default_factory=EnergySettings)
     safety: SafetySettings = field(default_factory=SafetySettings)
     learning: LearningSettings = field(default_factory=LearningSettings)
+
+    #: Which units to present figures in. Calculation stays metric regardless.
+    unit_system: str = UnitSystem.METRIC
 
     #: Logical sensor roles that resolve to the same physical entity. Aliased
     #: roles are excluded from cross-comparison, otherwise the plausibility

@@ -162,6 +162,11 @@ class PoolStore:
             _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
 
         self._close_open_interval()
+        if self.backfill_cop_counts():
+            _LOGGER.info(
+                "Recovered COP session counts for learned values that predate the "
+                "confidence counter"
+            )
 
     def _close_open_interval(self) -> None:
         """Close an interval that a crash or restart left open.
@@ -273,6 +278,51 @@ class PoolStore:
             self.session_log = self.session_log[-SESSION_LOG_SIZE:]
 
     # -- Learned values ----------------------------------------------------
+
+    def backfill_cop_counts(self) -> bool:
+        """Give pre-1.1 buckets a session count they were never given.
+
+        `cop_by_air_bucket` has existed since 0.9; the counter that gates it was
+        added in 1.1. Anyone who upgraded therefore has learned values sitting
+        behind a gate that can never open, because the count starts at zero no
+        matter how many sessions produced the value.
+
+        Counting the recorded sessions per bucket recovers the real figure. Where
+        the session log has been trimmed away, one is assumed: enough to show the
+        value exists, not enough to trust it for planning, which is the honest
+        position for a number whose provenance was lost.
+        """
+        if not self.learned.cop_by_air_bucket:
+            return False
+        if self.learned.cop_sessions_by_bucket:
+            return False
+
+        from .core.learning import recover_cop_counts
+
+        self.learned.cop_sessions_by_bucket = recover_cop_counts(
+            self.learned.cop_by_air_bucket, self.session_log
+        )
+        return True
+
+    def reset_learned(self, name: str) -> bool:
+        """Clear one learned value without discarding the rest.
+
+        A single implausible figure should not cost someone their whole learning
+        history -- particularly the heat loss, which takes days of idle periods
+        to establish and is the hardest one to rebuild.
+        """
+        from .core.learning import RESETTABLE
+
+        if name not in RESETTABLE:
+            return False
+
+        value_attr, count_attr = RESETTABLE[name]
+        current = getattr(self.learned, value_attr)
+        setattr(self.learned, value_attr, {} if isinstance(current, dict) else None)
+        if count_attr:
+            counter = getattr(self.learned, count_attr)
+            setattr(self.learned, count_attr, {} if isinstance(counter, dict) else 0)
+        return True
 
     def apply_learned(self, name: str, value: float, max_step_ratio: float) -> float:
         """Update a learned value with a capped step.

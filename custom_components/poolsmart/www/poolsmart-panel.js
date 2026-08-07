@@ -46,6 +46,17 @@ const STRINGS = {
     heatPumpAdds: "Heat pump adds", poolLoses: "Pool loses", net: "Net",
     cover: "Cover", coverOn: "on", coverOff: "off",
     notConfigured: "not configured",
+    nearMisses: "What it ran into",
+    nearMissesNote:
+      "Branches that wanted to run today, and what stopped them. Twenty refusals " +
+      "on price is a setting worth revisiting; one is a passing expensive hour.",
+    onSchedule: "On schedule",
+    previousSessions: "Previous sessions",
+    duration: "Duration", gain: "Gain",
+    usedFor: "Used for", resetThis: "Reset this value",
+    readings: "Readings", combinedChlorine: "Combined chlorine",
+    whatItMeans: "What this means together", circulate: "Circulate for",
+    target: "target", outdoors: "outdoors",
   },
   nl: {
     overview: "Overzicht", planning: "Planning", water: "Water",
@@ -70,6 +81,18 @@ const STRINGS = {
     heatPumpAdds: "Warmtepomp levert", poolLoses: "Bad verliest", net: "Netto",
     cover: "Afdekhoes", coverOn: "ligt erop", coverOff: "eraf",
     notConfigured: "niet ingesteld",
+    nearMisses: "Waar het op afketste",
+    nearMissesNote:
+      "Takken die vandaag wilden draaien, en wat ze tegenhield. Twintig keer " +
+      "afketsen op prijs is een instelling om te heroverwegen; één keer is een " +
+      "duur uurtje.",
+    onSchedule: "Op schema",
+    previousSessions: "Vorige sessies",
+    duration: "Duur", gain: "Winst",
+    usedFor: "Gebruikt voor", resetThis: "Deze waarde wissen",
+    readings: "Metingen", combinedChlorine: "Gebonden chloor",
+    whatItMeans: "Wat dit samen betekent", circulate: "Laat circuleren",
+    target: "doel", outdoors: "buiten",
   },
 };
 
@@ -203,8 +226,57 @@ class PoolSmartPanel extends HTMLElement {
         nav button { background:none; border:none; padding:10px 14px; cursor:pointer; font-size:14px;
                      color: var(--secondary-text-color,#666); border-bottom:2px solid transparent; }
         nav button.active { color: var(--primary-color,#03a9f4); border-bottom-color: var(--primary-color,#03a9f4); }
-        .card { background: var(--card-background-color,#fff); border-radius:12px; padding:16px; margin-bottom:16px;
+        .card { background: var(--card-background-color,#fff); border-radius:14px; padding:16px; margin-bottom:12px;
                 box-shadow:0 1px 3px rgba(0,0,0,.12); }
+        /* Direction A: dense monospace readouts, for the tabs meant for reading
+           closely rather than glancing at. */
+        .mono { font-family: ui-monospace,"IBM Plex Mono",Menlo,monospace; }
+        .dense { display:grid; gap:0; }
+        .dense .d { display:grid; grid-template-columns:1fr auto 74px; gap:10px;
+                    align-items:center; padding:8px 0;
+                    border-bottom:1px solid var(--divider-color,#eee); font-size:12.5px; }
+        .dense .d:last-child { border-bottom:none; }
+        .dense .dk { color: var(--secondary-text-color,#777); font-size:10px;
+                     letter-spacing:.07em; text-transform:uppercase; }
+        .dense .dv { font-family: ui-monospace,monospace; font-weight:600; text-align:right; }
+        .spark { height:15px; display:flex; align-items:flex-end; gap:1.5px; }
+        .spark i { flex:1; background: var(--primary-color,#03a9f4); opacity:.35; border-radius:1px; }
+        .spark i.hi { opacity:1; }
+        /* Direction B: the hero block and the ring. */
+        /* The hero has to follow the theme rather than impose one. A fixed
+           navy block looked right in a dark mockup and wrong on a light Home
+           Assistant, which is most installations. Tinting the accent colour
+           gives the same emphasis in either. */
+        .hero { border-radius:14px; padding:18px; margin-bottom:12px;
+                background: color-mix(in srgb, var(--primary-color,#03a9f4) 12%,
+                            var(--card-background-color,#fff));
+                border:1px solid color-mix(in srgb, var(--primary-color,#03a9f4) 28%,
+                            transparent);
+                color: var(--primary-text-color,#212121); }
+        .hero .ht { font-size:38px; font-weight:600; line-height:1;
+                    color: var(--primary-text-color,#212121); }
+        .hero .hs { color: var(--secondary-text-color,#666); font-size:14px;
+                    margin-top:6px; }
+        .hero .pill { display:inline-block; margin-top:12px; padding:5px 12px;
+                      border-radius:20px; font-size:12.5px;
+                      background: color-mix(in srgb, var(--primary-color,#03a9f4) 20%,
+                                  transparent);
+                      color: var(--primary-text-color,#212121); }
+        .ring { width:56px; height:56px; border-radius:50%; display:grid; place-items:center; }
+        .ring span { width:40px; height:40px; border-radius:50%;
+                     background: var(--card-background-color,#fff); display:grid;
+                     place-items:center; font-size:12px; font-weight:700; }
+        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        @media(max-width:560px){ .grid2 { grid-template-columns:1fr; } }
+        .band { display:grid; grid-template-columns:1fr auto; gap:10px; padding:7px 0;
+                border-bottom:1px solid var(--divider-color,#eee); font-size:13px; }
+        .band:last-child { border-bottom:none; }
+        .band .bv { font-family:ui-monospace,monospace; font-weight:600; }
+        .scale { height:5px; border-radius:3px; margin-top:5px; position:relative;
+                 background:linear-gradient(90deg,#c62828 0 16%,#ef6c00 16% 30%,
+                   #2e7d32 30% 70%,#ef6c00 70% 84%,#c62828 84% 100%); }
+        .scale b { position:absolute; top:-3px; width:2px; height:11px;
+                   background: var(--primary-text-color,#222); border-radius:1px; }
         .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--divider-color,#f0f0f0); }
         .row:last-child { border-bottom:none; }
         .row span:first-child { color: var(--secondary-text-color,#666); }
@@ -275,8 +347,16 @@ class PoolSmartPanel extends HTMLElement {
     const pct = f && f.required_h ? Math.min(100, (f.done_h / f.required_h) * 100) : 0;
 
     return `
+      <div class="hero">
+        <div class="ht">${s.water_temp !== null ? s.water_temp.toFixed(1) : "—"} °C</div>
+        <div class="hs">${esc(d.reason || "")}</div>
+        <div class="pill">${esc(d.branch || "—")} &middot; ${
+      s.target_temp
+    } °C ${esc(this.t("target"))} &middot; ${
+      s.air_temp !== null ? s.air_temp.toFixed(1) : "—"
+    } °C ${esc(this.t("outdoors"))}</div>
+      </div>
       <div class="card">
-        <div class="big">${s.water_temp !== null ? s.water_temp.toFixed(1) : "—"} °C</div>
         <div class="muted">target ${s.target_temp} °C &middot; outdoors ${
       s.air_temp !== null ? s.air_temp.toFixed(1) : "—"
     } °C</div>
@@ -353,12 +433,52 @@ class PoolSmartPanel extends HTMLElement {
       <div class="row"><span>${esc(this.t("used"))}</span><span>${x.energy_kwh} kWh · ${x.cost}</span></div>
       ${
         x.actual_rate_c_per_h
-          ? `<div class="row"><span>${esc(this.t("risePerHour"))}</span><span>${
-              x.actual_rate_c_per_h
-            } / ${x.expected_rate_c_per_h} ${esc(this.t("expected"))}</span></div>
+          ? `<div class="dense" style="margin-top:10px">
+               <div class="d"><span class="dk">${esc(
+                 this.t("risePerHour")
+               )}</span><span class="dv">${x.actual_rate_c_per_h}</span>
+                 <span class="muted mono" style="text-align:right;font-size:11px">/ ${
+                   x.expected_rate_c_per_h
+                 }</span></div>
+               <div class="d"><span class="dk">${esc(
+                 this.t("onSchedule")
+               )}</span><span class="dv">${Math.round(
+                 (x.on_schedule_ratio || 0) * 100
+               )}%</span><span></span></div>
+             </div>
              <div class="reason" style="color:${verdictColour}">${esc(x.verdict)}</div>`
           : `<div class="reason muted">${esc(this.t("tooEarly"))}</div>`
       }
+    </div>
+    ${this._previousSessions(s)}`;
+  }
+
+  _previousSessions(s) {
+    /* A rate means nothing without something to compare it against. Three
+       recent sessions turn "0.15 °C/h" into "normal for this pool". */
+    const rows = (s.session_log || []).filter((x) => x.usable).slice(0, 3);
+    if (!rows.length) return "";
+    return `<div class="card">
+      <strong>${esc(this.t("previousSessions"))}</strong>
+      <table>
+        <tr><th>${esc(this.t("when"))}</th><th>${esc(
+          this.t("duration")
+        )}</th><th>${esc(this.t("gain"))}</th><th>°C/h</th><th>COP</th></tr>
+        ${rows
+          .map(
+            (r) => `<tr>
+              <td>${fmtDateTime(r.start)}</td>
+              <td>${fmtHours(r.duration_h)}</td>
+              <td>${
+                r.water_start !== null && r.water_end !== null
+                  ? `${(r.water_end - r.water_start).toFixed(2)}`
+                  : "—"
+              }</td>
+              <td>${r.heating_rate ?? "—"}</td>
+              <td>${r.measured_cop ?? "—"}</td></tr>`
+          )
+          .join("")}
+      </table>
     </div>`;
   }
 
@@ -456,10 +576,66 @@ class PoolSmartPanel extends HTMLElement {
                  : ""
              }
              <div class="reason muted">${esc(d.instructions)}</div>
+             ${
+               d.circulation_minutes
+                 ? `<div class="reason"><b>${esc(
+                     this.t("circulate")
+                   )} ${fmtHours(d.circulation_minutes / 60)}</b> — ${esc(
+                     d.circulation_reason
+                   )}</div>`
+                 : ""
+             }
            </div>`
         : "";
 
+    const bands = (w.bands || [])
+      .map((b) => {
+        const span = b.ideal_high - b.ideal_low;
+        const lo = b.ideal_low - span;
+        const hi = b.ideal_high + span;
+        const pos = Math.max(0, Math.min(100, ((b.value - lo) / (hi - lo)) * 100));
+        const colour =
+          b.verdict === "ok"
+            ? "#2e7d32"
+            : b.urgent
+            ? "#c62828"
+            : "#ef6c00";
+        return `<div class="band">
+            <div>${esc(b.label)}
+              <div class="scale"><b style="left:${pos}%"></b></div>
+              ${b.note ? `<div class="reason muted">${esc(b.note)}</div>` : ""}
+            </div>
+            <div style="text-align:right">
+              <div class="bv" style="color:${colour}">${b.value}${
+          b.unit ? ` ${esc(b.unit)}` : ""
+        }</div>
+              <div class="muted" style="font-size:11px">${b.ideal_low}–${
+          b.ideal_high
+        }</div>
+            </div>
+          </div>`;
+      })
+      .join("");
+
     return `
+      ${
+        bands
+          ? `<div class="card"><strong>${esc(this.t("readings"))}</strong>${bands}
+             ${
+               w.combined_chlorine !== null && w.combined_chlorine !== undefined
+                 ? `<div class="row" style="margin-top:8px"><span>${esc(
+                     this.t("combinedChlorine")
+                   )}</span><span class="bv">${w.combined_chlorine} mg/L</span></div>`
+                 : ""
+             }</div>`
+          : ""
+      }
+      ${
+        (w.advice || []).length
+          ? `<div class="card"><strong>${esc(this.t("whatItMeans"))}</strong>
+             ${w.advice.map((a) => `<div class="reason">${esc(a)}</div>`).join("")}</div>`
+          : ""
+      }
       <div class="card">
         <div class="row"><span>${esc(this.t("ph"))}</span><span>${
           w.ph ?? "—"
@@ -568,7 +744,28 @@ class PoolSmartPanel extends HTMLElement {
                   }</span></div>`
                 : ""
             }
-            <div class="reason muted">Used for ${esc(v.used_for)}.</div>
+            ${
+              v.confidence
+                ? `<div class="bar" style="margin-top:8px"><div style="width:${
+                    { "not learned yet": 0, provisional: 25, usable: 60, reliable: 100 }[
+                      v.confidence
+                    ] ?? 0
+                  }%;background:${
+                    v.in_use ? "#2e7d32" : "#b0bec5"
+                  }"></div></div>`
+                : ""
+            }
+            <div class="reason muted">${esc(this.t("usedFor"))} ${esc(v.used_for)}.</div>
+            ${
+              v.value !== null && v.value !== undefined
+                ? `<button class="action" style="margin-top:10px;background:transparent;
+                     border:1px solid var(--divider-color);color:var(--secondary-text-color)"
+                     data-service="poolsmart.reset_learned"
+                     data-payload='{"value":"${v.key}"}'>${esc(
+                     this.t("resetThis")
+                   )}</button>`
+                : ""
+            }
           </div>`
           )
           .join("")}
@@ -716,6 +913,28 @@ class PoolSmartPanel extends HTMLElement {
           : ""
       }
       ${this._traceCard(s)}
+      ${
+        (s.near_misses || []).length
+          ? `<div class="card"><strong>${esc(this.t("nearMisses"))}</strong>
+             <div class="reason muted">${esc(this.t("nearMissesNote"))}</div>
+             <div class="dense">
+             ${s.near_misses
+               .map(
+                 (m) => `<div class="d">
+                   <span>${esc(
+                     m.branch.replace(/_/g, " ").toLowerCase()
+                   )} <span class="muted">— ${esc(
+                     (VERDICT_STYLE[m.verdict] || {}).label || m.verdict
+                   )}</span></span>
+                   <span class="dv">${m.count}×</span>
+                   <span class="muted mono" style="text-align:right;font-size:11px">${fmtHours(
+                     m.seconds / 3600
+                   )}</span></div>`
+               )
+               .join("")}
+             </div></div>`
+          : ""
+      }
       ${
         (s.branch_time_today || []).length
           ? `<div class="card"><strong>Today, by branch</strong>

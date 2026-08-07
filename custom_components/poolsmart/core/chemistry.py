@@ -19,9 +19,47 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 
-#: Ideal ranges. Widely agreed and not worth making configurable in a first pass.
+#: Ideal ranges, as printed on an AquaChek comparator and agreed on widely
+#: enough not to be worth arguing about.
 PH_IDEAL = (7.2, 7.6)
 CHLORINE_IDEAL = (1.0, 3.0)
+BROMINE_IDEAL = (2.0, 6.0)
+ALKALINITY_IDEAL = (80.0, 120.0)
+CYANURIC_IDEAL = (30.0, 50.0)
+HARDNESS_IDEAL = (200.0, 400.0)
+SALT_IDEAL = (2700.0, 3400.0)
+
+#: Combined chlorine above this means the sanitiser is being consumed by
+#: contamination faster than it is working, and shocking is the answer rather
+#: than topping up.
+COMBINED_CHLORINE_SHOCK = 0.5
+
+#: Above this, cyanuric acid locks up so much of the free chlorine that adding
+#: more achieves very little. The only real fix is diluting the water.
+CYANURIC_LOCKOUT = 100.0
+
+
+class Sanitiser(str, Enum):
+    """What keeps the water clean. These are alternatives, not additions."""
+
+    CHLORINE = "chlorine"
+    BROMINE = "bromine"
+    SALT = "salt"
+
+
+#: Which readings are worth asking for, per sanitiser. Showing a bromine field
+#: to someone running chlorine is not neutral: it is a field they will wonder
+#: about, leave blank, and see reported as missing.
+RELEVANT_READINGS = {
+    Sanitiser.CHLORINE: (
+        "ph", "free_chlorine", "total_chlorine", "alkalinity", "cyanuric", "hardness",
+    ),
+    Sanitiser.BROMINE: ("ph", "bromine", "alkalinity", "hardness"),
+    Sanitiser.SALT: (
+        "ph", "free_chlorine", "total_chlorine", "alkalinity", "cyanuric",
+        "hardness", "salt",
+    ),
+}
 
 #: Litres of 15% hydrochloric acid to lower 10 m3 of water by 0.1 pH.
 #:
@@ -38,6 +76,111 @@ CHLORINE_G_PER_10M3_PER_MGL = 14.3
 MAX_PH_STEP = 0.4
 
 
+@dataclass(frozen=True)
+class Band:
+    """A reading judged against its ideal range."""
+
+    key: str
+    label: str
+    value: float
+    unit: str
+    low: float
+    high: float
+    #: "ok", "low", "high", "very_low" or "very_high".
+    verdict: str
+    note: str = ""
+
+    @property
+    def urgent(self) -> bool:
+        return self.verdict in ("very_low", "very_high")
+
+    def as_dict(self) -> dict:
+        return {
+            "key": self.key,
+            "label": self.label,
+            "value": self.value,
+            "unit": self.unit,
+            "ideal_low": self.low,
+            "ideal_high": self.high,
+            "verdict": self.verdict,
+            "urgent": self.urgent,
+            "note": self.note,
+        }
+
+
+#: Label, unit and ideal range for every reading an AquaChek strip produces,
+#: plus salt for electrolysis systems.
+READINGS = {
+    "ph": ("pH", "", PH_IDEAL),
+    "free_chlorine": ("Free chlorine", "mg/L", CHLORINE_IDEAL),
+    "total_chlorine": ("Total chlorine", "mg/L", CHLORINE_IDEAL),
+    "bromine": ("Bromine", "mg/L", BROMINE_IDEAL),
+    "alkalinity": ("Total alkalinity", "ppm", ALKALINITY_IDEAL),
+    "cyanuric": ("Cyanuric acid", "ppm", CYANURIC_IDEAL),
+    "hardness": ("Total hardness", "ppm", HARDNESS_IDEAL),
+    "salt": ("Salt", "ppm", SALT_IDEAL),
+}
+
+#: Notes worth attaching when a reading strays, because the number alone rarely
+#: says what to do about it.
+BAND_NOTES = {
+    ("alkalinity", "low"): (
+        "Low alkalinity lets pH swing on its own. Correct this before chasing pH."
+    ),
+    ("alkalinity", "high"): (
+        "High alkalinity makes pH stubborn and can cloud the water."
+    ),
+    ("cyanuric", "low"): (
+        "Little stabiliser means sunlight destroys chlorine within hours."
+    ),
+    ("cyanuric", "high"): (
+        "Too much stabiliser holds chlorine hostage. Adding more chlorine will "
+        "not help; diluting the water is the only real fix."
+    ),
+    ("hardness", "low"): (
+        "Soft water is aggressive and pulls calcium out of grout and fittings."
+    ),
+    ("hardness", "high"): "Hard water scales heat exchangers and leaves deposits.",
+    ("salt", "low"): "The chlorinator will produce little or nothing below range.",
+    ("salt", "high"): "Excess salt corrodes fittings and can trip the cell.",
+}
+
+
+def judge(key: str, value: float | None) -> Band | None:
+    """Place one reading in its band.
+
+    Two levels of "wrong" rather than one: a pH of 7.7 wants attention this week,
+    a pH of 8.6 wants attention now, and collapsing those into a single warning
+    means the urgent one arrives looking like the routine one.
+    """
+    if value is None or key not in READINGS:
+        return None
+    label, unit, (low, high) = READINGS[key]
+    span = high - low
+
+    if value < low:
+        verdict = "very_low" if value < low - span else "low"
+    elif value > high:
+        verdict = "very_high" if value > high + span else "high"
+    else:
+        verdict = "ok"
+
+    direction = "low" if verdict.endswith("low") else "high"
+    note = BAND_NOTES.get((key, direction), "") if verdict != "ok" else ""
+    return Band(key, label, value, unit, low, high, verdict, note)
+
+
+def combined_chlorine(free: float | None, total: float | None) -> float | None:
+    """Total minus free: the chlorine already spent on contamination.
+
+    Worth deriving because it is the one figure a strip gives you that answers
+    "should I shock?", and it only exists if someone subtracts two columns.
+    """
+    if free is None or total is None:
+        return None
+    return round(max(0.0, total - free), 2)
+
+
 class Product(str, Enum):
     """Chemical types, in the concentrations sold for domestic pools."""
 
@@ -46,6 +189,54 @@ class Product(str, Enum):
     PH_PLUS = "ph_plus"
     CHLORINE_GRANULES_70 = "chlorine_granules_70"
     CHLORINE_LIQUID_15 = "chlorine_liquid_15"
+    SHOCK = "shock"
+    SHOCK_NON_CHLORINE = "shock_non_chlorine"
+    ALGAECIDE = "algaecide"
+    TABLET = "tablet"
+
+
+#: Minutes of circulation each product needs, from published guidance.
+#:
+#: One fixed duration for "chemistry" was always going to be wrong, because the
+#: products are not comparable. Non-chlorine shock is done in a quarter of an
+#: hour; chlorine shock wants a full night so it reaches every corner and gets
+#: pulled through the filter; an algae treatment runs until the water clears.
+#: Getting this wrong in the short direction leaves undissolved product on the
+#: floor bleaching the liner.
+CIRCULATION_MINUTES = {
+    Product.ACID_15: 60,
+    Product.ACID_37: 60,
+    Product.PH_PLUS: 60,
+    Product.CHLORINE_GRANULES_70: 240,
+    Product.CHLORINE_LIQUID_15: 240,
+    Product.SHOCK: 600,
+    Product.SHOCK_NON_CHLORINE: 30,
+    Product.ALGAECIDE: 1440,
+    Product.TABLET: 0,
+}
+
+#: Why each duration is what it is, shown to the user rather than left implicit.
+CIRCULATION_REASON = {
+    Product.ACID_15: "an hour to disperse, then measure again",
+    Product.ACID_37: "an hour to disperse, then measure again",
+    Product.PH_PLUS: "an hour to disperse, then measure again",
+    Product.CHLORINE_GRANULES_70: "four hours for a maintenance dose to spread",
+    Product.CHLORINE_LIQUID_15: "four hours for a maintenance dose to spread",
+    Product.SHOCK: (
+        "ten hours: shock needs a full night to reach every corner and be pulled "
+        "through the filter, and undissolved product left sitting will bleach "
+        "the liner"
+    ),
+    Product.SHOCK_NON_CHLORINE: "half an hour is enough for non-chlorine shock",
+    Product.ALGAECIDE: (
+        "a full day, and keep going until the water is visibly clear rather than "
+        "stopping on the clock"
+    ),
+    Product.TABLET: (
+        "none: a tablet dissolves over days in a floater or skimmer, so there is "
+        "nothing to circulate now"
+    ),
+}
 
 
 PRODUCT_LABELS = {
@@ -54,7 +245,20 @@ PRODUCT_LABELS = {
     Product.PH_PLUS: ("pH-plus (sodium carbonate)", "g"),
     Product.CHLORINE_GRANULES_70: ("chlorine granules (70%)", "g"),
     Product.CHLORINE_LIQUID_15: ("liquid chlorine (15%)", "ml"),
+    Product.SHOCK: ("chlorine shock", "g"),
+    Product.SHOCK_NON_CHLORINE: ("non-chlorine shock", "g"),
+    Product.ALGAECIDE: ("algaecide", "ml"),
+    Product.TABLET: ("chlorine tablet", "g"),
 }
+
+
+def circulation_for(product: Product | str) -> tuple[int, str]:
+    """How long to circulate after adding this, and why."""
+    try:
+        item = Product(product)
+    except ValueError:
+        return 60, "an hour by default for an unrecognised product"
+    return CIRCULATION_MINUTES[item], CIRCULATION_REASON[item]
 
 
 @dataclass(frozen=True)
@@ -229,11 +433,16 @@ def dose_for_ph(
     )
 
 
+#: Sizes chlorine tablets are actually sold in, in grams.
+TABLET_SIZES = (20, 200, 500)
+
+
 def dose_for_chlorine(
     measured_mgl: float,
     volume_l: float,
     product: Product = Product.CHLORINE_GRANULES_70,
     correction: float = 1.0,
+    tablet_grams: float = 20.0,
 ) -> Dose | None:
     """How much chlorine to add to reach the middle of the ideal range.
 
@@ -250,9 +459,43 @@ def dose_for_chlorine(
 
     grams = rise * CHLORINE_G_PER_10M3_PER_MGL * volume_10m3 * correction
     unit = "g"
+
     if product is Product.CHLORINE_LIQUID_15:
         grams *= 4.7  # roughly, going from 70% granules to 15% liquid by volume
         unit = "ml"
+
+    if product is Product.TABLET:
+        # "Add 11 g of tablet" is not an instruction anyone can follow. Tablets
+        # come in fixed sizes, cannot be halved usefully, and take days to
+        # dissolve -- which makes them the wrong product for a reading that is
+        # low right now. Say that, rather than quietly rounding a slow-release
+        # product into a correction it cannot make.
+        whole = max(1, round(grams / tablet_grams))
+        overshoot = whole * tablet_grams / grams if grams else 1.0
+        return Dose(
+            product=product,
+            amount=whole,
+            unit="tablet" if whole == 1 else "tablets",
+            reason=(
+                f"Free chlorine is {measured_mgl:.1f} mg/L, below the ideal "
+                f"{low:.1f}–{high:.1f}. This needs about {grams:.0f} g of "
+                f"chlorine; your tablets are {tablet_grams:.0f} g, so "
+                f"{whole} would be "
+                + (
+                    "roughly right"
+                    if 0.8 <= overshoot <= 1.25
+                    else f"{overshoot:.1f}× that"
+                )
+                + "."
+            ),
+            instructions=(
+                "Tablets dissolve over days in a floater or skimmer, so they hold "
+                "a level rather than correct one. If the pool needs chlorine "
+                "today, use granules or liquid for the correction and let the "
+                "tablets carry it from there."
+            ),
+            aiming_for=round(target, 2),
+        )
 
     return Dose(
         product=product,
@@ -269,6 +512,67 @@ def dose_for_chlorine(
         ),
         aiming_for=round(target, 2),
     )
+
+
+def water_advice(readings: dict[str, float | None]) -> list[str]:
+    """Conclusions that need more than one reading to reach.
+
+    Each band judges its own number. These are the things that only become
+    visible when the numbers are read together, and they are the ones that
+    change what you should actually do.
+    """
+    advice: list[str] = []
+
+    combined = combined_chlorine(
+        readings.get("free_chlorine"), readings.get("total_chlorine")
+    )
+    if combined is not None and combined >= COMBINED_CHLORINE_SHOCK:
+        advice.append(
+            f"Combined chlorine is {combined:.1f} mg/L. The sanitiser is being "
+            "used up by contamination, so shocking will do more than topping up."
+        )
+
+    cyanuric = readings.get("cyanuric")
+    free = readings.get("free_chlorine")
+    if cyanuric is not None and cyanuric > CYANURIC_LOCKOUT:
+        advice.append(
+            f"Cyanuric acid is {cyanuric:.0f} ppm. Above about "
+            f"{CYANURIC_LOCKOUT:.0f} it holds chlorine hostage: adding more will "
+            "not raise the effective level. Partially draining and refilling is "
+            "the only fix."
+        )
+    elif cyanuric is not None and free is not None and cyanuric > 0:
+        # The rule of thumb pool professionals use: free chlorine wants to sit
+        # around 7.5% of the stabiliser level to stay effective.
+        wanted = cyanuric * 0.075
+        if wanted > CHLORINE_IDEAL[1] and free < wanted:
+            advice.append(
+                f"With {cyanuric:.0f} ppm of stabiliser, free chlorine needs to "
+                f"be nearer {wanted:.1f} mg/L than the usual "
+                f"{CHLORINE_IDEAL[0]:.1f}–{CHLORINE_IDEAL[1]:.1f} to stay effective."
+            )
+
+    ph = readings.get("ph")
+    alkalinity = readings.get("alkalinity")
+    if (
+        ph is not None
+        and alkalinity is not None
+        and not ALKALINITY_IDEAL[0] <= alkalinity <= ALKALINITY_IDEAL[1]
+        and not PH_IDEAL[0] <= ph <= PH_IDEAL[1]
+    ):
+        advice.append(
+            "Both pH and alkalinity are out of range. Correct alkalinity first: "
+            "it is what holds pH steady, and adjusting pH against a bad buffer "
+            "means doing it again next week."
+        )
+
+    if ph is not None and ph > PH_IDEAL[1] and free is not None:
+        advice.append(
+            f"At pH {ph:.1f} chlorine works at a fraction of its strength. "
+            "Bring the pH down before judging whether the chlorine is enough."
+        )
+
+    return advice
 
 
 def test_interval_days(water_temp: float | None) -> tuple[int, str]:

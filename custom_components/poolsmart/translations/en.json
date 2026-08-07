@@ -10,14 +10,18 @@
           "surface_m2": "Water surface (m²)",
           "depth_m": "Water depth (m)",
           "target_temp": "Desired temperature (°C)",
-          "max_temp": "Maximum temperature (°C)"
+          "max_temp": "Maximum temperature (°C)",
+          "unit_system": "Units",
+          "sanitiser": "How the water is sanitised"
         },
         "data_description": {
           "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
           "depth_m": "Actual water depth, not the wall height. Most pools are filled to about 80-90% of the wall.",
           "surface_m2": "Leave blank and it is calculated from volume and depth. Only used for the initial heat-loss guess, which is replaced by a measured value within days.",
           "target_temp": "28 °C is comfortable for most people. 26 is brisk, 30 is bath-like and noticeably more expensive.",
-          "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat."
+          "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat.",
+          "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
+          "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing."
         }
       },
       "pump": {
@@ -98,7 +102,13 @@
           "pump_inlet_sensor": "Pump inlet temperature (optional)",
           "ph_sensor": "pH reading",
           "chlorine_sensor": "Free chlorine reading (mg/L)",
-          "pump_outlet_sensor": "Pump outlet temperature"
+          "pump_outlet_sensor": "Pump outlet temperature",
+          "total_chlorine_sensor": "Total chlorine (mg/L)",
+          "bromine_sensor": "Bromine (mg/L)",
+          "alkalinity_sensor": "Total alkalinity (ppm)",
+          "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
+          "hardness_sensor": "Total hardness (ppm)",
+          "salt_sensor": "Salt (ppm)"
         },
         "data_description": {
           "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
@@ -117,7 +127,13 @@
           "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong.",
           "ph_sensor": "A sensor or input_number holding your last pH measurement. Used to work out how much to add, using the pool volume you entered.",
           "chlorine_sensor": "A sensor or input_number holding your last free chlorine measurement in mg/L.",
-          "pump_outlet_sensor": "Water leaving the circulation pump, on its way to the heat pump. Kept separate from the heat pump inlet below because that assumes only one plumbing layout: if there is a filter, a longer run, or anything else between the pump and the heat pump, these are two real points. If your plumbing runs pool → pump → heat pump → pool with nothing in between, and you only have one probe there, point this field and \"Heat pump inlet temperature\" at the same entity — the integration recognises they are one measurement and will not compare them against each other as if they were independent."
+          "pump_outlet_sensor": "Water leaving the circulation pump, on its way to the heat pump. Kept separate from the heat pump inlet below because that assumes only one plumbing layout: if there is a filter, a longer run, or anything else between the pump and the heat pump, these are two real points. If your plumbing runs pool → pump → heat pump → pool with nothing in between, and you only have one probe there, point this field and \"Heat pump inlet temperature\" at the same entity — the integration recognises they are one measurement and will not compare them against each other as if they were independent.",
+          "total_chlorine_sensor": "Total chlorine minus free chlorine gives combined chlorine — the part already used up by contamination. Above 0.5 mg/L, shocking does more than topping up. It is the one figure a strip gives you that answers 'should I shock', and it only exists if two columns are subtracted.",
+          "bromine_sensor": "Only if you sanitise with bromine instead of chlorine. The two are alternatives, not additions.",
+          "alkalinity_sensor": "The buffer that holds pH steady. Out of range, pH drifts on its own and correcting it is a weekly chore rather than a fix.",
+          "cyanuric_sensor": "Stabiliser, which shields chlorine from sunlight. Too little and chlorine burns off in hours; above about 100 ppm it holds chlorine hostage and adding more achieves nothing.",
+          "hardness_sensor": "Soft water pulls calcium out of grout and fittings; hard water scales the heat exchanger.",
+          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual."
         }
       }
     }
@@ -195,7 +211,8 @@
           "compressor_min_on_minutes": "Compressor minimum run time (minutes)",
           "calibration_tolerance": "Probe disagreement tolerance (°C)",
           "acid_product": "pH product you use",
-          "chlorine_product": "Chlorine product you use"
+          "chlorine_product": "Chlorine product you use",
+          "tablet_grams": "Tablet size (grams)"
         },
         "data_description": {
           "turnover_factor": "How many times the whole pool should pass the filter per day. Filtered water mixes back in, so one pass cleans about 63% of the pool, two 86%, three 95%. Three is where the gains flatten off.",
@@ -222,7 +239,8 @@
           "solar_margin_w": "Added to the equipment draw when the threshold is calculated. A margin stops a passing cloud from starting and stopping a session.",
           "compressor_min_off_minutes": "How long the heat pump must stay off before restarting, so refrigerant pressures can equalise. Short cycling wears a compressor out early. This cannot be overridden by any other rule.",
           "compressor_min_on_minutes": "Minimum run once started. Reaching the target temperature still stops it immediately.",
-          "calibration_tolerance": "How far the pool probe and the pump inlet may differ before it is mentioned. DS18B20s are accurate to roughly ±0.5 °C, so anything under that is the sensors rather than the pool."
+          "calibration_tolerance": "How far the pool probe and the pump inlet may differ before it is mentioned. DS18B20s are accurate to roughly ±0.5 °C, so anything under that is the sensors rather than the pool.",
+          "tablet_grams": "The size your chlorine tablets actually come in — commonly 20 g, 200 g or 500 g. Tablets are counted rather than weighed out, so this is what turns a required weight into a number of tablets."
         }
       },
       "init": {
@@ -257,7 +275,13 @@
           "pump_inlet_sensor": "Pump inlet temperature (optional)",
           "ph_sensor": "pH reading",
           "chlorine_sensor": "Free chlorine reading (mg/L)",
-          "pump_outlet_sensor": "Pump outlet temperature"
+          "pump_outlet_sensor": "Pump outlet temperature",
+          "total_chlorine_sensor": "Total chlorine (mg/L)",
+          "bromine_sensor": "Bromine (mg/L)",
+          "alkalinity_sensor": "Total alkalinity (ppm)",
+          "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
+          "hardness_sensor": "Total hardness (ppm)",
+          "salt_sensor": "Salt (ppm)"
         },
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",
@@ -279,7 +303,13 @@
           "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong.",
           "ph_sensor": "A sensor or input_number holding your last pH measurement. Used to work out how much to add, using the pool volume you entered.",
           "chlorine_sensor": "A sensor or input_number holding your last free chlorine measurement in mg/L.",
-          "pump_outlet_sensor": "Water leaving the circulation pump, on its way to the heat pump. Kept separate from the heat pump inlet below because that assumes only one plumbing layout: if there is a filter, a longer run, or anything else between the pump and the heat pump, these are two real points. If your plumbing runs pool → pump → heat pump → pool with nothing in between, and you only have one probe there, point this field and \"Heat pump inlet temperature\" at the same entity — the integration recognises they are one measurement and will not compare them against each other as if they were independent."
+          "pump_outlet_sensor": "Water leaving the circulation pump, on its way to the heat pump. Kept separate from the heat pump inlet below because that assumes only one plumbing layout: if there is a filter, a longer run, or anything else between the pump and the heat pump, these are two real points. If your plumbing runs pool → pump → heat pump → pool with nothing in between, and you only have one probe there, point this field and \"Heat pump inlet temperature\" at the same entity — the integration recognises they are one measurement and will not compare them against each other as if they were independent.",
+          "total_chlorine_sensor": "Total chlorine minus free chlorine gives combined chlorine — the part already used up by contamination. Above 0.5 mg/L, shocking does more than topping up. It is the one figure a strip gives you that answers 'should I shock', and it only exists if two columns are subtracted.",
+          "bromine_sensor": "Only if you sanitise with bromine instead of chlorine. The two are alternatives, not additions.",
+          "alkalinity_sensor": "The buffer that holds pH steady. Out of range, pH drifts on its own and correcting it is a weekly chore rather than a fix.",
+          "cyanuric_sensor": "Stabiliser, which shields chlorine from sunlight. Too little and chlorine burns off in hours; above about 100 ppm it holds chlorine hostage and adding more achieves nothing.",
+          "hardness_sensor": "Soft water pulls calcium out of grout and fittings; hard water scales the heat exchanger.",
+          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual."
         }
       },
       "hardware": {
@@ -304,7 +334,9 @@
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
           "filter_media": "Filter medium",
           "hp_flow_min_blocking": "Pause heating below the minimum flow",
-          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation"
+          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation",
+          "unit_system": "Units",
+          "sanitiser": "How the water is sanitised"
         },
         "data_description": {
           "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
@@ -325,7 +357,9 @@
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
           "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
-          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach."
+          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach.",
+          "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
+          "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing."
         }
       }
     }
@@ -361,7 +395,24 @@
         "acid_37": "pH-minus, 37% hydrochloric acid",
         "ph_plus": "pH-plus, sodium carbonate",
         "chlorine_granules_70": "Chlorine granules, 70%",
-        "chlorine_liquid_15": "Liquid chlorine, 15%"
+        "chlorine_liquid_15": "Liquid chlorine, 15%",
+        "shock": "Chlorine shock",
+        "shock_non_chlorine": "Non-chlorine shock",
+        "algaecide": "Algaecide",
+        "tablet": "Chlorine tablet (floater or skimmer)"
+      }
+    },
+    "unit_system": {
+      "options": {
+        "metric": "Metric (litres, ml, grams)",
+        "imperial": "US customary (gallons, fl oz, ounces)"
+      }
+    },
+    "sanitiser": {
+      "options": {
+        "chlorine": "Chlorine",
+        "bromine": "Bromine",
+        "salt": "Salt chlorinator"
       }
     }
   },
@@ -444,6 +495,9 @@
       },
       "heat_balance": {
         "name": "Heat kept"
+      },
+      "water_balance": {
+        "name": "Water balance"
       }
     },
     "binary_sensor": {

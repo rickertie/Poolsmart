@@ -75,6 +75,9 @@
       },
       "heat_balance": {
         "default": "mdi:home-thermometer-outline"
+      },
+      "water_balance": {
+        "default": "mdi:scale-balance"
       }
     },
     "binary_sensor": {

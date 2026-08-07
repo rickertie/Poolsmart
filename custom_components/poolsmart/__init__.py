@@ -175,6 +175,15 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, "record_dose", _record)
 
+    async def _reset(call) -> None:
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            if coordinator.store.reset_learned(call.data["value"]):
+                await coordinator.store.async_save()
+                await coordinator.async_request_refresh()
+                _LOGGER.info("Reset learned value: %s", call.data["value"])
+
+    hass.services.async_register(DOMAIN, "reset_learned", _reset)
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

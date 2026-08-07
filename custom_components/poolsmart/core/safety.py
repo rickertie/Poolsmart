@@ -61,7 +61,12 @@ def _reading_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
         if not reading.available or reading.age_seconds is None:
             continue
         age = reading.age_seconds
-        if age <= warn_after:
+        limit = warn_after
+        block_limit = block_after
+        if reading.role in config.safety.slow_roles:
+            limit *= config.safety.slow_role_factor
+            block_limit *= config.safety.slow_role_factor
+        if age <= limit:
             continue
         # A probe that only matters while the heat pump runs is allowed to go
         # quiet while it is off: nothing is changing, so nothing is reported.
@@ -71,7 +76,7 @@ def _reading_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
 
         code = f"stale_{reading.role or label.replace(' ', '_')}"
         minutes = age / 60
-        if age > block_after:
+        if age > block_limit:
             faults.append(
                 Fault(
                     code,
