@@ -14,7 +14,7 @@ own paperwork.
 - **The panel header ignored the theme.** A fixed navy block looked right in a
   dark mockup and wrong on a light Home Assistant, which is most installations.
   It now tints the accent colour, giving the same emphasis either way
-- **"Add 11 g of chlorine tablet" is not an instruction anyone can follow.**
+- **\"Add 11 g of chlorine tablet\" is not an instruction anyone can follow.**
   Tablets come in fixed sizes, cannot usefully be halved, and take days to
   dissolve — which makes them the wrong product for a reading that is low right
   now. The recommendation is a whole number of tablets, says how that compares
@@ -510,6 +510,7 @@ never published, so everything listed there is part of this release.
   capacity
 
 [1.2.3]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.3
+
 [1.2.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.2
 [1.2.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.1
 [1.2.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.0

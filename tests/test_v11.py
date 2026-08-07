@@ -737,3 +737,4 @@ def test_t86_slow_roles_are_not_nagged_about():
 
     effective = settings.stale_warning_seconds * settings.slow_role_factor
     assert effective >= 3600, "an hour is the least that makes sense for outdoor air"
+
