@@ -8,6 +8,108 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.2.0] — Seven Readings and a Ceiling — 2026-08-05
+
+### Fixed
+- **A learned heating rate of 1.02 °C/h on a pool whose maximum is 0.67.**
+  Nothing checked the measured rise against what the appliance can physically
+  deliver, so a session where the pump stirred stratified water read as
+  spectacular heating. Because the learned rate is trusted ahead of any COP
+  calculation, that single session drove every later estimate: two hours
+  predicted for a rise that really takes fourteen, so heating started far too
+  late. Sessions above the appliance's own ceiling are now rejected
+- **The measured COP was never used.** `cop_by_air_bucket` has existed since
+  0.9; the counter gating it arrived in 1.1, so anyone who upgraded had learned
+  values with a count of zero — sitting behind a gate that could never open no
+  matter how many sessions produced them. Counts are now recovered from the
+  session log on startup
+- The chemistry cycle ran for one fixed duration regardless of product. Adding
+  a 20 g tablet and circulating for a few minutes is not a treatment
+
+### Added
+- **Unit system.** Metric or US customary, chosen at setup, changing how volumes
+  and doses are presented. Calculation stays metric throughout
+- **Circulation time per product**, from published guidance: 30 minutes for
+  non-chlorine shock, an hour for pH adjustment, four hours for a maintenance
+  chlorine dose, ten for chlorine shock, a full day for algaecide, and none at
+  all for a tablet in a floater
+- **The whole AquaChek strip.** Total chlorine, bromine, alkalinity, cyanuric
+  acid, hardness, and salt for electrolysis systems, each judged against its
+  ideal range with two levels of wrong rather than one — a pH of 7.7 wants
+  attention this week, 8.6 wants it now
+- **Combined chlorine**, derived from total minus free. The one figure a strip
+  gives you that answers "should I shock", and it only exists if two columns are
+  subtracted
+- **Conclusions that need several readings together**: stabiliser high enough
+  that adding chlorine achieves nothing, pH and alkalinity both adrift with
+  alkalinity as the one to fix first, chlorine judged against the stabiliser
+  level rather than a fixed range
+- **Sanitiser type** at setup, so a chlorine pool is not shown bromine fields
+- **Near misses**, tallied across the day. One tick's trace answers "why not
+  now"; this answers "why not today", and twenty refusals on price is a setting
+  worth revisiting where one is a passing expensive hour
+- Expected against actual rise during a session, previous sessions to compare
+  it with, confidence bars on each learned value, and a `reset_learned` service
+  to clear one figure without discarding the rest
+- Panel restyled: the dense monospace readouts of one direction with the card
+  shell and hero block of another
+
+### Changed
+- The Pool Chem recommendation is gone; it turned out not to do what was wanted.
+  The boundary is still stated plainly — this is not a water chemistry
+  integration — but pointing at a specific alternative that did not suit is
+  worse than describing the limit
+
+## [1.1.2] — Where Does This Sensor Go — 2026-08-04
+
+### Fixed
+- **Setup failed with `AttributeError: no attribute '_bridge'`.** `_read` called
+  a method that was never actually written — an edit that reported success and
+  landed nowhere. It only surfaced the first time a sensor went unavailable,
+  which on a system whose probes live on an ESP is a matter of when rather than
+  whether. A test now checks every `self._x()` call in the coordinator against
+  the methods that genuinely exist
+- **The panel never updated in the browser.** It is served as a static file
+  with no version in its URL, so the cached copy was kept indefinitely: the
+  Water tab was in the code and not on screen, and the integration looked like
+  it had silently failed to update. The URL now carries the manifest version
+- **The panel is now translated.** Entity names follow Home Assistant's
+  language, the panel was hardcoded English, and that gap was the real
+  inconsistency — not the Dutch entity names, which are what appear on
+  dashboards, in automations and in the logbook and should stay translated. So
+  the panel was localised rather than the entities un-translated
+- The pH and chlorine entity pickers were restricted to `domain="sensor"`,
+  which hid every `input_number` helper from the list. A water test strip has
+  no sensor of its own, so those readings are as often a manually-updated
+  helper as a real sensor — the helper existed, the picker just would not show
+  it. Both pickers now accept `sensor` and `input_number`
+- **Pump outlet is now its own field**, separate from heat pump inlet. The
+  first attempt at this fix only reworded the "Heat pump inlet temperature"
+  label to mention "your pump outlet sensor" — but that assumed everyone's
+  plumbing folds the two into one physical point, which is only true for a
+  pool with nothing between the pump and the heat pump. A filter housing, a
+  longer run, or any other layout has two real points to measure, and forcing
+  them into one field was wrong for that installation regardless of how
+  clearly it was labelled. There are four distinct optional fields now — pump
+  inlet, pump outlet, heat pump inlet, heat pump outlet — and alias detection,
+  already used for water/pump-inlet, was generalised to cover all of them: an
+  installation where pump outlet and heat pump inlet genuinely are one probe
+  configures the same entity in both fields, and the integration recognises
+  that as one measurement rather than comparing a probe against itself
+
+## [1.1.1] — Sorted, Not Underscored — 2026-08-04
+
+### Fixed
+- hassfest CI failed on two things at once: `manifest.json` keys were not
+  sorted (domain, name, then alphabetical is their rule, not a suggestion), and
+  the `gpm_` translation key ended in an underscore, which their validator
+  rejects even though it matched the broader pattern this project's own checks
+  used. The trailing underscore existed only to avoid colliding with an
+  already-present `gpm` key in the same lookup table; both now simply share that
+  key, since they mapped to the same conversion factor anyway
+- Two tests added pinning hassfest's actual rules, not an approximation of them,
+  since the approximation is exactly what let this through
+
 ## [1.1.0] — Where The Heat Goes — 2026-08-03
 
 ### Added
@@ -354,6 +456,9 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.2.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.0
+[1.1.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.2
+[1.1.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.1
 [1.1.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.0
 [1.0.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.0.0

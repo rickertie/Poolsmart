@@ -67,6 +67,7 @@ def make_state(now: datetime, **overrides) -> PoolState:
         "water_temp": SensorReading(27.0, 10, "water"),
         "air_temp": SensorReading(20.0, 10, "air"),
         "pump_inlet": SensorReading(None, None, "pump_inlet"),
+        "pump_outlet": SensorReading(None, None, "pump_outlet"),
         "hp_inlet": SensorReading(27.0, 10, "hp_inlet"),
         "hp_outlet": SensorReading(30.0, 10, "hp_outlet"),
         "flow_m3h": SensorReading(3.5, 10, "flow"),

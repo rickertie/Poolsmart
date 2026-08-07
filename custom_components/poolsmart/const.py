@@ -88,6 +88,7 @@ CONF_WATER_TEMP_SENSOR = "water_temp_sensor"
 # -- Step 5: optional entities --------------------------------------------
 CONF_AIR_TEMP_SENSOR = "air_temp_sensor"
 CONF_PUMP_INLET_SENSOR = "pump_inlet_sensor"
+CONF_PUMP_OUTLET_SENSOR = "pump_outlet_sensor"
 CONF_HP_INLET_SENSOR = "hp_inlet_sensor"
 CONF_HP_OUTLET_SENSOR = "hp_outlet_sensor"
 CONF_FLOW_SENSOR = "flow_sensor"
@@ -104,6 +105,7 @@ CONF_COVER_ENTITY = "cover_entity"
 OPTIONAL_ENTITY_KEYS = (
     CONF_AIR_TEMP_SENSOR,
     CONF_PUMP_INLET_SENSOR,
+    CONF_PUMP_OUTLET_SENSOR,
     CONF_HP_INLET_SENSOR,
     CONF_HP_OUTLET_SENSOR,
     CONF_FLOW_SENSOR,
@@ -111,6 +113,12 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_HP_POWER_SENSOR,
     CONF_PRICE_SENSOR,
     CONF_CHEAP_PRICE_SENSOR,
+    CONF_TOTAL_CHLORINE_SENSOR,
+    CONF_BROMINE_SENSOR,
+    CONF_ALKALINITY_SENSOR,
+    CONF_CYANURIC_SENSOR,
+    CONF_HARDNESS_SENSOR,
+    CONF_SALT_SENSOR,
     CONF_SOLAR_POWER_SENSOR,
     CONF_SOLAR_FORECAST_SENSOR,
     CONF_WEATHER_ENTITY,
@@ -122,6 +130,7 @@ OPTIONAL_ENTITY_KEYS = (
 CAPABILITY_BY_ENTITY = {
     CONF_AIR_TEMP_SENSOR: "operating_envelope",
     CONF_PUMP_INLET_SENSOR: "calibration_check",
+    CONF_PUMP_OUTLET_SENSOR: "delta_t_and_cop",
     CONF_HP_INLET_SENSOR: "delta_t_and_cop",
     CONF_HP_OUTLET_SENSOR: "delta_t_and_cop",
     CONF_FLOW_SENSOR: "flow_protection",
@@ -166,6 +175,27 @@ CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
 CONF_PH_SENSOR = "ph_sensor"
 CONF_CHLORINE_SENSOR = "chlorine_sensor"
+CONF_TOTAL_CHLORINE_SENSOR = "total_chlorine_sensor"
+CONF_BROMINE_SENSOR = "bromine_sensor"
+CONF_ALKALINITY_SENSOR = "alkalinity_sensor"
+CONF_CYANURIC_SENSOR = "cyanuric_sensor"
+CONF_HARDNESS_SENSOR = "hardness_sensor"
+CONF_SALT_SENSOR = "salt_sensor"
+CONF_SANITISER = "sanitiser"
+CONF_UNIT_SYSTEM = "unit_system"
+
+#: Which config key holds which chemistry reading, so the whole set can be read
+#: in one pass rather than named individually everywhere.
+CHEMISTRY_SENSORS = {
+    "ph": CONF_PH_SENSOR,
+    "free_chlorine": CONF_CHLORINE_SENSOR,
+    "total_chlorine": CONF_TOTAL_CHLORINE_SENSOR,
+    "bromine": CONF_BROMINE_SENSOR,
+    "alkalinity": CONF_ALKALINITY_SENSOR,
+    "cyanuric": CONF_CYANURIC_SENSOR,
+    "hardness": CONF_HARDNESS_SENSOR,
+    "salt": CONF_SALT_SENSOR,
+}
 CONF_ACID_PRODUCT = "acid_product"
 CONF_CHLORINE_PRODUCT = "chlorine_product"
 
@@ -207,6 +237,8 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_HP_FLOW_MIN_BLOCKING: False,
     CONF_HP_FLOW_MIN_VERIFIED: False,
     CONF_FLOW_UNIT: "l_min",
+    CONF_UNIT_SYSTEM: "metric",
+    CONF_SANITISER: "chlorine",
 }
 
 #: Optional file in the configuration directory that overrides SETUP_DEFAULTS.

@@ -294,6 +294,7 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             "heat_balance": _heat_balance_snapshot(coordinator),
             "chemistry": coordinator.water_chemistry,
             "branch_time_today": _branch_time_today(coordinator),
+            "near_misses": coordinator.near_misses.as_list(),
             "bridged_roles": sorted(coordinator.bridged_roles),
             "energy": {
                 "today_kwh": round(coordinator.store.energy_today_kwh, 3),

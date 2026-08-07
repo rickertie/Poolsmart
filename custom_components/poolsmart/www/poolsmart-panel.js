@@ -9,6 +9,93 @@
  * is for everyone else, and the two are deliberately not the same thing.
  */
 
+
+/**
+ * Panel wording, by language.
+ *
+ * Entity names are translated by Home Assistant from translations/*.json, so on
+ * a Dutch system everything outside this file already reads Dutch. A hardcoded
+ * English panel next to Dutch entity names is the actual inconsistency, and the
+ * fix is to translate the panel rather than to stop translating the entities:
+ * the entity names are what appear on dashboards, in automations and in the
+ * logbook, and those should follow the user's language.
+ *
+ * English is the fallback for any language not listed here, and for any key a
+ * translation happens to be missing.
+ */
+const STRINGS = {
+  en: {
+    overview: "Overview", planning: "Planning", water: "Water",
+    sessions: "Sessions", learning: "Learning", settings: "Settings",
+    diagnostics: "Diagnostics",
+    ph: "pH", chlorine: "Free chlorine", testEvery: "Test every",
+    nextTest: "Next test", overdue: "overdue", days: "days",
+    balanced: "Balanced", nothingToAdd: "Nothing to add.",
+    doseLog: "Dose log",
+    doseLogNote: "What was added, and what it did. Without this, dosing is guessing.",
+    when: "When", added: "Added", before: "Before", after: "After",
+    effect: "Effect", pending: "pending",
+    noChemistry: "No water chemistry configured.",
+    aimFirst: (v) =>
+      `Aiming for ${v} first — a correction this large overshoots if done in ` +
+      `one go. Measure again after an hour.`,
+    runningFor: (t) => `Running for ${t}`,
+    used: "Used", risePerHour: "Rise per hour", expected: "expected",
+    tooEarly: "Too early to judge the rate.",
+    whereHeatGoes: "Where the heat goes",
+    heatPumpAdds: "Heat pump adds", poolLoses: "Pool loses", net: "Net",
+    cover: "Cover", coverOn: "on", coverOff: "off",
+    notConfigured: "not configured",
+    nearMisses: "What it ran into",
+    nearMissesNote:
+      "Branches that wanted to run today, and what stopped them. Twenty refusals " +
+      "on price is a setting worth revisiting; one is a passing expensive hour.",
+    onSchedule: "On schedule",
+    previousSessions: "Previous sessions",
+    duration: "Duration", gain: "Gain",
+    usedFor: "Used for", resetThis: "Reset this value",
+    readings: "Readings", combinedChlorine: "Combined chlorine",
+    whatItMeans: "What this means together", circulate: "Circulate for",
+    target: "target", outdoors: "outdoors",
+  },
+  nl: {
+    overview: "Overzicht", planning: "Planning", water: "Water",
+    sessions: "Sessies", learning: "Leren", settings: "Instellingen",
+    diagnostics: "Diagnose",
+    ph: "pH", chlorine: "Vrij chloor", testEvery: "Meten elke",
+    nextTest: "Volgende meting", overdue: "te laat", days: "dagen",
+    balanced: "In balans", nothingToAdd: "Niets toe te voegen.",
+    doseLog: "Doseerlogboek",
+    doseLogNote:
+      "Wat er is toegevoegd, en wat het deed. Zonder dit blijft doseren gokken.",
+    when: "Wanneer", added: "Toegevoegd", before: "Voor", after: "Na",
+    effect: "Effect", pending: "nog niet gemeten",
+    noChemistry: "Geen waterchemie ingesteld.",
+    aimFirst: (v) =>
+      `Eerst naar ${v} — een correctie van deze grootte schiet in één keer ` +
+      `door. Meet na een uur opnieuw.`,
+    runningFor: (t) => `${t} bezig`,
+    used: "Verbruikt", risePerHour: "Stijging per uur", expected: "verwacht",
+    tooEarly: "Nog te vroeg om de stijging te beoordelen.",
+    whereHeatGoes: "Waar de warmte blijft",
+    heatPumpAdds: "Warmtepomp levert", poolLoses: "Bad verliest", net: "Netto",
+    cover: "Afdekhoes", coverOn: "ligt erop", coverOff: "eraf",
+    notConfigured: "niet ingesteld",
+    nearMisses: "Waar het op afketste",
+    nearMissesNote:
+      "Takken die vandaag wilden draaien, en wat ze tegenhield. Twintig keer " +
+      "afketsen op prijs is een instelling om te heroverwegen; één keer is een " +
+      "duur uurtje.",
+    onSchedule: "Op schema",
+    previousSessions: "Vorige sessies",
+    duration: "Duur", gain: "Winst",
+    usedFor: "Gebruikt voor", resetThis: "Deze waarde wissen",
+    readings: "Metingen", combinedChlorine: "Gebonden chloor",
+    whatItMeans: "Wat dit samen betekent", circulate: "Laat circuleren",
+    target: "doel", outdoors: "buiten",
+  },
+};
+
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "planning", label: "Planning" },
@@ -77,6 +164,15 @@ const esc = (s) =>
   );
 
 class PoolSmartPanel extends HTMLElement {
+  /** Translate one key, falling back to English per key. */
+  t(key, ...args) {
+    const lang = (this._hass && this._hass.language ? this._hass.language : "en")
+      .split("-")[0];
+    const table = STRINGS[lang] || STRINGS.en;
+    const value = table[key] !== undefined ? table[key] : STRINGS.en[key];
+    return typeof value === "function" ? value(...args) : value;
+  }
+
   constructor() {
     super();
     this._tab = "overview";
@@ -130,8 +226,44 @@ class PoolSmartPanel extends HTMLElement {
         nav button { background:none; border:none; padding:10px 14px; cursor:pointer; font-size:14px;
                      color: var(--secondary-text-color,#666); border-bottom:2px solid transparent; }
         nav button.active { color: var(--primary-color,#03a9f4); border-bottom-color: var(--primary-color,#03a9f4); }
-        .card { background: var(--card-background-color,#fff); border-radius:12px; padding:16px; margin-bottom:16px;
+        .card { background: var(--card-background-color,#fff); border-radius:14px; padding:16px; margin-bottom:12px;
                 box-shadow:0 1px 3px rgba(0,0,0,.12); }
+        /* Direction A: dense monospace readouts, for the tabs meant for reading
+           closely rather than glancing at. */
+        .mono { font-family: ui-monospace,"IBM Plex Mono",Menlo,monospace; }
+        .dense { display:grid; gap:0; }
+        .dense .d { display:grid; grid-template-columns:1fr auto 74px; gap:10px;
+                    align-items:center; padding:8px 0;
+                    border-bottom:1px solid var(--divider-color,#eee); font-size:12.5px; }
+        .dense .d:last-child { border-bottom:none; }
+        .dense .dk { color: var(--secondary-text-color,#777); font-size:10px;
+                     letter-spacing:.07em; text-transform:uppercase; }
+        .dense .dv { font-family: ui-monospace,monospace; font-weight:600; text-align:right; }
+        .spark { height:15px; display:flex; align-items:flex-end; gap:1.5px; }
+        .spark i { flex:1; background: var(--primary-color,#03a9f4); opacity:.35; border-radius:1px; }
+        .spark i.hi { opacity:1; }
+        /* Direction B: the hero block and the ring. */
+        .hero { border-radius:14px; padding:18px; margin-bottom:12px; color:#fff;
+                background:linear-gradient(135deg,#12303c,#1f3244); }
+        .hero .ht { font-size:38px; font-weight:600; line-height:1; }
+        .hero .hs { opacity:.85; font-size:14px; margin-top:6px; }
+        .hero .pill { display:inline-block; margin-top:12px; padding:5px 12px;
+                      border-radius:20px; font-size:12.5px; background:rgba(255,255,255,.15); }
+        .ring { width:56px; height:56px; border-radius:50%; display:grid; place-items:center; }
+        .ring span { width:40px; height:40px; border-radius:50%;
+                     background: var(--card-background-color,#fff); display:grid;
+                     place-items:center; font-size:12px; font-weight:700; }
+        .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        @media(max-width:560px){ .grid2 { grid-template-columns:1fr; } }
+        .band { display:grid; grid-template-columns:1fr auto; gap:10px; padding:7px 0;
+                border-bottom:1px solid var(--divider-color,#eee); font-size:13px; }
+        .band:last-child { border-bottom:none; }
+        .band .bv { font-family:ui-monospace,monospace; font-weight:600; }
+        .scale { height:5px; border-radius:3px; margin-top:5px; position:relative;
+                 background:linear-gradient(90deg,#c62828 0 16%,#ef6c00 16% 30%,
+                   #2e7d32 30% 70%,#ef6c00 70% 84%,#c62828 84% 100%); }
+        .scale b { position:absolute; top:-3px; width:2px; height:11px;
+                   background: var(--primary-text-color,#222); border-radius:1px; }
         .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--divider-color,#f0f0f0); }
         .row:last-child { border-bottom:none; }
         .row span:first-child { color: var(--secondary-text-color,#666); }
@@ -155,7 +287,9 @@ class PoolSmartPanel extends HTMLElement {
       }</div>
       <nav>${TABS.map(
         (t) =>
-          `<button data-tab="${t.id}" class="${this._tab === t.id ? "active" : ""}">${t.label}</button>`
+          `<button data-tab="${t.id}" class="${
+            this._tab === t.id ? "active" : ""
+          }">${esc(this.t(t.id) || t.label)}</button>`
       ).join("")}</nav>
       <div id="content">${s ? this._renderTab(s) : ""}</div>
     `;
@@ -200,8 +334,16 @@ class PoolSmartPanel extends HTMLElement {
     const pct = f && f.required_h ? Math.min(100, (f.done_h / f.required_h) * 100) : 0;
 
     return `
+      <div class="hero">
+        <div class="ht">${s.water_temp !== null ? s.water_temp.toFixed(1) : "—"} °C</div>
+        <div class="hs">${esc(d.reason || "")}</div>
+        <div class="pill">${esc(d.branch || "—")} &middot; ${
+      s.target_temp
+    } °C ${esc(this.t("target"))} &middot; ${
+      s.air_temp !== null ? s.air_temp.toFixed(1) : "—"
+    } °C ${esc(this.t("outdoors"))}</div>
+      </div>
       <div class="card">
-        <div class="big">${s.water_temp !== null ? s.water_temp.toFixed(1) : "—"} °C</div>
         <div class="muted">target ${s.target_temp} °C &middot; outdoors ${
       s.air_temp !== null ? s.air_temp.toFixed(1) : "—"
     } °C</div>
@@ -268,22 +410,62 @@ class PoolSmartPanel extends HTMLElement {
       ? "#c62828"
       : "#2e7d32";
     return `<div class="card">
-      <strong>Running for ${esc(x.elapsed_readable)}</strong>
+      <strong>${esc(this.t("runningFor", x.elapsed_readable))}</strong>
       <div class="bar" style="margin-top:10px"><div style="width:${Math.max(
         0,
         Math.min(100, done)
       )}%"></div></div>
       <div class="row"><span>${x.start_temp} → ${x.target_temp} °C</span>
         <span>${x.current_temp} °C (${x.gain > 0 ? "+" : ""}${x.gain})</span></div>
-      <div class="row"><span>Used</span><span>${x.energy_kwh} kWh · ${x.cost}</span></div>
+      <div class="row"><span>${esc(this.t("used"))}</span><span>${x.energy_kwh} kWh · ${x.cost}</span></div>
       ${
         x.actual_rate_c_per_h
-          ? `<div class="row"><span>Rise per hour</span><span>${
-              x.actual_rate_c_per_h
-            } vs ${x.expected_rate_c_per_h} expected</span></div>
+          ? `<div class="dense" style="margin-top:10px">
+               <div class="d"><span class="dk">${esc(
+                 this.t("risePerHour")
+               )}</span><span class="dv">${x.actual_rate_c_per_h}</span>
+                 <span class="muted mono" style="text-align:right;font-size:11px">/ ${
+                   x.expected_rate_c_per_h
+                 }</span></div>
+               <div class="d"><span class="dk">${esc(
+                 this.t("onSchedule")
+               )}</span><span class="dv">${Math.round(
+                 (x.on_schedule_ratio || 0) * 100
+               )}%</span><span></span></div>
+             </div>
              <div class="reason" style="color:${verdictColour}">${esc(x.verdict)}</div>`
-          : `<div class="reason muted">Too early to judge the rate.</div>`
+          : `<div class="reason muted">${esc(this.t("tooEarly"))}</div>`
       }
+    </div>
+    ${this._previousSessions(s)}`;
+  }
+
+  _previousSessions(s) {
+    /* A rate means nothing without something to compare it against. Three
+       recent sessions turn "0.15 °C/h" into "normal for this pool". */
+    const rows = (s.session_log || []).filter((x) => x.usable).slice(0, 3);
+    if (!rows.length) return "";
+    return `<div class="card">
+      <strong>${esc(this.t("previousSessions"))}</strong>
+      <table>
+        <tr><th>${esc(this.t("when"))}</th><th>${esc(
+          this.t("duration")
+        )}</th><th>${esc(this.t("gain"))}</th><th>°C/h</th><th>COP</th></tr>
+        ${rows
+          .map(
+            (r) => `<tr>
+              <td>${fmtDateTime(r.start)}</td>
+              <td>${fmtHours(r.duration_h)}</td>
+              <td>${
+                r.water_start !== null && r.water_end !== null
+                  ? `${(r.water_end - r.water_start).toFixed(2)}`
+                  : "—"
+              }</td>
+              <td>${r.heating_rate ?? "—"}</td>
+              <td>${r.measured_cop ?? "—"}</td></tr>`
+          )
+          .join("")}
+      </table>
     </div>`;
   }
 
@@ -291,21 +473,21 @@ class PoolSmartPanel extends HTMLElement {
     const b = s.heat_balance;
     if (!b || !b.gross_rise_c_per_h) return "";
     return `<div class="card">
-      <strong>Where the heat goes</strong>
+      <strong>${esc(this.t("whereHeatGoes"))}</strong>
       <div class="bar" style="margin-top:10px;display:flex">
         <div style="width:${b.kept_percent}%;background:#2e7d32"></div>
         <div style="width:${b.lost_percent}%;background:#c62828"></div>
       </div>
-      <div class="row"><span>Heat pump adds</span><span>${b.gross_rise_c_per_h} °C/h</span></div>
-      <div class="row"><span>Pool loses</span><span>${b.loss_c_per_h} °C/h</span></div>
-      <div class="row"><span><b>Net</b></span><span><b>${b.net_rise_c_per_h} °C/h</b></span></div>
-      <div class="row"><span>Cover</span><span>${
+      <div class="row"><span>${esc(this.t("heatPumpAdds"))}</span><span>${b.gross_rise_c_per_h} °C/h</span></div>
+      <div class="row"><span>${esc(this.t("poolLoses"))}</span><span>${b.loss_c_per_h} °C/h</span></div>
+      <div class="row"><span><b>${esc(this.t("net"))}</b></span><span><b>${b.net_rise_c_per_h} °C/h</b></span></div>
+      <div class="row"><span>${esc(this.t("cover"))}</span><span>${esc(
         b.covered === null || b.covered === undefined
-          ? "not configured"
+          ? this.t("notConfigured")
           : b.covered
-          ? "on"
-          : "off"
-      }</span></div>
+          ? this.t("coverOn")
+          : this.t("coverOff")
+      )}</span></div>
       ${b.advice ? `<div class="reason">${esc(b.advice)}</div>` : ""}
     </div>`;
   }
@@ -366,7 +548,7 @@ class PoolSmartPanel extends HTMLElement {
 
   _water(s) {
     const w = s.chemistry;
-    if (!w) return `<div class="card muted">No water chemistry configured.</div>`;
+    if (!w) return `<div class="card muted">${esc(this.t("noChemistry"))}</div>`;
     const dose = (d) =>
       d
         ? `<div class="card">
@@ -375,24 +557,84 @@ class PoolSmartPanel extends HTMLElement {
              <div class="reason">${esc(d.reason)}</div>
              ${
                d.partial
-                 ? `<div class="reason" style="color:#ef6c00">Aiming for ${d.aiming_for}
-                    first — a correction this large overshoots if done in one go.
-                    Measure again after an hour.</div>`
+                 ? `<div class="reason" style="color:#ef6c00">${esc(
+                     this.t("aimFirst", d.aiming_for)
+                   )}</div>`
                  : ""
              }
              <div class="reason muted">${esc(d.instructions)}</div>
+             ${
+               d.circulation_minutes
+                 ? `<div class="reason"><b>${esc(
+                     this.t("circulate")
+                   )} ${fmtHours(d.circulation_minutes / 60)}</b> — ${esc(
+                     d.circulation_reason
+                   )}</div>`
+                 : ""
+             }
            </div>`
         : "";
 
+    const bands = (w.bands || [])
+      .map((b) => {
+        const span = b.ideal_high - b.ideal_low;
+        const lo = b.ideal_low - span;
+        const hi = b.ideal_high + span;
+        const pos = Math.max(0, Math.min(100, ((b.value - lo) / (hi - lo)) * 100));
+        const colour =
+          b.verdict === "ok"
+            ? "#2e7d32"
+            : b.urgent
+            ? "#c62828"
+            : "#ef6c00";
+        return `<div class="band">
+            <div>${esc(b.label)}
+              <div class="scale"><b style="left:${pos}%"></b></div>
+              ${b.note ? `<div class="reason muted">${esc(b.note)}</div>` : ""}
+            </div>
+            <div style="text-align:right">
+              <div class="bv" style="color:${colour}">${b.value}${
+          b.unit ? ` ${esc(b.unit)}` : ""
+        }</div>
+              <div class="muted" style="font-size:11px">${b.ideal_low}–${
+          b.ideal_high
+        }</div>
+            </div>
+          </div>`;
+      })
+      .join("");
+
     return `
+      ${
+        bands
+          ? `<div class="card"><strong>${esc(this.t("readings"))}</strong>${bands}
+             ${
+               w.combined_chlorine !== null && w.combined_chlorine !== undefined
+                 ? `<div class="row" style="margin-top:8px"><span>${esc(
+                     this.t("combinedChlorine")
+                   )}</span><span class="bv">${w.combined_chlorine} mg/L</span></div>`
+                 : ""
+             }</div>`
+          : ""
+      }
+      ${
+        (w.advice || []).length
+          ? `<div class="card"><strong>${esc(this.t("whatItMeans"))}</strong>
+             ${w.advice.map((a) => `<div class="reason">${esc(a)}</div>`).join("")}</div>`
+          : ""
+      }
       <div class="card">
-        <div class="row"><span>pH</span><span>${w.ph ?? "—"}</span></div>
-        <div class="row"><span>Free chlorine</span><span>${
+        <div class="row"><span>${esc(this.t("ph"))}</span><span>${
+          w.ph ?? "—"
+        }</span></div>
+        <div class="row"><span>${esc(this.t("chlorine"))}</span><span>${
           w.chlorine ?? "—"
         } mg/L</span></div>
-        <div class="row"><span>Test every</span><span>${w.test_interval_days} days</span></div>
-        <div class="row"><span>Next test</span><span>${
-          w.test_overdue ? "overdue" : fmtDateTime(w.test_due_at)
+        <div class="row"><span>${esc(this.t("testEvery"))}</span><span>${
+          w.test_interval_days
+        } ${esc(this.t("days"))}</span></div>
+        <div class="row"><span>${esc(this.t("nextTest"))}</span><span>${
+          w.test_overdue ? esc(this.t("overdue")) : fmtDateTime(w.test_due_at)
         }</span></div>
         <div class="reason muted">${esc(w.test_interval_reason)}</div>
       </div>
@@ -400,24 +642,27 @@ class PoolSmartPanel extends HTMLElement {
       ${dose(w.chlorine_dose)}
       ${
         !w.ph_dose && !w.chlorine_dose && (w.ph || w.chlorine)
-          ? `<div class="card"><strong>Balanced</strong>
-             <div class="reason muted">Nothing to add.</div></div>`
+          ? `<div class="card"><strong>${esc(this.t("balanced"))}</strong>
+             <div class="reason muted">${esc(this.t("nothingToAdd"))}</div></div>`
           : ""
       }
       ${
         (w.dose_log || []).length
-          ? `<div class="card"><strong>Dose log</strong>
-             <div class="reason muted">What was added, and what it did. Without
-               this, dosing is guessing.</div>
+          ? `<div class="card"><strong>${esc(this.t("doseLog"))}</strong>
+             <div class="reason muted">${esc(this.t("doseLogNote"))}</div>
              <table>
-               <tr><th>When</th><th>Added</th><th>Before</th><th>After</th><th>Effect</th></tr>
+               <tr><th>${esc(this.t("when"))}</th><th>${esc(
+                 this.t("added")
+               )}</th><th>${esc(this.t("before"))}</th><th>${esc(
+                 this.t("after")
+               )}</th><th>${esc(this.t("effect"))}</th></tr>
                ${w.dose_log
                  .map(
                    (d) => `<tr>
                    <td>${fmtDateTime(d.at)}</td>
                    <td>${d.amount} ${esc(d.unit)} ${esc(d.product)}</td>
                    <td>${d.measured_before ?? "—"}</td>
-                   <td>${d.measured_after ?? "pending"}</td>
+                   <td>${d.measured_after ?? esc(this.t("pending"))}</td>
                    <td>${
                      d.actual_change !== null && d.actual_change !== undefined
                        ? `${d.actual_change > 0 ? "+" : ""}${d.actual_change}`
@@ -486,7 +731,28 @@ class PoolSmartPanel extends HTMLElement {
                   }</span></div>`
                 : ""
             }
-            <div class="reason muted">Used for ${esc(v.used_for)}.</div>
+            ${
+              v.confidence
+                ? `<div class="bar" style="margin-top:8px"><div style="width:${
+                    { "not learned yet": 0, provisional: 25, usable: 60, reliable: 100 }[
+                      v.confidence
+                    ] ?? 0
+                  }%;background:${
+                    v.in_use ? "#2e7d32" : "#b0bec5"
+                  }"></div></div>`
+                : ""
+            }
+            <div class="reason muted">${esc(this.t("usedFor"))} ${esc(v.used_for)}.</div>
+            ${
+              v.value !== null && v.value !== undefined
+                ? `<button class="action" style="margin-top:10px;background:transparent;
+                     border:1px solid var(--divider-color);color:var(--secondary-text-color)"
+                     data-service="poolsmart.reset_learned"
+                     data-payload='{"value":"${v.key}"}'>${esc(
+                     this.t("resetThis")
+                   )}</button>`
+                : ""
+            }
           </div>`
           )
           .join("")}
@@ -634,6 +900,28 @@ class PoolSmartPanel extends HTMLElement {
           : ""
       }
       ${this._traceCard(s)}
+      ${
+        (s.near_misses || []).length
+          ? `<div class="card"><strong>${esc(this.t("nearMisses"))}</strong>
+             <div class="reason muted">${esc(this.t("nearMissesNote"))}</div>
+             <div class="dense">
+             ${s.near_misses
+               .map(
+                 (m) => `<div class="d">
+                   <span>${esc(
+                     m.branch.replace(/_/g, " ").toLowerCase()
+                   )} <span class="muted">— ${esc(
+                     (VERDICT_STYLE[m.verdict] || {}).label || m.verdict
+                   )}</span></span>
+                   <span class="dv">${m.count}×</span>
+                   <span class="muted mono" style="text-align:right;font-size:11px">${fmtHours(
+                     m.seconds / 3600
+                   )}</span></div>`
+               )
+               .join("")}
+             </div></div>`
+          : ""
+      }
       ${
         (s.branch_time_today || []).length
           ? `<div class="card"><strong>Today, by branch</strong>

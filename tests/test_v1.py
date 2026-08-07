@@ -7,6 +7,7 @@ using what was learned, and the chemistry module.
 
 from __future__ import annotations
 
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -409,3 +410,244 @@ def test_t64b_cover_changing_mid_period_teaches_nothing():
     ).read_text()
     assert "Cover changed during the idle period" in source
     assert "started_covered != covered" in source
+
+
+# ---------------------------------------------------------------------------
+# T65 - hassfest's exact rules, pinned after a real CI failure
+# ---------------------------------------------------------------------------
+
+def test_t65_manifest_keys_sorted_hassfest_style():
+    """hassfest wants domain, name, then the rest alphabetical.
+
+    Not our own convention -- theirs, and it fails CI silently until you look.
+    """
+    import json
+
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "manifest.json"
+    )
+    manifest = json.loads(path.read_text())
+    keys = list(manifest.keys())
+
+    assert keys[0] == "domain"
+    assert keys[1] == "name"
+    rest = keys[2:]
+    assert rest == sorted(rest), f"not alphabetical after domain/name: {rest}"
+
+
+def test_t65b_translation_selector_keys_match_hassfest_regex():
+    """The exact rule from the CI failure: [a-z0-9-_]+, no leading/trailing _ or -.
+
+    "gpm_" passed our own looser check and still failed hassfest. This is their
+    rule, not an approximation of it.
+    """
+    import json
+    import re
+
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    pattern = re.compile(r"[a-z0-9-_]+")
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (root / "translations" / f"{language}.json").read_text()
+        )
+        for selector_key, selector in translations.get("selector", {}).items():
+            for option in selector.get("options", {}):
+                assert pattern.fullmatch(option), f"{language}/{selector_key}: {option}"
+                assert not option.startswith(("_", "-")), (
+                    f"{language}/{selector_key}: {option} starts with _/-"
+                )
+                assert not option.endswith(("_", "-")), (
+                    f"{language}/{selector_key}: {option} ends with _/-"
+                )
+
+
+# ---------------------------------------------------------------------------
+# T66 - pH and chlorine pickers accept a manually-updated helper
+# ---------------------------------------------------------------------------
+
+def test_t66_ph_chlorine_pickers_allow_input_number():
+    """A water test strip has no sensor of its own.
+
+    pH and chlorine are as often an input_number helper someone updates by hand
+    after a test as they are a real sensor. Restricting the picker to
+    domain="sensor" hid every such helper from the list entirely -- the helper
+    existed, the field just would not show it.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "config_flow.py"
+    ).read_text()
+
+    assert "field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR" in source
+    assert "field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR" in source
+    assert 'vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR' in source
+    assert 'vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR' in source
+
+    # And the selector itself must actually include input_number.
+    definition = re.search(
+        r"MANUAL_OR_SENSOR = selector\.EntitySelector\(.*?domain=(\[[^\]]+\])",
+        source,
+        re.S,
+    )
+    assert definition is not None, "MANUAL_OR_SENSOR definition not found"
+    assert '"input_number"' in definition.group(1)
+    assert '"sensor"' in definition.group(1)
+
+
+# ---------------------------------------------------------------------------
+# T67 - pump outlet and heat pump inlet are separate, aliasable fields
+# ---------------------------------------------------------------------------
+
+def test_t67_pump_outlet_is_its_own_field():
+    """A user with different plumbing than the one this was built for.
+
+    Folding "pump outlet" into "heat pump inlet" assumed one particular layout:
+    pool -> pump -> heat pump -> pool, where the two are physically one point.
+    Someone with a filter, a longer run, or anything else between the pump and
+    the heat pump has two real points to measure, and needed two real fields.
+    """
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    const_source = (root / "const.py").read_text()
+    flow_source = (root / "config_flow.py").read_text()
+
+    assert 'CONF_PUMP_OUTLET_SENSOR = "pump_outlet_sensor"' in const_source
+
+    # Present in both the initial wizard and the later options flow, not just one.
+    assert flow_source.count("field(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR") == 1
+    assert flow_source.count("vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR") == 1
+
+    import json
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (root / "translations" / f"{language}.json").read_text()
+        )
+        for section in (
+            translations["config"]["step"]["optional"],
+            translations["options"]["step"]["entities"],
+        ):
+            assert "pump_outlet_sensor" in section["data"]
+            assert "pump_outlet_sensor" in section["data_description"]
+
+
+def test_t67b_shared_probe_installations_alias_cleanly():
+    """Rick's own plumbing has one probe doing both jobs.
+
+    Pointing both fields at the same entity must not be treated as two
+    disagreeing measurements -- the general alias mechanism, already used for
+    water/pump_inlet, covers pump_outlet the same way.
+    """
+    config = make_config(
+        sensor_aliases=frozenset({frozenset({"pump_outlet", "hp_inlet"})})
+    )
+    assert config.is_aliased("pump_outlet", "hp_inlet")
+    assert config.is_aliased("hp_inlet", "pump_outlet")
+    assert not config.is_aliased("pump_outlet", "hp_outlet")
+
+
+def test_t67c_coordinator_builds_the_pump_outlet_alias(monkeypatch=None):
+    """The coordinator's role list must include pump_outlet, or aliasing a
+    shared probe silently stops working the moment someone configures one."""
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    source = (root / "coordinator.py").read_text()
+    roles_block = source[source.index("roles = (") : source.index("for role_a")]
+    assert '"pump_outlet"' in roles_block
+    assert '"hp_inlet"' in roles_block
+
+
+# ---------------------------------------------------------------------------
+# T68 - the panel reload actually reaches the browser
+# ---------------------------------------------------------------------------
+
+def test_t68_panel_url_is_cache_busted():
+    """A new tab appeared in the source and not in the browser.
+
+    The panel is served as a static file with no version in its URL, so the
+    browser kept the cached copy indefinitely. The integration updated, the
+    panel did not, and it looked like the update had silently failed.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "__init__.py"
+    ).read_text()
+
+    assert "_panel_version" in source
+    assert "poolsmart-panel.js?v=" in source, "no cache-busting query on the panel URL"
+    # The version must come from the manifest, not be hardcoded next to it.
+    assert 'manifest.read_text()' in source or 'manifest.json' in source
+
+
+def test_t68b_bridge_method_exists_on_the_coordinator():
+    """Regression: `_read` called `self._bridge` and the method was not there.
+
+    Setup failed with an AttributeError the first time any sensor went
+    unavailable -- which, on a system whose probes live on an ESP that
+    occasionally reboots, is a matter of when rather than whether.
+    """
+    import ast
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "coordinator.py"
+    ).read_text()
+    tree = ast.parse(source)
+
+    methods = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == "PoolSmartCoordinator":
+            methods = {
+                n.name
+                for n in node.body
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            }
+
+    # Every self._x(...) call inside the class must resolve to a real method.
+    called = set(re.findall(r"self\.(_[a-z_]+)\(", source))
+    known = methods | {
+        "_conf",  # defined on the class, matched above, listed for clarity
+    }
+    missing = {name for name in called if name not in known}
+    assert not missing, f"called but not defined: {sorted(missing)}"
+
+
+# ---------------------------------------------------------------------------
+# T69 - the panel follows the user's language
+# ---------------------------------------------------------------------------
+
+def test_t69_panel_is_translatable():
+    """Entity names follow Home Assistant's language; the panel did not.
+
+    That gap is the real inconsistency -- not the translated entity names, which
+    are what appear on dashboards, in automations and in the logbook, and should
+    stay translated. So the panel was localised rather than the entities being
+    un-translated.
+    """
+    panel = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "www"
+        / "poolsmart-panel.js"
+    ).read_text()
+
+    assert "const STRINGS = {" in panel
+    assert "en:" in panel and "nl:" in panel
+    assert "this._hass.language" in panel
+
+    # Every key present in English must exist in Dutch, or the fallback quietly
+    # leaves half the panel in the wrong language.
+    english = re.search(r"\ben:\s*\{(.*?)\n  \},", panel, re.S).group(1)
+    dutch = re.search(r"\bnl:\s*\{(.*?)\n  \},", panel, re.S).group(1)
+    en_keys = set(re.findall(r"(\w+):", english))
+    nl_keys = set(re.findall(r"(\w+):", dutch))
+    assert en_keys <= nl_keys, f"untranslated: {sorted(en_keys - nl_keys)}"

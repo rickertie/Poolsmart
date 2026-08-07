@@ -113,6 +113,13 @@ class SessionRecord:
         }
 
 
+#: How far above the appliance's theoretical best a measured rise may sit before
+#: it is rejected. A little slack absorbs sensor noise and a warm afternoon
+#: adding solar gain; beyond that the number is measuring something other than
+#: the heat pump.
+MAX_PLAUSIBLE_RATE_FACTOR = 1.25
+
+
 @dataclass(frozen=True)
 class SessionVerdict:
     """Whether a session may be learned from, and why not if it may not."""
@@ -150,7 +157,41 @@ def assess(record: SessionRecord, config: PoolConfig) -> SessionVerdict:
                 False, f"the measured COP of {cop:.2f} is outside the plausible range"
             )
 
+    # Nothing else here checks the rise against what the appliance can physically
+    # deliver, and without that check a session where the pump stirred stratified
+    # water reads as a spectacular heating rate. Because the learned rate is
+    # trusted ahead of any COP calculation, one such session quietly drives every
+    # subsequent estimate -- a pool that really rises 0.15 C/h being planned as
+    # though it rises 1.0.
+    rate = record.heating_rate
+    if rate is not None:
+        ceiling = max_plausible_rate(config, record.air_avg)
+        if rate > ceiling:
+            return SessionVerdict(
+                False,
+                (
+                    f"a rise of {rate:.2f} C/h is above the {ceiling:.2f} C/h this "
+                    "heat pump can physically deliver, so something other than "
+                    "heating caused it"
+                ),
+            )
+
     return SessionVerdict(True, "clean session")
+
+
+def max_plausible_rate(config: PoolConfig, air_temp: float | None) -> float:
+    """The fastest this pool can rise, from the appliance's own specification.
+
+    Thermal output divided by the energy one degree takes. Solar gain and a
+    generous tolerance are folded in through MAX_PLAUSIBLE_RATE_FACTOR rather
+    than modelled, because the point is to catch the impossible rather than to
+    predict the merely optimistic.
+    """
+    per_degree = config.pool.kwh_thermal_per_degree
+    if per_degree <= 0:
+        return float("inf")
+    thermal = config.heat_pump.thermal_kw_at(air_temp if air_temp is not None else 20.0)
+    return thermal / per_degree * MAX_PLAUSIBLE_RATE_FACTOR
 
 
 def capped_update(current: float | None, proposed: float, max_step_ratio: float) -> float:
@@ -256,3 +297,45 @@ def rate_confidence(sessions: int) -> str:
     if sessions > 0:
         return "provisional"
     return "not learned yet"
+
+
+#: Which learned figure each reset name clears, and the counter that goes with
+#: it. Kept here rather than in the storage layer because it is a fact about the
+#: learning model, not about how it happens to be persisted -- and because the
+#: storage layer imports Home Assistant, which would put this beyond the reach
+#: of the tests.
+RESETTABLE = {
+    "heating_rate": ("heating_rate_c_per_h", "heating_rate_sessions"),
+    "heat_loss": ("heat_loss_c_per_h", "heat_loss_samples"),
+    "heat_loss_covered": ("heat_loss_covered_c_per_h", "heat_loss_covered_samples"),
+    "measured_flow": ("measured_flow_m3h", None),
+    "cop": ("cop_by_air_bucket", "cop_sessions_by_bucket"),
+}
+
+
+def recover_cop_counts(
+    curve: dict[str, float], sessions: list[dict]
+) -> dict[str, int]:
+    """Rebuild per-bucket session counts from the recorded sessions.
+
+    The curve has existed far longer than the counter that gates it, so anyone
+    who upgraded has learned values with a count of zero -- sitting behind a
+    gate that can never open no matter how many sessions produced them.
+
+    Where the session log has been trimmed away, one is assumed: enough to show
+    the value exists, not enough to trust it for planning. That is the honest
+    position for a figure whose provenance was lost.
+    """
+    counts: dict[str, int] = {}
+    for entry in sessions:
+        if not entry.get("usable") or entry.get("measured_cop") is None:
+            continue
+        air = entry.get("air_avg")
+        if air is None:
+            continue
+        key = bucket_key(float(air))
+        counts[key] = counts.get(key, 0) + 1
+
+    for key in curve:
+        counts.setdefault(key, 1)
+    return counts

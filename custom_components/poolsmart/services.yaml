@@ -36,3 +36,28 @@ record_dose:
       selector:
         select:
           options: [ml, g]
+
+reset_learned:
+  name: Reset one learned value
+  description: >-
+    Clear a single learned figure without discarding the rest. A value that has
+    drifted somewhere implausible should not cost you the whole learning
+    history, particularly the heat loss, which takes days of idle periods to
+    rebuild.
+  fields:
+    value:
+      name: Which value
+      required: true
+      selector:
+        select:
+          options:
+            - label: Heating rate
+              value: heating_rate
+            - label: Heat loss (uncovered)
+              value: heat_loss
+            - label: Heat loss (covered)
+              value: heat_loss_covered
+            - label: Measured flow
+              value: measured_flow
+            - label: COP curve
+              value: cop

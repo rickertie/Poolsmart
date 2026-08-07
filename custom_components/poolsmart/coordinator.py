@@ -22,8 +22,9 @@ from . import const as c
 from .core import chemistry as chem
 from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
-from .core.trace import Trace
+from .core.trace import NearMissLog, Trace
 from .core.config import (
+    display_amount,
     FILTER_MEDIA_DERATE,
     ComfortSettings,
     EnergySettings,
@@ -68,13 +69,12 @@ FLOW_UNIT_FACTORS = {
     "l/u": 0.001,
     "lph": 0.001,
     "l/s": 3.6,
-    "gpm": 0.2271,
+    "gpm": 0.2271,  # both the published unit and the stored slug
     # As stored by the config flow
     "m3_h": 1.0,
     "l_min": 0.06,
     "l_h": 0.001,
     "l_s": 3.6,
-    "gpm_": 0.2271,
 }
 
 
@@ -108,6 +108,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.plan: optimizer.HeatingPlan | None = None
         #: What the ladder considered on the last tick.
         self.trace: Trace | None = None
+        self.near_misses = NearMissLog()
         self.notifier = NotificationManager(hass, self)
         self.actions = ActionHandler(hass, self)
         self.advisor = Advisor(hass, self)
@@ -198,11 +199,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         outlet = self._conf(c.CONF_HP_OUTLET_SENSOR)
         water = self._conf(c.CONF_WATER_TEMP_SENSOR)
         pump_inlet = self._conf(c.CONF_PUMP_INLET_SENSOR)
+        pump_outlet = self._conf(c.CONF_PUMP_OUTLET_SENSOR)
+        # Every configured temperature role is compared against every other.
+        # This is what lets someone whose pump outlet and heat pump inlet really
+        # are the same physical probe just point both fields at it: the two
+        # roles are recognised as one measurement rather than compared as if
+        # they were independent, which would otherwise report a permanent
+        # zero-difference "fault" that is not one.
         roles = (
             ("hp_inlet", inlet),
             ("hp_outlet", outlet),
             ("water", water),
             ("pump_inlet", pump_inlet),
+            ("pump_outlet", pump_outlet),
         )
         for role_a, entity_a in roles:
             for role_b, entity_b in roles:
@@ -324,7 +333,33 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         # measure of liveness; it falls back for older Home Assistant versions.
         reported = getattr(state, "last_reported", None) or state.last_updated
         age = (dt_util.utcnow() - reported).total_seconds()
+        self._last_good[role] = (value, dt_util.utcnow())
         return SensorReading(value, age, role)
+
+    def _bridge(self, role: str) -> SensorReading:
+        """Carry the last reading through a brief outage.
+
+        An ESP reboot takes ten seconds and makes every sensor on it
+        unavailable. Treating that as a dead probe stops a heating session over
+        a gap shorter than the time it takes to notice -- and pool water does
+        not change temperature in twenty seconds, so the last reading is far
+        closer to the truth than no reading at all.
+
+        Past the bridge window the value is dropped and the normal fault
+        handling takes over, because at that point something really is wrong.
+        """
+        remembered = self._last_good.get(role)
+        if remembered is None:
+            return SensorReading(None, None, role)
+
+        value, seen_at = remembered
+        gap = (dt_util.utcnow() - seen_at).total_seconds()
+        if gap > self.pool_config.safety.bridge_outage_seconds:
+            self._last_good.pop(role, None)
+            return SensorReading(None, None, role)
+
+        self.bridged_roles.add(role)
+        return SensorReading(value, gap, role, bridged=True)
 
     def _read_binary(self, key: str) -> bool | None:
         """Read an optional on/off signal.
@@ -507,6 +542,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             water_temp=self._read(c.CONF_WATER_TEMP_SENSOR, "water"),
             air_temp=self._read(c.CONF_AIR_TEMP_SENSOR, "air"),
             pump_inlet=self._read(c.CONF_PUMP_INLET_SENSOR, "pump_inlet"),
+            pump_outlet=self._read(c.CONF_PUMP_OUTLET_SENSOR, "pump_outlet"),
             hp_inlet=self._read(c.CONF_HP_INLET_SENSOR, "hp_inlet"),
             hp_outlet=self._read(c.CONF_HP_OUTLET_SENSOR, "hp_outlet"),
             flow_m3h=self._read_flow(),
@@ -996,6 +1032,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self.store.log_decision(payload)
             self._fire_decision(decision, duration)
 
+        self._guard("near_misses", self._track_near_misses, state, duration)
         self._log_obstacles(state)
         self._log_faults(state, duration)
 
@@ -1012,6 +1049,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 c.ATTR_DURATION: round(duration) if duration else None,
             },
         )
+
+    def _track_near_misses(self, state: PoolState, duration: float | None) -> None:
+        """Tally what stopped each branch, across the whole day.
+
+        One tick's trace answers "why not now". This answers "why not today",
+        which is the more useful question: twenty refusals on price is a setting
+        worth revisiting, one is a passing expensive hour.
+        """
+        if self.trace is None:
+            return
+        if self.near_misses.roll_day(state.now.date().isoformat()):
+            _LOGGER.debug("Near-miss tallies reset for a new day")
+        self.near_misses.record(self.trace, duration or 0.0)
 
     def _log_obstacles(self, state: PoolState) -> None:
         """Log what the ladder wanted to do but could not.
@@ -1114,40 +1164,66 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     @property
     def water_chemistry(self) -> dict:
-        """Current readings, the dose they call for, and when to test next."""
+        """Every reading, judged, with the doses and advice that follow from it."""
         config = self.pool_config
-        ph = self._reading(c.CONF_PH_SENSOR)
-        chlorine = self._reading(c.CONF_CHLORINE_SENSOR)
+        sanitiser = chem.Sanitiser(self._conf(c.CONF_SANITISER, "chlorine"))
+        relevant = chem.RELEVANT_READINGS[sanitiser]
+
+        readings = {
+            key: self._reading(conf_key)
+            for key, conf_key in c.CHEMISTRY_SENSORS.items()
+            if key in relevant
+        }
 
         state = self.data.get("state") if self.data else None
         water_temp = (
             state.water_temp.value if state and state.water_temp.available else None
         )
 
+        bands = [
+            band.as_dict()
+            for band in (chem.judge(key, value) for key, value in readings.items())
+            if band is not None
+        ]
+
         records = [chem.DoseRecord.from_dict(r) for r in self.store.dose_log]
         acid_product = chem.Product(self._conf(c.CONF_ACID_PRODUCT, "acid_15"))
         chlorine_product = chem.Product(
             self._conf(c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70")
         )
+        units = self._conf(c.CONF_UNIT_SYSTEM, "metric")
+
+        def present(dose):
+            """Convert a dose into the units the user measures with."""
+            if dose is None:
+                return None
+            payload = dose.as_dict()
+            amount, unit = display_amount(dose.amount, dose.unit, units)
+            payload["amount"] = amount
+            payload["unit"] = unit
+            payload["circulation_minutes"], payload["circulation_reason"] = (
+                chem.circulation_for(dose.product)
+            )
+            return payload
 
         ph_dose = (
             chem.dose_for_ph(
-                ph,
+                readings["ph"],
                 config.pool.volume_l,
                 acid_product,
                 chem.learn_correction(records, acid_product.value),
             )
-            if ph is not None
+            if readings.get("ph") is not None
             else None
         )
         chlorine_dose = (
             chem.dose_for_chlorine(
-                chlorine,
+                readings["free_chlorine"],
                 config.pool.volume_l,
                 chlorine_product,
                 chem.learn_correction(records, chlorine_product.value),
             )
-            if chlorine is not None
+            if readings.get("free_chlorine") is not None
             else None
         )
 
@@ -1157,10 +1233,20 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         interval, _ = chem.test_interval_days(water_temp)
 
         return {
-            "ph": ph,
-            "chlorine": chlorine,
-            "ph_dose": ph_dose.as_dict() if ph_dose else None,
-            "chlorine_dose": chlorine_dose.as_dict() if chlorine_dose else None,
+            "sanitiser": sanitiser.value,
+            "unit_system": units,
+            "readings": readings,
+            "bands": bands,
+            "urgent": [b for b in bands if b["urgent"]],
+            "combined_chlorine": chem.combined_chlorine(
+                readings.get("free_chlorine"), readings.get("total_chlorine")
+            ),
+            "advice": chem.water_advice(readings),
+            # Kept for the older cards that read these directly.
+            "ph": readings.get("ph"),
+            "chlorine": readings.get("free_chlorine"),
+            "ph_dose": present(ph_dose),
+            "chlorine_dose": present(chlorine_dose),
             "test_interval_days": interval,
             "test_interval_reason": why,
             "test_due_at": due_at.isoformat() if due_at else None,
@@ -1177,7 +1263,13 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
     async def async_record_dose(
         self, product: str, amount: float, unit: str, measured_before: float
     ) -> None:
-        """Log a dose and circulate so it disperses."""
+        """Log a dose and circulate for as long as that product needs.
+
+        The duration comes from the product rather than from one setting,
+        because the products are not comparable: non-chlorine shock is done in
+        half an hour and chlorine shock wants a full night. Stopping early
+        leaves undissolved product sitting on the floor bleaching the liner.
+        """
         record = chem.DoseRecord(
             at=dt_util.now(),
             product=product,
@@ -1186,7 +1278,18 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             measured_before=measured_before,
         )
         self.store.log_dose(record.as_dict())
-        await self.async_start_chemistry()
+
+        minutes, reason = chem.circulation_for(product)
+        if minutes <= 0:
+            # A tablet dissolves over days in a floater; there is nothing to
+            # circulate now, and pretending otherwise would run the pump for no
+            # reason.
+            _LOGGER.info("Logged %s; no circulation needed: %s", product, reason)
+            await self.store.async_save()
+            self.async_update_listeners()
+            return
+
+        await self.async_start_chemistry(minutes)
 
     async def async_record_test(self) -> None:
         """Mark the water as tested just now, and close off any open dose."""
@@ -1208,7 +1311,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.async_update_listeners()
 
     async def async_start_chemistry(self, minutes: int | None = None) -> None:
-        duration = minutes or int(self._conf(c.CONF_CHEMISTRY_MINUTES, 30))
+        """Circulate for a chemical treatment.
+
+        Branch 3 sits above the filtration branches in the ladder, so a day
+        whose filtration quota is already met does not stop this: dosing in the
+        evening still gets the circulation it needs, which is the whole point of
+        having a separate branch for it rather than borrowing the filtration one.
+        """
+        duration = minutes or int(self._conf(c.CONF_CHEMISTRY_MINUTES, 60))
         request = self.chemistry.manual_cycle(dt_util.now(), duration)
         self.store.chemistry_until = request.until
         await self.notifier.async_send_chemistry(request.reason)
