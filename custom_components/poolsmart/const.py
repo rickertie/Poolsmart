@@ -102,6 +102,35 @@ CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_COVER_ENTITY = "cover_entity"
 
+# -- Water chemistry readings ---------------------------------------------
+#
+# Defined here rather than further down with the other chemistry settings,
+# because OPTIONAL_ENTITY_KEYS below refers to them: a name has to exist before
+# the tuple that lists it is built, and Python will not wait.
+CONF_PH_SENSOR = "ph_sensor"
+CONF_CHLORINE_SENSOR = "chlorine_sensor"
+CONF_TOTAL_CHLORINE_SENSOR = "total_chlorine_sensor"
+CONF_BROMINE_SENSOR = "bromine_sensor"
+CONF_ALKALINITY_SENSOR = "alkalinity_sensor"
+CONF_CYANURIC_SENSOR = "cyanuric_sensor"
+CONF_HARDNESS_SENSOR = "hardness_sensor"
+CONF_SALT_SENSOR = "salt_sensor"
+CONF_SANITISER = "sanitiser"
+CONF_UNIT_SYSTEM = "unit_system"
+
+#: Which config key holds which chemistry reading, so the whole set can be read
+#: in one pass rather than named individually everywhere.
+CHEMISTRY_SENSORS = {
+    "ph": CONF_PH_SENSOR,
+    "free_chlorine": CONF_CHLORINE_SENSOR,
+    "total_chlorine": CONF_TOTAL_CHLORINE_SENSOR,
+    "bromine": CONF_BROMINE_SENSOR,
+    "alkalinity": CONF_ALKALINITY_SENSOR,
+    "cyanuric": CONF_CYANURIC_SENSOR,
+    "hardness": CONF_HARDNESS_SENSOR,
+    "salt": CONF_SALT_SENSOR,
+}
+
 OPTIONAL_ENTITY_KEYS = (
     CONF_AIR_TEMP_SENSOR,
     CONF_PUMP_INLET_SENSOR,
@@ -173,29 +202,6 @@ CONF_SWIM_TIME_2 = "swim_time_2"
 CONF_SWIM_DAYS = "swim_days"
 CONF_NOTIFY_TARGETS = "notify_targets"
 CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
-CONF_PH_SENSOR = "ph_sensor"
-CONF_CHLORINE_SENSOR = "chlorine_sensor"
-CONF_TOTAL_CHLORINE_SENSOR = "total_chlorine_sensor"
-CONF_BROMINE_SENSOR = "bromine_sensor"
-CONF_ALKALINITY_SENSOR = "alkalinity_sensor"
-CONF_CYANURIC_SENSOR = "cyanuric_sensor"
-CONF_HARDNESS_SENSOR = "hardness_sensor"
-CONF_SALT_SENSOR = "salt_sensor"
-CONF_SANITISER = "sanitiser"
-CONF_UNIT_SYSTEM = "unit_system"
-
-#: Which config key holds which chemistry reading, so the whole set can be read
-#: in one pass rather than named individually everywhere.
-CHEMISTRY_SENSORS = {
-    "ph": CONF_PH_SENSOR,
-    "free_chlorine": CONF_CHLORINE_SENSOR,
-    "total_chlorine": CONF_TOTAL_CHLORINE_SENSOR,
-    "bromine": CONF_BROMINE_SENSOR,
-    "alkalinity": CONF_ALKALINITY_SENSOR,
-    "cyanuric": CONF_CYANURIC_SENSOR,
-    "hardness": CONF_HARDNESS_SENSOR,
-    "salt": CONF_SALT_SENSOR,
-}
 CONF_ACID_PRODUCT = "acid_product"
 CONF_CHLORINE_PRODUCT = "chlorine_product"
 

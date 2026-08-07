@@ -8,6 +8,18 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.2.1] — Defined Before Used — 2026-08-05
+
+### Fixed
+- **1.2.0 would not load at all.** `const.py` built a tuple from names declared
+  seventy lines further down, and Python executes a module top to bottom. Every
+  syntax check passed, because `ast.parse` proves a file is grammatical and says
+  nothing about whether its names resolve
+- A package verification script now imports every module that carries no Home
+  Assistant dependency, rather than only parsing it, and checks manifest key
+  order, translation key format and panel string parity in the built archive
+  before it goes out
+
 ## [1.2.0] — Seven Readings and a Ceiling — 2026-08-05
 
 ### Fixed
@@ -456,6 +468,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.2.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.1
 [1.2.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.0
 [1.1.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.2
 [1.1.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.1.1

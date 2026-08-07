@@ -30,3 +30,16 @@ jobs:
           python-version: "3.12"
       - name: Run the acceptance suite
         run: cd tests && python run_tests.py
+
+      - name: Import every Home Assistant free module
+        run: |
+          cd custom_components/poolsmart
+          python -c "
+          import importlib, sys
+          sys.path.insert(0, '.')
+          for m in ('const','core.config','core.models','core.chemistry',
+                    'core.learning','core.heating','core.optimizer',
+                    'core.filtration','core.safety','core.ladder','core.trace'):
+              importlib.import_module(m)
+          print('all pure modules import')
+          "

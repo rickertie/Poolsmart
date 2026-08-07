@@ -463,3 +463,66 @@ def test_t82_poolchem_recommendation_removed():
     readme = (root / "README.md").read_text()
     assert "ha-poolchem" not in readme
     assert "poolchem" not in readme.lower()
+
+
+# ---------------------------------------------------------------------------
+# T83 - modules without Home Assistant imports must actually import
+# ---------------------------------------------------------------------------
+
+def test_t83_pure_modules_import_cleanly():
+    """Regression: const.py used a name defined seventy lines below it.
+
+    `ast.parse` only checks that a file is grammatical, not that its names
+    resolve, so every syntax check passed while Home Assistant refused to load
+    the integration at all. Importing the file is the check that would have
+    caught it, and it costs nothing for the modules that carry no Home Assistant
+    dependency.
+    """
+    import importlib
+
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+
+    for name in (
+        "const",
+        "core.config",
+        "core.models",
+        "core.chemistry",
+        "core.learning",
+        "core.heating",
+        "core.optimizer",
+        "core.filtration",
+        "core.safety",
+        "core.ladder",
+        "core.trace",
+    ):
+        module = importlib.import_module(name)
+        assert module is not None, name
+
+
+def test_t83b_forward_references_in_const():
+    """Every name const.py uses must be defined before the line that uses it.
+
+    Python executes a module top to bottom; a tuple built from names declared
+    later fails at import, which is a startup failure rather than a warning.
+    """
+    root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
+    source = (root / "const.py").read_text()
+
+    defined_at: dict[str, int] = {}
+    for number, line in enumerate(source.splitlines()):
+        match = re.match(r"^([A-Z][A-Z0-9_]*)\s*=", line)
+        if match:
+            defined_at.setdefault(match.group(1), number)
+
+    for number, line in enumerate(source.splitlines()):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or re.match(r"^[A-Z][A-Z0-9_]*\s*=", stripped):
+            continue
+        for name in re.findall(r"\b(CONF_[A-Z0-9_]+)\b", stripped):
+            assert name in defined_at, f"line {number + 1}: {name} never defined"
+            assert defined_at[name] < number, (
+                f"line {number + 1} uses {name}, defined later at line "
+                f"{defined_at[name] + 1}"
+            )

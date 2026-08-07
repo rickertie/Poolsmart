@@ -432,7 +432,7 @@ class PoolSmartPanel extends HTMLElement {
                )}</span><span class="dv">${Math.round(
                  (x.on_schedule_ratio || 0) * 100
                )}%</span><span></span></div>
-             </div>`
+             </div>
              <div class="reason" style="color:${verdictColour}">${esc(x.verdict)}</div>`
           : `<div class="reason muted">${esc(this.t("tooEarly"))}</div>`
       }

@@ -1,5 +1,3 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • **Learning** • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Defaults](defaults.md)
-***
 # Sensors and ESPHome
 
 PoolSmart does not require ESPHome. It reads whatever temperature, flow and
