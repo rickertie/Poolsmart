@@ -31,9 +31,15 @@ def test_t54_conditional_roles_stay_quiet_when_idle():
     Perfectly true and completely uninteresting: the appliance was off, so
     nothing was changing, so nothing was published. Warning about it teaches
     people to ignore warnings.
+
+    These probes are now slow as well as conditional, because a *stable* heating
+    session holds delta-T almost constant and stops them publishing too. The
+    better the heating ran, the more certainly the session used to be thrown
+    away as stale, which is exactly backwards.
     """
     config = make_config()
     now = datetime(2026, 8, 3, 14, 0, tzinfo=TZ)
+    slack = config.safety.slow_role_factor
 
     idle = make_state(
         now,
@@ -44,9 +50,20 @@ def test_t54_conditional_roles_stay_quiet_when_idle():
         f.code.startswith("stale_hp") for f in safety.evaluate(idle, config)
     )
 
-    # While it is running, the same silence is worth reporting.
-    running = idle.replace(heat_pump_on=True, pump_on=True)
-    assert any(f.code.startswith("stale_hp") for f in safety.evaluate(running, config))
+    # Running, but well inside the relaxed threshold: a steady delta-T is what a
+    # good session looks like, not a fault.
+    steady = idle.replace(heat_pump_on=True, pump_on=True)
+    assert not any(f.code.startswith("stale_hp") for f in safety.evaluate(steady, config))
+
+    # Genuinely silent for hours while running: now worth reporting.
+    silent = idle.replace(
+        heat_pump_on=True,
+        pump_on=True,
+        hp_outlet=SensorReading(
+            28.6, config.safety.stale_warning_seconds * slack + 60, "hp_outlet"
+        ),
+    )
+    assert any(f.code.startswith("stale_hp") for f in safety.evaluate(silent, config))
 
 
 # ---------------------------------------------------------------------------
@@ -593,10 +610,15 @@ def test_t68_panel_url_is_cache_busted():
         / "__init__.py"
     ).read_text()
 
-    assert "_panel_version" in source
+    assert "_async_panel_version" in source
     assert "poolsmart-panel.js?v=" in source, "no cache-busting query on the panel URL"
-    # The version must come from the manifest, not be hardcoded next to it.
-    assert 'manifest.read_text()' in source or 'manifest.json' in source
+    # Taken from the integration Home Assistant already loaded. Reading the
+    # manifest off disk here looked harmless and was not: file access inside the
+    # event loop blocks every other integration for the duration.
+    assert "async_get_integration" in source
+    panel_block = source[source.index("async def _async_panel_version") :]
+    panel_block = panel_block[: panel_block.index("\nasync def _async_register")]
+    assert "read_text" not in panel_block, "blocking file read is back"
 
 
 def test_t68b_bridge_method_exists_on_the_coordinator():

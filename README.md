@@ -293,6 +293,20 @@ uninsulated inflatable to 0.08 for a built-in pool. It is only a starting point,
 replaced by measurement within days, but those first days are when someone is
 deciding whether this works at all.
 
+## Two dashboards
+
+`docs/lovelace/dashboard.yaml` is the detailed one, with three tabs and every
+figure the integration produces.
+
+`docs/lovelace/simple.yaml` is for everyone else in the house. It answers three
+questions — is it warm enough, is the water fine, when can I get in — and asks
+nothing. Nothing on it changes a setting, because a page someone consults on the
+way outside should not present them with decisions.
+
+It also says whether electricity is cheap right now, judged against today's own
+range rather than a fixed number: 0.24 is a bargain in January and daylight
+robbery in a sunny week, and the figure alone does not say which.
+
 ## Settings
 
 Eight topics rather than four sections and a bin marked "general". Saving

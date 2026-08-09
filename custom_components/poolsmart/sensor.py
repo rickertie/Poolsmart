@@ -369,6 +369,16 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         },
     ),
     PoolSensorDescription(
+        key="simple_status",
+        value_fn=lambda c: _simple_status(c)[0],
+        attributes_fn=lambda c: _simple_status(c)[1],
+    ),
+    PoolSensorDescription(
+        key="price_verdict",
+        value_fn=lambda c: _price_verdict(c)[0],
+        attributes_fn=lambda c: _price_verdict(c)[1],
+    ),
+    PoolSensorDescription(
         key="water_balance",
         value_fn=lambda c: _water_balance(c)[0],
         attributes_fn=lambda c: _water_balance(c)[1],
@@ -420,6 +430,97 @@ def _readable_hours(hours: float | None) -> str | None:
     if total % 60 == 0:
         return f"{total // 60} h"
     return f"{total // 60} h {total % 60} min"
+
+
+def _price_verdict(coordinator: PoolSmartCoordinator):
+    """Is electricity cheap right now, in words.
+
+    A figure of 0.24 means nothing to someone who does not follow tariffs daily.
+    Where it sits within today's range does: the same price is a bargain in
+    January and daylight robbery in a sunny week.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None or state.price_total is None:
+        return "unknown", {"reason": "no electricity price sensor is configured"}
+
+    price = state.price_total
+    numbers = {"price": round(price, 4)}
+
+    slots = coordinator._price_slots
+    if slots:
+        prices = [p for _s, _e, p in slots]
+        low, high = min(prices), max(prices)
+        numbers.update({"today_low": round(low, 4), "today_high": round(high, 4)})
+        span = high - low
+        if span > 0:
+            position = (price - low) / span
+            numbers["position"] = round(position, 2)
+            if position <= 0.25:
+                return "cheap", numbers
+            if position <= 0.6:
+                return "normal", numbers
+            return "expensive", numbers
+
+    # An external cheap-period signal is a better answer than a bare comparison
+    # against a fixed ceiling, because it knows the shape of the day.
+    if state.cheap_price_now is True:
+        return "cheap", numbers
+    limit = coordinator.pool_config.energy.max_price
+    if limit:
+        numbers["limit"] = limit
+        return ("cheap" if price <= limit * 0.8 else
+                "normal" if price <= limit else "expensive"), numbers
+    return "unknown", numbers
+
+
+def _simple_status(coordinator: PoolSmartCoordinator):
+    """Three answers, for the people who do not want the other forty.
+
+    Is it warm enough, is it clean, and when can I swim. Everything that asks
+    the reader to make a decision is left out on purpose -- a page someone
+    consults before going outside should not present them with settings.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None or not state.water_temp.available:
+        return "unknown", {}
+
+    water = state.water_temp.value
+    target = state.target_temp
+    chemistry = coordinator.water_chemistry
+    bands = chemistry.get("bands") or []
+    urgent = [b for b in bands if b["urgent"]]
+    off = [b for b in bands if b["verdict"] != "ok"]
+
+    warm_enough = water >= target - 1.0
+    if not bands:
+        water_state = "unknown"
+    elif urgent:
+        water_state = "needs attention"
+    elif off:
+        water_state = "slightly off"
+    else:
+        water_state = "fine"
+
+    if warm_enough and water_state in ("fine", "unknown"):
+        headline = "ready to swim"
+    elif not warm_enough:
+        headline = "warming up"
+    else:
+        headline = "check the water"
+
+    ready = coordinator.estimate
+    detail = {
+        "water_temperature": round(water, 1),
+        "target_temperature": target,
+        "warm_enough": warm_enough,
+        "water_quality": water_state,
+        "water_note": (urgent or off)[0]["label"] if (urgent or off) else None,
+        "price_verdict": _price_verdict(coordinator)[0],
+    }
+    if not warm_enough and ready and ready.hours_needed not in (0, float("inf")):
+        detail["hours_to_target"] = round(ready.hours_needed, 1)
+        detail["ready_readable"] = _readable_hours(ready.hours_needed)
+    return headline, detail
 
 
 def _water_balance(coordinator: PoolSmartCoordinator):

@@ -436,3 +436,199 @@ def test_t96_new_keys_are_defined_before_use():
             assert defined_at[name] < number, (
                 f"line {number + 1} uses {name}, defined later"
             )
+
+
+# ---------------------------------------------------------------------------
+# T97 - every step and every field has words
+# ---------------------------------------------------------------------------
+
+def _fields_asked(blob: str, step: str) -> set[str]:
+    """Which settings a flow step actually puts on screen."""
+    import const
+
+    block = re.search(
+        rf"async def async_step_{step}\(.*?(?=\n    async def |\Z)", blob, re.S
+    )
+    if block is None:
+        return set()
+    keys = re.findall(r"c\.(CONF_[A-Z0-9_]+)", block.group(0))
+    return {
+        getattr(const, key)
+        for key in set(keys)
+        if hasattr(const, key) and isinstance(getattr(const, key), str)
+    }
+
+
+def test_t97_every_flow_step_is_translated():
+    """A step without a translation renders as an empty screen.
+
+    Reworking the wizard and the menu moved fields between steps and left their
+    words behind: two menu items showed nothing at all, and the pool step in
+    setup showed raw keys. Nothing caught it, because the tests checked that
+    dropdown *options* were translated and never that the steps holding them
+    were.
+    """
+    sys.path.insert(0, str(ROOT))
+    source = (ROOT / "config_flow.py").read_text()
+
+    config_flow = source[
+        source.index("class PoolSmartConfigFlow") : source.index(
+            "class PoolSmartOptionsFlow"
+        )
+    ]
+    options_flow = source[source.index("class PoolSmartOptionsFlow") :]
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (ROOT / "translations" / f"{language}.json").read_text()
+        )
+        for section, blob in (
+            ("config", config_flow),
+            ("options", options_flow),
+        ):
+            steps = set(re.findall(r"async def async_step_(\w+)\(", blob))
+            translated = set(translations[section]["step"])
+            missing = steps - translated - {"init"}
+            assert not missing, f"{language}/{section}: no translation for {sorted(missing)}"
+
+
+def test_t97b_every_field_on_screen_has_a_label():
+    """A field with no label shows its raw key, or nothing at all."""
+    sys.path.insert(0, str(ROOT))
+    source = (ROOT / "config_flow.py").read_text()
+    options_flow = source[source.index("class PoolSmartOptionsFlow") :]
+
+    #: Stored under this key rather than shown as a field of its own.
+    not_a_field = {"notify_targets"}
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (ROOT / "translations" / f"{language}.json").read_text()
+        )
+        for step in re.findall(r"async def async_step_(\w+)\(", options_flow):
+            if step == "init":
+                continue
+            asked = _fields_asked(options_flow, step) - not_a_field
+            labelled = set(
+                translations["options"]["step"].get(step, {}).get("data", {})
+            )
+            missing = asked - labelled
+            assert not missing, f"{language}/{step}: no label for {sorted(missing)}"
+
+
+def test_t97c_no_orphan_translations():
+    """A translation for a step that no longer exists is dead weight, and hides
+    that the live step has none."""
+    source = (ROOT / "config_flow.py").read_text()
+    config_flow = source[
+        source.index("class PoolSmartConfigFlow") : source.index(
+            "class PoolSmartOptionsFlow"
+        )
+    ]
+    steps = set(re.findall(r"async def async_step_(\w+)\(", config_flow))
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (ROOT / "translations" / f"{language}.json").read_text()
+        )
+        orphans = set(translations["config"]["step"]) - steps
+        assert not orphans, f"{language}: translations with no step: {sorted(orphans)}"
+
+
+def test_t97d_the_user_step_describes_what_it_asks():
+    """Fields moved to the pool step; their descriptions did not move with them."""
+    sys.path.insert(0, str(ROOT))
+    source = (ROOT / "config_flow.py").read_text()
+
+    kind = re.search(r"def _kind_schema\(.*?(?=\ndef )", source, re.S).group(0)
+    import const
+
+    asked = {"name"}
+    for key in set(re.findall(r"c\.(CONF_[A-Z0-9_]+)", kind)):
+        if hasattr(const, key) and isinstance(getattr(const, key), str):
+            asked.add(getattr(const, key))
+
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (ROOT / "translations" / f"{language}.json").read_text()
+        )
+        described = set(translations["config"]["step"]["user"]["data"])
+        assert described == asked, (
+            f"{language}: user step describes {sorted(described)} "
+            f"but asks {sorted(asked)}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# T98 - the pool kind explanation answers the question people have
+# ---------------------------------------------------------------------------
+
+def test_t98_pool_kind_is_explained_by_example():
+    """"Do I have a frame pool or an above ground one?" is the actual question.
+
+    A list of four words does not answer it; naming a product someone can
+    recognise does.
+    """
+    for language in ("en", "nl"):
+        translations = json.loads(
+            (ROOT / "translations" / f"{language}.json").read_text()
+        )
+        help_text = translations["config"]["step"]["user"]["data_description"][
+            "pool_kind"
+        ]
+        assert "Intex" in help_text, "no recognisable example"
+        for kind in ("rame", "pblaas") if language == "nl" else ("rame", "nflat"):
+            assert kind in help_text, kind
+        assert len(help_text) > 150, "too short to distinguish the four kinds"
+
+
+# ---------------------------------------------------------------------------
+# T99 - the simple page answers three questions and asks nothing
+# ---------------------------------------------------------------------------
+
+def test_t99_simple_status_exists_and_stays_simple():
+    source = (ROOT / "sensor.py").read_text()
+
+    assert "def _simple_status" in source
+    assert "def _price_verdict" in source
+
+    block = source[source.index("def _simple_status") :]
+    block = block[: block.index("\ndef ")]
+    # The three questions, and nothing that asks the reader to decide anything.
+    for answer in ("warm_enough", "water_quality", "price_verdict"):
+        assert answer in block, answer
+    for setting in ("async_set", "input_number", "dose_for"):
+        assert setting not in block, f"the simple page should not offer {setting}"
+
+
+def test_t99b_price_is_judged_against_the_day():
+    """0.24 means nothing to someone who does not follow tariffs.
+
+    Where it sits within today's range does: the same figure is a bargain in
+    January and daylight robbery in a sunny week.
+    """
+    source = (ROOT / "sensor.py").read_text()
+    block = source[source.index("def _price_verdict") :]
+    block = block[: block.index("\ndef ")]
+
+    assert "today_low" in block and "today_high" in block
+    for verdict in ("cheap", "normal", "expensive"):
+        assert f'"{verdict}"' in block, verdict
+    # Falls back to the cheap-period signal, which knows the shape of the day
+    # better than a fixed ceiling does.
+    assert "cheap_price_now" in block
+
+
+def test_t99c_the_simple_dashboard_is_valid_and_read_only():
+    import yaml
+
+    path = ROOT.parents[1] / "docs" / "lovelace" / "simple.yaml"
+    assert path.exists(), "no simple dashboard shipped"
+
+    dashboard = yaml.safe_load(path.read_text())
+    assert dashboard["views"], "no views"
+
+    text = path.read_text()
+    # Nothing on this page changes anything.
+    for interactive in ("input_number.", "input_boolean.", "call-service", "button."):
+        assert interactive not in text, f"the simple page should not include {interactive}"

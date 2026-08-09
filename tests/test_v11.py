@@ -149,21 +149,23 @@ def test_t73_impossible_heating_rate_is_rejected():
     that really takes fourteen.
     """
     config = make_config()
-    ceiling = learning.max_plausible_rate(config, 26.0)
+
+    # At night, only the appliance is heating.
+    ceiling = learning.max_plausible_rate(config, 26.0, daytime=False)
     assert 0.6 < ceiling < 1.0, ceiling
 
-    start = datetime(2026, 8, 5, 9, 0, tzinfo=TZ)
+    start = datetime(2026, 8, 5, 22, 0, tzinfo=TZ)
     impossible = learning.SessionRecord(
         start=start,
         end=start + timedelta(hours=2),
         water_start=26.0,
-        water_end=28.05,  # 1.02 °C/h
+        water_end=28.05,  # 1.02 °C/h, at night
         energy_kwh=1.2,
     )
     impossible.sample_air(26.0)
-    verdict = learning.assess(impossible, config)
-    assert verdict.usable is False
-    assert "physically deliver" in verdict.reason
+    verdict = learning.assess_measurements(impossible, config)
+    assert verdict.heating_rate is False
+    assert "full sun" in verdict.reasons["heating_rate"]
 
     plausible = learning.SessionRecord(
         start=start,
@@ -174,7 +176,68 @@ def test_t73_impossible_heating_rate_is_rejected():
         thermal_kwh=8.0,
     )
     plausible.sample_air(26.0)
-    assert learning.assess(plausible, config).usable is True
+    assert learning.assess_measurements(plausible, config).heating_rate is True
+
+
+def test_t73b_sunshine_raises_the_ceiling():
+    """Two real sessions were rejected as impossible. They were not.
+
+    Six square metres of water under an August sun takes in two to three
+    kilowatts — comparable to the heat pump itself. A ten hour session starting
+    at nine in the morning legitimately outruns the appliance rating, because
+    for most of those hours the sky was heating the pool too. The first version
+    of this ceiling ignored that and threw away the best sessions of the year.
+    """
+    config = make_config()
+
+    night = learning.max_plausible_rate(config, 26.0, daytime=False)
+    day = learning.max_plausible_rate(config, 26.0)
+    assert day > night * 1.8, (night, day)
+
+    # The two sessions this was found on, measured on a real pool.
+    for hours, gain in ((3.16, 3.13), (10.23, 8.88)):
+        rate = gain / hours
+        assert rate > night, "these were rejected before, correctly under the old rule"
+        assert rate < day, f"{rate:.2f} C/h should be plausible in daylight"
+
+
+def test_t73c_a_measured_sun_beats_an_assumed_one():
+    config = make_config()
+    dull = learning.max_plausible_rate(config, 26.0, irradiance_w_m2=100)
+    bright = learning.max_plausible_rate(config, 26.0, irradiance_w_m2=900)
+    assert bright > dull
+    # An overcast day is barely above the appliance's own ceiling.
+    assert dull < learning.max_plausible_rate(config, 26.0, daytime=False) * 1.3
+
+
+def test_t73d_a_partly_spoiled_session_still_teaches_something():
+    """Seven sessions out of seven were discarded on a real installation.
+
+    Several held perfectly good evidence of how fast the pool warms up, ruined
+    by a probe on the heat pump going quiet — which spoils the efficiency figure
+    and says nothing whatever about the temperature rise.
+    """
+    config = make_config()
+    start = datetime(2026, 8, 8, 9, 0, tzinfo=TZ)
+    record = learning.SessionRecord(
+        start=start,
+        end=start + timedelta(hours=4),
+        water_start=26.0,
+        water_end=26.8,
+        energy_kwh=2.3,
+        thermal_kwh=8.0,
+        faults=["stale_hp_outlet"],
+    )
+    record.sample_air(26.0)
+    record.spans_daylight = True
+
+    verdict = learning.assess_measurements(record, config)
+    assert verdict.heating_rate is True, verdict.reasons
+    assert verdict.cop is False
+    assert verdict.anything_usable is True
+    # And the panel is told what it gained, not only what it lost.
+    assert "learned heating rate" in verdict.describe()
+    assert "stale_hp_outlet" in verdict.describe()
 
 
 # ---------------------------------------------------------------------------
@@ -730,9 +793,12 @@ def test_t86_slow_roles_are_not_nagged_about():
     settings = SafetySettings()
     assert "air" in settings.slow_roles
     assert "water" in settings.slow_roles
-    # The probes either side of the heat pump are not on this list: they are
-    # handled separately, by only being judged while the appliance runs.
-    assert "hp_inlet" not in settings.slow_roles
+    # The probes either side of the heat pump are slow too. They are also
+    # conditional -- only judged while the appliance runs -- but that alone was
+    # not enough: a stable session holds delta-T constant, so they stop
+    # publishing precisely when the session is going well.
+    assert "hp_inlet" in settings.slow_roles
+    assert "hp_outlet" in settings.slow_roles
     assert settings.slow_role_factor > 1
 
     effective = settings.stale_warning_seconds * settings.slow_role_factor

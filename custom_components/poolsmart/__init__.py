@@ -15,6 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify
 
 from . import websocket as poolsmart_ws
@@ -34,18 +35,19 @@ PLATFORMS: list[Platform] = [
 ]
 
 
-def _panel_version(hass: HomeAssistant) -> str:
+async def _async_panel_version(hass: HomeAssistant) -> str:
     """The integration version, used to bust the browser cache on the panel.
 
-    Read from the manifest rather than hardcoded, so bumping the version in one
-    place is enough. If it cannot be read the current timestamp is used, which
-    is heavy-handed but always correct -- a panel that reloads too often is a
-    far smaller problem than one that never reloads.
+    Taken from the integration Home Assistant has already loaded rather than
+    read off disk. Reading the manifest here looked harmless and was not: file
+    access inside the event loop blocks every other integration for the duration,
+    and Home Assistant reports it as a stability problem. It was also redundant
+    -- the version was already in memory a function call away.
     """
     try:
-        manifest = Path(__file__).parent / "manifest.json"
-        return json.loads(manifest.read_text())["version"]
-    except (OSError, ValueError, KeyError):
+        integration = await async_get_integration(hass, DOMAIN)
+        return str(integration.version)
+    except Exception:  # noqa: BLE001 -- a cache buster must never break setup
         return str(int(time.time()))
 
 
@@ -61,6 +63,7 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(f"/{DOMAIN}_panel", module_path, True)]
     )
+    version = await _async_panel_version(hass)
     await panel_custom.async_register_panel(
         hass,
         webcomponent_name="poolsmart-panel",
@@ -69,7 +72,7 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
         # the browser keeps serving the cached copy of the panel, so a new tab or
         # a fixed card silently does not appear and the integration looks like it
         # did not update at all.
-        module_url=f"/{DOMAIN}_panel/poolsmart-panel.js?v={_panel_version(hass)}",
+        module_url=f"/{DOMAIN}_panel/poolsmart-panel.js?v={version}",
         sidebar_title="Pool",
         sidebar_icon="mdi:pool",
         require_admin=False,

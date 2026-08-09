@@ -256,42 +256,6 @@ def _heating_schema(d: dict, source: str) -> vol.Schema:
     return vol.Schema(fields)
 
 
-def _heat_pump_schema(d: dict) -> vol.Schema:
-    return vol.Schema(
-        {
-            vol.Required(c.CONF_HP_INPUT_KW, default=d[c.CONF_HP_INPUT_KW]): _positive(
-                0.05, 50, 0.01
-            ),
-            vol.Required(
-                c.CONF_HP_THERMAL_KW, default=d[c.CONF_HP_THERMAL_KW]
-            ): _positive(0.1, 200, 0.1),
-            vol.Required(
-                c.CONF_HP_COP_REF_TEMP, default=d[c.CONF_HP_COP_REF_TEMP]
-            ): _positive(-10, 45, 0.5),
-            vol.Optional(c.CONF_HP_COP_LOW): _positive(1, 15, 0.01),
-            vol.Optional(
-                c.CONF_HP_COP_LOW_TEMP, default=d[c.CONF_HP_COP_LOW_TEMP]
-            ): _positive(-10, 45, 0.5),
-            vol.Required(
-                c.CONF_HP_AIR_TEMP_MIN, default=d[c.CONF_HP_AIR_TEMP_MIN]
-            ): _positive(-20, 30, 0.5),
-            vol.Required(
-                c.CONF_HP_AIR_TEMP_MAX, default=d[c.CONF_HP_AIR_TEMP_MAX]
-            ): _positive(20, 60, 0.5),
-            vol.Required(
-                c.CONF_HP_FLOW_MIN_M3H, default=d[c.CONF_HP_FLOW_MIN_M3H]
-            ): _positive(0, 50, 0.1),
-            vol.Required(
-                c.CONF_HP_FLOW_MIN_BLOCKING,
-                default=d[c.CONF_HP_FLOW_MIN_BLOCKING],
-            ): bool,
-            vol.Required(
-                c.CONF_HP_FLOW_MIN_VERIFIED,
-                default=d[c.CONF_HP_FLOW_MIN_VERIFIED],
-            ): bool,
-        }
-    )
-
 
 def derive_pool_shape(data: dict) -> dict:
     """Fill in the pool dimensions that were left blank.
@@ -309,6 +273,31 @@ def derive_pool_shape(data: dict) -> dict:
     return data
 
 
+def _required_entities(source: str) -> vol.Schema:
+    """What must be configured, which depends on what heats the water.
+
+    Demanding a heat pump switch from someone whose collector is on a manual
+    three-way valve asks them to name a switch that does not exist -- and there
+    is nothing for the integration to operate anyway. The same applies to a pool
+    with no heating at all, which still benefits from filtration scheduling and
+    water chemistry.
+
+    Circulation and a water temperature are required in every case: without the
+    first there is nothing to control, and without the second nothing to reason
+    about.
+    """
+    from .core.config import SOURCE_TRAITS, HeatingSource
+
+    fields: dict = {
+        vol.Required(c.CONF_PUMP_SWITCH): SWITCH,
+        vol.Required(c.CONF_WATER_TEMP_SENSOR): TEMP_SENSOR,
+    }
+    if SOURCE_TRAITS[HeatingSource(source)]["controllable"]:
+        fields[vol.Required(c.CONF_HP_SWITCH)] = SWITCH
+    return vol.Schema(fields)
+
+
+#: Kept for the options flow, where every field is optional anyway.
 STEP_REQUIRED_ENTITIES = vol.Schema(
     {
         vol.Required(c.CONF_PUMP_SWITCH): SWITCH,
@@ -348,6 +337,7 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
+        vol.Optional(c.CONF_COLLECTOR_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=["cover", "binary_sensor", "input_boolean"])
         ),
@@ -423,26 +413,6 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"recommended_setpoint": f"{recommended:.0f}"},
         )
 
-    async def async_step_heat_pump(self, user_input: dict | None = None) -> ConfigFlowResult:
-        if user_input is not None:
-            # Derive the reference COP from thermal output over electrical input.
-            input_kw = float(user_input[c.CONF_HP_INPUT_KW])
-            thermal_kw = float(user_input[c.CONF_HP_THERMAL_KW])
-            cop_ref = thermal_kw / input_kw if input_kw else 5.0
-            user_input[c.CONF_HP_COP_REF] = round(cop_ref, 3)
-            if c.CONF_HP_COP_LOW not in user_input:
-                # No second reference point: assume a flat curve.
-                user_input[c.CONF_HP_COP_LOW] = round(cop_ref, 3)
-                user_input[c.CONF_HP_COP_LOW_TEMP] = user_input[c.CONF_HP_COP_REF_TEMP]
-            self._data.update(user_input)
-            return await self.async_step_entities()
-
-        recommended = float(self._data.get(c.CONF_MAX_TEMP, 32.0)) + 2.0
-        return self.async_show_form(
-            step_id="heat_pump",
-            data_schema=_heat_pump_schema(self._defaults),
-            description_placeholders={"recommended_setpoint": f"{recommended:.0f}"},
-        )
 
     async def async_step_entities(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
@@ -651,6 +621,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
                 field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
                 field(c.CONF_WEATHER_ENTITY): WEATHER,
+                field(c.CONF_COLLECTOR_SENSOR): TEMP_SENSOR,
                 field(c.CONF_COVER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(
                         domain=["cover", "binary_sensor", "input_boolean"]

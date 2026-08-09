@@ -46,6 +46,12 @@ class SessionRecord:
     water_end: float | None = None
     air_sum: float = 0.0
     air_samples: int = 0
+    #: Irradiance samples, where anything can estimate how bright it was.
+    irradiance_samples: list[float] = field(default_factory=list)
+    #: Whether any part of the session fell in daylight hours. A session that
+    #: touched daylight is allowed a sunnier ceiling, because for those hours the
+    #: sky was heating the pool alongside the appliance.
+    spans_daylight: bool = False
     energy_kwh: float = 0.0
     thermal_kwh: float = 0.0
     interrupted: bool = False
@@ -87,6 +93,17 @@ class SessionRecord:
             return self.thermal_kwh / self.energy_kwh
         return None
 
+    def sample_irradiance(self, value: float | None) -> None:
+        """Record how much sun was falling on the pool."""
+        if value is not None:
+            self.irradiance_samples.append(value)
+
+    @property
+    def irradiance_avg(self) -> float | None:
+        if not self.irradiance_samples:
+            return None
+        return sum(self.irradiance_samples) / len(self.irradiance_samples)
+
     def sample_air(self, value: float | None) -> None:
         if value is not None:
             self.air_sum += value
@@ -118,6 +135,46 @@ class SessionRecord:
 #: adding solar gain; beyond that the number is measuring something other than
 #: the heat pump.
 MAX_PLAUSIBLE_RATE_FACTOR = 1.25
+
+
+@dataclass(frozen=True)
+class MeasurementVerdicts:
+    """What a session can and cannot teach.
+
+    One flag per session threw away everything when anything went wrong, and on
+    a real installation something is nearly always slightly wrong. A stale probe
+    on the heat pump outlet ruins the COP and says nothing whatever about how
+    fast the water rose -- so the rise is still worth learning from.
+    """
+
+    heating_rate: bool = False
+    cop: bool = False
+    reasons: dict = field(default_factory=dict)
+
+    @property
+    def anything_usable(self) -> bool:
+        return self.heating_rate or self.cop
+
+    def describe(self) -> str:
+        """What this session contributed, rather than only why it fell short."""
+        gained = []
+        if self.heating_rate:
+            gained.append("heating rate")
+        if self.cop:
+            gained.append("COP")
+        if not gained:
+            return "; ".join(self.reasons.values()) or "nothing usable"
+        text = "learned " + " and ".join(gained)
+        rejected = [f"{k}: {v}" for k, v in self.reasons.items()]
+        return f"{text} ({'; '.join(rejected)})" if rejected else text
+
+    def as_dict(self) -> dict:
+        return {
+            "heating_rate": self.heating_rate,
+            "cop": self.cop,
+            "reasons": self.reasons,
+            "summary": self.describe(),
+        }
 
 
 @dataclass(frozen=True)
@@ -165,7 +222,12 @@ def assess(record: SessionRecord, config: PoolConfig) -> SessionVerdict:
     # though it rises 1.0.
     rate = record.heating_rate
     if rate is not None:
-        ceiling = max_plausible_rate(config, record.air_avg)
+        ceiling = max_plausible_rate(
+            config,
+            record.air_avg,
+            irradiance_w_m2=record.irradiance_avg,
+            daytime=record.spans_daylight,
+        )
         if rate > ceiling:
             return SessionVerdict(
                 False,
@@ -179,19 +241,62 @@ def assess(record: SessionRecord, config: PoolConfig) -> SessionVerdict:
     return SessionVerdict(True, "clean session")
 
 
-def max_plausible_rate(config: PoolConfig, air_temp: float | None) -> float:
-    """The fastest this pool can rise, from the appliance's own specification.
+#: Fraction of incoming sunlight a pool surface actually retains as heat. The
+#: rest is reflected or re-radiated. Widely quoted between 0.75 and 0.9.
+SOLAR_ABSORPTION = 0.85
 
-    Thermal output divided by the energy one degree takes. Solar gain and a
-    generous tolerance are folded in through MAX_PLAUSIBLE_RATE_FACTOR rather
-    than modelled, because the point is to catch the impossible rather than to
-    predict the merely optimistic.
+#: Assumed midday irradiance when there is no solar sensor to ask, in W/m2.
+#: Deliberately on the generous side: the figure exists to avoid discarding real
+#: measurements, and a ceiling set too low throws away good sessions while one
+#: set too high merely lets a doubtful one through.
+ASSUMED_PEAK_IRRADIANCE = 600.0
+
+
+def solar_gain_kw(config: PoolConfig, irradiance_w_m2: float | None) -> float:
+    """Free heat arriving through the surface.
+
+    Easy to forget and far from negligible: six square metres of water under a
+    summer sun takes in two to three kilowatts, comparable to the heat pump
+    itself. A ceiling that ignores it will reject the best sessions of the year
+    -- the long sunny ones -- as physically impossible.
+    """
+    surface = config.pool.surface_m2
+    if surface <= 0 or not irradiance_w_m2:
+        return 0.0
+    return surface * irradiance_w_m2 * SOLAR_ABSORPTION / 1000.0
+
+
+def max_plausible_rate(
+    config: PoolConfig,
+    air_temp: float | None,
+    irradiance_w_m2: float | None = None,
+    daytime: bool = True,
+) -> float:
+    """The fastest this pool can rise, appliance and sunshine together.
+
+    The appliance's own output is the easy part. The sun is what the first
+    version of this missed: a ten hour session starting at nine in the morning
+    legitimately outruns the heat pump's rating, because for most of those hours
+    the sky was heating the pool too.
+
+    With a solar sensor the figure is measured. Without one, a generous midday
+    assumption is used during daylight and none at night, since the whole point
+    is to catch the impossible rather than to second-guess the merely good.
     """
     per_degree = config.pool.kwh_thermal_per_degree
     if per_degree <= 0:
         return float("inf")
+
     thermal = config.heat_pump.thermal_kw_at(air_temp if air_temp is not None else 20.0)
-    return thermal / per_degree * MAX_PLAUSIBLE_RATE_FACTOR
+
+    if irradiance_w_m2 is not None:
+        solar = solar_gain_kw(config, irradiance_w_m2)
+    elif daytime:
+        solar = solar_gain_kw(config, ASSUMED_PEAK_IRRADIANCE)
+    else:
+        solar = 0.0
+
+    return (thermal + solar) / per_degree * MAX_PLAUSIBLE_RATE_FACTOR
 
 
 def capped_update(current: float | None, proposed: float, max_step_ratio: float) -> float:
@@ -339,3 +444,93 @@ def recover_cop_counts(
     for key in curve:
         counts.setdefault(key, 1)
     return counts
+
+
+#: Faults that spoil one measurement without touching the other. A probe on the
+#: heat pump outlet is what delta-T and therefore COP are built from; it has
+#: nothing to do with how fast the pool warmed up.
+COP_ONLY_FAULTS = frozenset(
+    {
+        "stale_hp_inlet",
+        "stale_hp_outlet",
+        "heat_pump_not_producing",
+        "delta_t_implausible",
+        "aliased_delta_t",
+    }
+)
+
+#: Faults that make the temperature rise itself untrustworthy.
+RATE_FAULTS = frozenset({"stale_water", "no_flow_while_pump_running"})
+
+
+def assess_measurements(
+    record: SessionRecord, config: PoolConfig
+) -> MeasurementVerdicts:
+    """Judge each measurement on its own merits.
+
+    The all-or-nothing version discarded seven sessions out of seven on a real
+    installation, several of which held perfectly good evidence of how fast the
+    pool warms up. What ruined them was a probe on the heat pump going quiet --
+    which spoils the efficiency figure and tells you nothing at all about the
+    temperature rise.
+    """
+    reasons: dict[str, str] = {}
+    faults = set(record.faults or ())
+
+    if record.interrupted:
+        return MeasurementVerdicts(
+            reasons={
+                "heating_rate": "the session was interrupted",
+                "cop": "the session was interrupted",
+            }
+        )
+
+    # -- Heating rate ------------------------------------------------------
+    rate_ok = True
+    if record.duration_h * 60 < MIN_SESSION_MINUTES:
+        rate_ok = False
+        reasons["heating_rate"] = (
+            f"too short to measure ({record.duration_h * 60:.0f} minutes)"
+        )
+    elif record.heating_rate is None or record.heating_rate <= 0:
+        rate_ok = False
+        reasons["heating_rate"] = "the pool did not get warmer"
+    elif faults & RATE_FAULTS:
+        rate_ok = False
+        reasons["heating_rate"] = (
+            "the water temperature was unreliable: "
+            + ", ".join(sorted(faults & RATE_FAULTS))
+        )
+    else:
+        ceiling = max_plausible_rate(
+            config,
+            record.air_avg,
+            irradiance_w_m2=record.irradiance_avg,
+            daytime=record.spans_daylight,
+        )
+        if record.heating_rate > ceiling:
+            rate_ok = False
+            reasons["heating_rate"] = (
+                f"a rise of {record.heating_rate:.2f} C/h is above the "
+                f"{ceiling:.2f} C/h possible even with full sun, so something "
+                "other than heating caused it"
+            )
+
+    # -- COP ---------------------------------------------------------------
+    cop_ok = True
+    cop = record.measured_cop
+    if cop is None:
+        cop_ok = False
+        reasons["cop"] = "no usable inlet and outlet readings"
+    elif faults & COP_ONLY_FAULTS:
+        cop_ok = False
+        reasons["cop"] = "the heat pump probes were unreliable: " + ", ".join(
+            sorted(faults & COP_ONLY_FAULTS)
+        )
+    elif not (
+        config.heat_pump.cop_clamp_min <= cop <= config.heat_pump.cop_clamp_max
+    ):
+        cop_ok = False
+        reasons["cop"] = f"a measured COP of {cop:.2f} is outside the plausible range"
+
+    return MeasurementVerdicts(heating_rate=rate_ok, cop=cop_ok, reasons=reasons)

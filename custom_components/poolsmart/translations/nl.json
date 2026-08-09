@@ -6,33 +6,19 @@
         "description": "Deze antwoorden bepalen waar de rest van de installatie naar vraagt. Een elektrisch element heeft geen rendementscurve en geen minimale buitentemperatuur, dus die vragen worden overgeslagen in plaats van gesteld en gegokt.",
         "data": {
           "name": "Naam",
-          "volume_l": "Waterinhoud (liter)",
-          "surface_m2": "Wateroppervlak (m²)",
-          "depth_m": "Waterdiepte (m)",
-          "target_temp": "Gewenste temperatuur (°C)",
-          "max_temp": "Maximale temperatuur (°C)",
           "unit_system": "Eenheden",
           "sanitiser": "Hoe het water ontsmet wordt",
           "heating_source": "Hoe wordt het water verwarmd?",
           "pool_kind": "Type bad",
-          "has_solar_collector": "Heeft ook een zonnecollector",
-          "collector_sensor": "Temperatuur zonnecollector",
-          "collector_margin": "Collector moet warmer zijn dan bad met (°C)",
-          "adopt_from": "Leergeschiedenis overnemen van"
+          "has_solar_collector": "Heeft ook een zonnecollector"
         },
         "data_description": {
-          "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
-          "depth_m": "De werkelijke waterdiepte, niet de wandhoogte. De meeste baden staan tot ongeveer 80-90% van de wand.",
-          "surface_m2": "Laat leeg, dan wordt het uit inhoud en diepte berekend. Wordt alleen gebruikt voor de eerste schatting van warmteverlies, die binnen enkele dagen door een gemeten waarde wordt vervangen.",
-          "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder.",
-          "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
-          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies — een ongeïsoleerd opblaasbaar bad verliest een veelvoud van een ingebouwd bad. Het is alleen een startpunt; de echte waarde wordt binnen dagen gemeten.",
+          "pool_kind": "Framebad — een stalen frame met een liner erin, zoals een Intex Metal Frame. Opbouw — vaste wanden van staal of hout die het hele jaar blijven staan. Opblaasbaar — een opgeblazen ring die de wanden omhoog houdt. Ingebouwd — in de grond gebouwd. Dit bepaalt een realistische startwaarde voor het warmteverlies; de echte wordt binnen dagen gemeten.",
           "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
           "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
-          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
-          "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
+          "name": "Hoe dit bad in Home Assistant heet."
         }
       },
       "pump": {
@@ -49,34 +35,6 @@
           "pump_flow_measured": "Vink alleen aan als je het met een debietmeter hebt gemeten. Anders wordt de brochurewaarde met 30% verlaagd vanwege filterweerstand.",
           "pump_power_kw": "Staat op het plaatje in watt. Deel door 1000. Voorbeeld: 100 W is 0,1 kW.",
           "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen."
-        }
-      },
-      "heat_pump": {
-        "title": "Warmtepomp",
-        "description": "Aanbeveling: zet de eigen thermostaat van de warmtepomp op {recommended_setpoint} °C. Daaronder houd je volledige softwarecontrole, en erboven grijpt de hardware in als de software ooit niet uitschakelt. Laat het tweede COP-punt leeg voor een vlakke curve.",
-        "data": {
-          "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
-          "hp_thermal_kw": "Thermisch vermogen (kW)",
-          "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
-          "hp_cop_low": "COP bij een tweede, lagere luchttemperatuur",
-          "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
-          "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
-          "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
-          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
-          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
-          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie"
-        },
-        "data_description": {
-          "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
-          "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
-          "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
-          "hp_cop_low": "Optioneel. De COP bij een koudere luchttemperatuur, als de brochure een tweede waarde noemt. Leeg laten geeft een vlakke curve.",
-          "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
-          "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
-          "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
-          "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
-          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
-          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen."
         }
       },
       "entities": {
@@ -168,6 +126,26 @@
           "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
           "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
           "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
+        }
+      },
+      "pool": {
+        "title": "Afmetingen van het bad",
+        "description": "De inhoud is het belangrijkst — elke dosering en elke opwarmschatting volgt eruit. Diepte en oppervlak zijn voor het warmteverlies en mogen afgeleid worden.",
+        "data": {
+          "name": "Naam",
+          "volume_l": "Waterinhoud (liter)",
+          "depth_m": "Gemiddelde diepte (m)",
+          "surface_m2": "Wateroppervlak (m²)",
+          "target_temp": "Doeltemperatuur (°C)",
+          "max_temp": "Maximumtemperatuur (°C)"
+        },
+        "data_description": {
+          "name": "Hoe dit bad in Home Assistant heet. Handig als je er meer dan één hebt.",
+          "volume_l": "Staat op de doos, of lengte × breedte × gemiddelde diepte in meters, × 1000. Dit goed hebben telt zwaarder dan welk ander getal hier ook: doseringen en opwarmtijden volgen er allebei uit.",
+          "depth_m": "Gemiddeld, niet maximaal. Bij een aflopende bodem: halverwege het ondiepe en het diepe deel.",
+          "surface_m2": "Leeg laten en het wordt berekend uit inhoud en diepte. Bepaalt hoe snel het bad warmte aan de lucht verliest, en hoeveel zon het opneemt.",
+          "target_temp": "Hoe warm het water moet zijn als je zwemt. Elke graad kost op een klein bad ruwweg anderhalf uur verwarmen.",
+          "max_temp": "Een grens waar de automatisering nooit overheen gaat, wat er ook gevraagd wordt. Zet hem een paar graden boven het doel."
         }
       }
     }
@@ -402,7 +380,53 @@
         }
       },
       "pool": {
-        "title": "Zwembad en pomp"
+        "title": "Zwembad en pomp",
+        "data": {
+          "depth_m": "Waterdiepte (m)",
+          "filter_media": "Filtermedium",
+          "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
+          "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
+          "hp_cop_low": "COP bij een tweede, lagere luchttemperatuur",
+          "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
+          "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
+          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
+          "hp_thermal_kw": "Thermisch vermogen (kW)",
+          "max_temp": "Maximale temperatuur (°C)",
+          "pump_flow_m3h": "Flow (m³/u)",
+          "pump_flow_measured": "Dit is een gemeten waarde, niet uit de brochure",
+          "pump_power_kw": "Elektrisch vermogen (kW)",
+          "sanitiser": "Hoe het water ontsmet wordt",
+          "surface_m2": "Wateroppervlak (m²)",
+          "unit_system": "Eenheden",
+          "volume_l": "Waterinhoud (liter)",
+          "hp_cop_ref": "Rendement (COP) bij de referentietemperatuur"
+        },
+        "data_description": {
+          "depth_m": "De werkelijke waterdiepte, niet de wandhoogte. De meeste baden staan tot ongeveer 80-90% van de wand.",
+          "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
+          "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
+          "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
+          "hp_cop_low": "Optioneel. De COP bij een koudere luchttemperatuur, als de brochure een tweede waarde noemt. Leeg laten geeft een vlakke curve.",
+          "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
+          "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
+          "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
+          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
+          "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
+          "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
+          "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
+          "pump_flow_m3h": "Staat op het typeplaatje of in de handleiding, vaak als 'flow rate' in m³/u of liter per uur. Deel L/u door 1000 voor m³/u. Voorbeeld: een kleine cartridgepomp zit rond 2-4 m³/u.",
+          "pump_flow_measured": "Vink alleen aan als je het met een debietmeter hebt gemeten. Anders wordt de brochurewaarde met 30% verlaagd vanwege filterweerstand.",
+          "pump_power_kw": "Staat op het plaatje in watt. Deel door 1000. Voorbeeld: 100 W is 0,1 kW.",
+          "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
+          "surface_m2": "Laat leeg, dan wordt het uit inhoud en diepte berekend. Wordt alleen gebruikt voor de eerste schatting van warmteverlies, die binnen enkele dagen door een gemeten waarde wordt vervangen.",
+          "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
+          "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
+          "hp_cop_ref": "Hoeveel kilowatt warmte je krijgt per kilowatt stroom, bij de buitentemperatuur hieronder. Van het typeplaatje — maar de integratie meet binnen een paar sessies je eigen waarde en gebruikt die liever, want een meting op jouw installatie zegt meer dan een meting op een testbank."
+        }
       },
       "heating": {
         "title": "Verwarmingstoestel",
@@ -413,31 +437,135 @@
           "has_solar_collector": "Heeft ook een zonnecollector",
           "collector_sensor": "Temperatuur zonnecollector",
           "collector_margin": "Collector moet warmer zijn dan bad met (°C)",
-          "adopt_from": "Leergeschiedenis overnemen van"
+          "adopt_from": "Leergeschiedenis overnemen van",
+          "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
+          "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
+          "hp_cop_low": "COP bij een tweede, lagere luchttemperatuur",
+          "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
+          "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
+          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
+          "hp_thermal_kw": "Thermisch vermogen (kW)",
+          "hp_cop_ref": "Rendement (COP) bij de referentietemperatuur"
         },
         "data_description": {
           "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies — een ongeïsoleerd opblaasbaar bad verliest een veelvoud van een ingebouwd bad. Het is alleen een startpunt; de echte waarde wordt binnen dagen gemeten.",
           "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
           "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
           "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
-          "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
+          "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte.",
+          "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
+          "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
+          "hp_cop_low": "Optioneel. De COP bij een koudere luchttemperatuur, als de brochure een tweede waarde noemt. Leeg laten geeft een vlakke curve.",
+          "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
+          "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
+          "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
+          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
+          "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
+          "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
+          "hp_cop_ref": "Hoeveel kilowatt warmte je krijgt per kilowatt stroom, bij de buitentemperatuur hieronder. Van het typeplaatje — maar de integratie meet binnen een paar sessies je eigen waarde en gebruikt die liever, want een meting op jouw installatie zegt meer dan een meting op een testbank."
         }
       },
       "when_to_heat": {
         "title": "Wanneer verwarmen",
-        "description": "Doeltemperaturen, zwemtijd, en wat verwarmen de moeite waard maakt — prijs en zon."
+        "description": "Doeltemperaturen, zwemtijd, en wat verwarmen de moeite waard maakt — prijs en zon.",
+        "data": {
+          "eco_price_factor": "Strengheidsfactor ECO",
+          "frost_air_temp": "Vorstbeveiliging onder (°C)",
+          "max_price": "Maximale prijs voor verwarmen (per kWh)",
+          "max_temp": "Maximale temperatuur (°C)",
+          "min_water_temp": "Minimale watertemperatuur (°C)",
+          "negative_price_basis": "Welke prijs geldt als onder nul",
+          "solar_hysteresis_w": "Hysterese zon (W)",
+          "solar_margin_w": "Marge boven het verbruik van de apparatuur (W)",
+          "solar_threshold_w": "Zonoverschot voor gratis verwarmen (W)",
+          "swim_time": "Op temperatuur om (UU:MM)",
+          "target_temp": "Gewenste temperatuur (°C)"
+        },
+        "data_description": {
+          "eco_price_factor": "ECO vermenigvuldigt de prijslimiet hiermee en wordt daardoor strenger. 0,7 betekent dat ECO alleen verwarmt onder 70% van je normale limiet.",
+          "frost_air_temp": "Onder deze buitentemperatuur gaat de pomp draaien. Stromend water bevriest niet.",
+          "max_price": "Boven deze prijs wacht de verwarming op een goedkoper moment. Boost negeert dit. Zet hem hoog om prijsoptimalisatie feitelijk uit te schakelen.",
+          "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
+          "min_water_temp": "Daaronder wordt het bad beschermd, ongeacht de modus. Is het buiten te koud voor de warmtepomp, dan circuleert de beveiliging in plaats van te verwarmen.",
+          "negative_price_basis": "Welke prijs onder nul moet zakken voordat er hoe dan ook verwarmd wordt.",
+          "solar_hysteresis_w": "Extra marge in ECO, zodat een overtrekkende wolk geen sessie start en stopt.",
+          "solar_margin_w": "Wordt bij het verbruik van de apparatuur opgeteld als de drempel berekend wordt. Een marge voorkomt dat een overtrekkende wolk een sessie start en stopt.",
+          "solar_threshold_w": "Hierboven geldt verwarmen als gratis en wordt de prijslimiet genegeerd. Laat leeg, dan wordt hij berekend uit wat de warmtepomp en de pomp samen verbruiken, plus de marge hieronder. Lager dan dat verbruik betekent dat je meer gebruikt dan je opwekt; veel hoger betekent zonnige middagen missen.",
+          "swim_time": "De planner rekent hiervandaan terug wanneer het verwarmen moet beginnen. Laat leeg als je geen vast tijdstip hebt; dan houdt hij het bad simpelweg op temperatuur.",
+          "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder."
+        }
       },
       "filtration": {
         "title": "Filtratie",
-        "description": "Hoeveel circulatie het bad per dag nodig heeft, en wanneer dat mag."
+        "description": "Hoeveel circulatie het bad per dag nodig heeft, en wanneer dat mag.",
+        "data": {
+          "min_block_minutes": "Minimale blokduur (minuten)",
+          "min_daily_hours": "Minimale filtratie per dag bij zwemtemperatuur (uren)",
+          "night_end": "Nachtrust eindigt (UU:MM)",
+          "night_start": "Nachtrust begint (UU:MM)",
+          "pump_rundown_minutes": "Naloop pomp na verwarmen (minuten)",
+          "turnover_factor": "Turnover-factor (keer de zwembadinhoud per dag)"
+        },
+        "data_description": {
+          "min_block_minutes": "Kortere blokken zijn het starten niet waard; het water bereikt het filter nauwelijks.",
+          "min_daily_hours": "Een tijdsgebonden bodem, die geldt zodra hij groter is dan het turnover-getal. Skimmen, chloorcontacttijd en het voorkomen van stilstand hangen af van draaiuren, niet van hoe snel de pomp is. Deze waarde geldt rond 25 °C en schaalt van de helft in koud water tot anderhalf keer boven 30 °C.",
+          "night_end": "Einde van de nachtrust.",
+          "night_start": "Begin van de nachtrust. Daarna draait alleen nog veiligheid, de filtratiedeadline, een negatieve prijs of een handmatige boost.",
+          "pump_rundown_minutes": "De pomp circuleert zo lang door nadat de warmtepomp stopt, om de restwarmte af te voeren.",
+          "turnover_factor": "Hoe vaak het hele bad per dag door het filter moet. Gefilterd water mengt terug, dus één ronde reinigt ongeveer 63% van het bad, twee 86%, drie 95%. Bij drie vlakt de winst af."
+        }
       },
       "water": {
         "title": "Waterbehandeling",
-        "description": "Welke middelen je gebruikt, zodat een meting een hoeveelheid wordt die je kunt afmeten."
+        "description": "Welke middelen je gebruikt, zodat een meting een hoeveelheid wordt die je kunt afmeten.",
+        "data": {
+          "acid_product": "pH-middel dat je gebruikt",
+          "chemistry_cycle_minutes": "Duur chemiecyclus (minuten)",
+          "chlorine_product": "Chloormiddel dat je gebruikt",
+          "filter_media": "Filtermedium",
+          "sanitiser": "Hoe het water ontsmet wordt",
+          "tablet_grams": "Tabletgrootte (gram)"
+        },
+        "data_description": {
+          "chemistry_cycle_minutes": "Hoe lang de pomp draait als je op de chemieknop drukt.",
+          "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
+          "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
+          "tablet_grams": "De grootte waarin je chloortabletten verkocht worden — meestal 20, 200 of 500 gram. Tabletten worden geteld en niet afgewogen, dus hiermee wordt een benodigd gewicht een aantal tabletten."
+        }
       },
       "advanced": {
         "title": "Gevorderd",
-        "description": "Dingen die je alleen aanpast als een meting zich vreemd gedraagt. De standaardwaarden kloppen doorgaans."
+        "description": "Dingen die je alleen aanpast als een meting zich vreemd gedraagt. De standaardwaarden kloppen doorgaans.",
+        "data": {
+          "calibration_tolerance": "Toegestaan verschil tussen voelers (°C)",
+          "compressor_min_off_minutes": "Minimale stilstand compressor (minuten)",
+          "compressor_min_on_minutes": "Minimale draaitijd compressor (minuten)",
+          "learning_enabled": "Zelflerend actief",
+          "min_off_minutes": "Minimale stilstandtijd (minuten)",
+          "min_on_minutes": "Minimale draaitijd (minuten)",
+          "pump_startup_grace_seconds": "Aanlooptijd pomp (seconden)",
+          "stale_blocking_seconds": "Beschouw een sensor als defect na (seconden)",
+          "stale_warning_seconds": "Waarschuw als een meting ouder is dan (seconden)",
+          "temp_hysteresis": "Temperatuurhysterese (°C)",
+          "max_step_ratio": "Maximale verandering per meting"
+        },
+        "data_description": {
+          "calibration_tolerance": "Hoeveel de zwembadvoeler en de pompaanvoer mogen verschillen voordat het gemeld wordt. DS18B20's zijn nauwkeurig tot ongeveer ±0,5 °C, dus alles daaronder komt van de sensoren en niet van het bad.",
+          "compressor_min_off_minutes": "Hoe lang de warmtepomp uit moet blijven voor hij opnieuw start, zodat de koeldrukken kunnen uitbalanceren. Kortcyclen sloopt een compressor. Geen enkele andere regel kan hier overheen.",
+          "compressor_min_on_minutes": "Minimale draaitijd na starten. Bij het bereiken van de doeltemperatuur stopt hij nog steeds meteen.",
+          "learning_enabled": "Of afgeronde sessies de opwarmsnelheid, het warmteverlies en de COP bijwerken.",
+          "min_off_minutes": "Wat uitgaat blijft minstens zo lang uit.",
+          "min_on_minutes": "Wat aangaat blijft minstens zo lang aan. Dit voorkomt dat de pomp gaat klapperen.",
+          "pump_startup_grace_seconds": "Zo lang na het starten van de pomp wordt de doorstroming niet beoordeeld. De pomp moet eerst aanzuigen en de lucht uit de leidingen duwen; dat als storing melden maakt van een normale start een alarm.",
+          "stale_blocking_seconds": "Wanneer de sensor als defect geldt en verwarmen pauzeert. Circulatie en filtratie gaan gewoon door.",
+          "stale_warning_seconds": "Sommige sensoren melden alleen als hun waarde verandert, dus een stabiele temperatuur kan oud lijken. Vanaf hier wordt het gemeld.",
+          "temp_hysteresis": "Hoever het water onder het doel moet zakken voordat er weer verwarmd wordt. Stoppen gebeurt precies op het doel.",
+          "max_step_ratio": "Hoeveel een geleerde waarde in één keer mag verschuiven, als fractie. Bij 0,15 verschuift één vreemde sessie de boel hooguit vijftien procent, zodat één slechte meting geen weken aan goede metingen ongedaan maakt. Lager is stabieler en past zich trager aan."
+        }
       }
     }
   },
@@ -593,6 +721,12 @@
       },
       "water_balance": {
         "name": "Waterbalans"
+      },
+      "simple_status": {
+        "name": "Zwembadstatus"
+      },
+      "price_verdict": {
+        "name": "Stroomprijs"
       }
     },
     "binary_sensor": {

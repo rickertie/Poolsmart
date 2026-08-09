@@ -438,7 +438,13 @@ class SafetySettings:
     #: Warning about those on the same clock as a probe that should be changing
     #: constantly produces alerts nobody can act on, which is how people learn to
     #: ignore the ones that matter.
-    slow_roles: frozenset[str] = frozenset({"air", "water"})
+    #: A stable heating session holds delta-T almost constant, so the probes
+    #: either side of the heat pump stop publishing -- and the better the
+    #: heating runs, the more certainly the session used to be discarded as
+    #: stale. Exactly backwards.
+    slow_roles: frozenset[str] = frozenset(
+        {"air", "water", "hp_inlet", "hp_outlet", "pump_inlet", "pump_outlet"}
+    )
     #: Multiplier applied to the staleness thresholds for those roles.
     slow_role_factor: float = 4.0
 

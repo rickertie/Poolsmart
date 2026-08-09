@@ -78,6 +78,12 @@
       },
       "water_balance": {
         "default": "mdi:scale-balance"
+      },
+      "simple_status": {
+        "default": "mdi:pool"
+      },
+      "price_verdict": {
+        "default": "mdi:cash-clock"
       }
     },
     "binary_sensor": {

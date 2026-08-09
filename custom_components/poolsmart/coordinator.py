@@ -311,6 +311,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 initial_heat_loss_c_per_h=INITIAL_HEAT_LOSS.get(
                     PoolKind(self._conf(c.CONF_POOL_KIND, "frame")), 0.22
                 ),
+                max_step_ratio=float(self._conf(c.CONF_MAX_STEP_RATIO, 0.15)),
                 enabled=bool(self._conf(c.CONF_LEARNING_ENABLED, True))
             ),
             heating_source=self._conf(c.CONF_HEATING_SOURCE, "heat_pump"),
@@ -759,6 +760,22 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._device_id_cache = device.id if device else None
         return self._device_id_cache
 
+    def _irradiance(self, state: PoolState) -> float | None:
+        """Sunlight per square metre, if anything can tell us.
+
+        A solar power sensor measures a panel array rather than the pool, but
+        the two rise and fall together, so scaling the array against its peak
+        gives a serviceable estimate of how bright it is. Without a peak figure
+        to scale against there is nothing to infer, and the caller falls back to
+        an assumption rather than a bad number.
+        """
+        if state.solar_power_w is None:
+            return None
+        peak = float(self._conf(c.CONF_SOLAR_PEAK_W, 0) or 0)
+        if peak <= 0:
+            return None
+        return max(0.0, min(1.0, state.solar_power_w / peak)) * 1000.0
+
     def _heat_loss_for(self, covered: bool | None) -> float:
         """The heat loss figure matching the current cover state.
 
@@ -854,6 +871,13 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._session.sample_air(
                 state.air_temp.value if state.air_temp.available else None
             )
+            self._session.sample_irradiance(self._irradiance(state))
+            # A session that touched daylight is allowed a sunnier ceiling, since
+            # for those hours the sky was heating the pool alongside the
+            # appliance. Judged by the clock rather than by sun angle, which
+            # would be precision this does not need.
+            if 7 <= state.now.hour < 20:
+                self._session.spans_daylight = True
             if self._last_tick is not None:
                 hours = (now - self._last_tick).total_seconds() / 3600.0
                 if 0 < hours <= 0.5:
@@ -889,34 +913,45 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     def _finish_session(self, record: learning.SessionRecord, config: PoolConfig) -> None:
         verdict = learning.assess(record, config)
+        measurements = learning.assess_measurements(record, config)
+
         payload = record.as_dict()
-        payload["usable"] = verdict.usable
-        payload["verdict"] = verdict.reason
+        payload["usable"] = measurements.anything_usable
+        payload["verdict"] = measurements.describe()
+        payload["measurements"] = measurements.as_dict()
         self.store.log_session(payload)
 
-        if not verdict.usable or not config.learning.enabled:
-            _LOGGER.debug("Session not used for learning: %s", verdict.reason)
+        if not measurements.anything_usable or not config.learning.enabled:
+            _LOGGER.debug("Session taught nothing: %s", measurements.describe())
             return
 
+        # Each measurement stands or falls on its own. The all-or-nothing
+        # version discarded seven sessions out of seven on a real installation,
+        # several of which held perfectly good evidence of how fast the pool
+        # warms up -- ruined by a probe on the heat pump going quiet, which
+        # spoils the efficiency figure and says nothing whatever about the rise.
         ratio = config.learning.max_step_ratio
-        if record.heating_rate is not None:
+
+        if measurements.heating_rate and record.heating_rate is not None:
             self.store.learned.heating_rate_c_per_h = round(
                 learning.capped_update(
                     self.store.learned.heating_rate_c_per_h, record.heating_rate, ratio
                 ),
                 4,
             )
-        before = dict(self.store.learned.cop_by_air_bucket)
-        self.store.learned.cop_by_air_bucket = learning.update_cop_curve(
-            before, record, config
-        )
-        if record.air_avg is not None and record.measured_cop is not None:
-            key = learning.bucket_key(record.air_avg)
-            counts = dict(self.store.learned.cop_sessions_by_bucket)
-            counts[key] = counts.get(key, 0) + 1
-            self.store.learned.cop_sessions_by_bucket = counts
-        if record.heating_rate is not None:
             self.store.learned.heating_rate_sessions += 1
+
+        if measurements.cop:
+            before = dict(self.store.learned.cop_by_air_bucket)
+            self.store.learned.cop_by_air_bucket = learning.update_cop_curve(
+                before, record, config
+            )
+            if record.air_avg is not None and record.measured_cop is not None:
+                key = learning.bucket_key(record.air_avg)
+                counts = dict(self.store.learned.cop_sessions_by_bucket)
+                counts[key] = counts.get(key, 0) + 1
+                self.store.learned.cop_sessions_by_bucket = counts
+
         self.store.learned.session_count += 1
 
     # -- Idle observation, for heat loss -----------------------------------

@@ -1,0 +1,106 @@
+# ---------------------------------------------------------------------------
+# PoolSmart — the simple page
+#
+# For everyone in the house who is not the person who set this up. It answers
+# three questions and asks nothing: is it warm enough, is the water fine, and
+# when can I get in.
+#
+# Nothing here changes a setting. A page someone consults on the way outside
+# should not present them with decisions.
+#
+# Paste as a new dashboard, or as one view alongside the detailed ones.
+# ---------------------------------------------------------------------------
+
+views:
+  - title: Zwembad
+    path: zwembad
+    icon: mdi:pool
+    cards:
+      - type: custom:mushroom-template-card
+        primary: >-
+          {% set s = states('sensor.pool_simple_status') %}
+          {% if s == 'ready to swim' %}Je kunt zwemmen
+          {% elif s == 'warming up' %}Nog aan het opwarmen
+          {% elif s == 'check the water' %}Water even nakijken
+          {% else %}Nog geen meting{% endif %}
+        secondary: >-
+          {{ state_attr('sensor.pool_simple_status','water_temperature') }} °C
+          {%- set h = state_attr('sensor.pool_simple_status','ready_readable') -%}
+          {%- if h %} · over {{ h }} op {{
+            state_attr('sensor.pool_simple_status','target_temperature') }} °C{% endif %}
+        icon: >-
+          {% set s = states('sensor.pool_simple_status') %}
+          {% if s == 'ready to swim' %}mdi:pool
+          {% elif s == 'warming up' %}mdi:fire
+          {% else %}mdi:water-alert{% endif %}
+        icon_color: >-
+          {% set s = states('sensor.pool_simple_status') %}
+          {% if s == 'ready to swim' %}green
+          {% elif s == 'warming up' %}orange
+          {% else %}red{% endif %}
+        multiline_secondary: true
+        card_mod:
+          style: |
+            ha-card { --card-primary-font-size: 22px; }
+
+      # ---- Is het water in orde? ------------------------------------------
+      - type: custom:mushroom-template-card
+        primary: >-
+          {% set q = state_attr('sensor.pool_simple_status','water_quality') %}
+          {% if q == 'fine' %}Water is in orde
+          {% elif q == 'slightly off' %}Water mag bijgesteld
+          {% elif q == 'needs attention' %}Water vraagt aandacht
+          {% else %}Nog niet gemeten{% endif %}
+        secondary: >-
+          {%- set n = state_attr('sensor.pool_simple_status','water_note') -%}
+          {%- if n %}{{ n }} valt buiten het ideale bereik
+          {%- else %}pH en chloor zitten goed{% endif %}
+        icon: mdi:water-check
+        icon_color: >-
+          {% set q = state_attr('sensor.pool_simple_status','water_quality') %}
+          {% if q == 'fine' %}green
+          {% elif q == 'slightly off' %}orange
+          {% elif q == 'needs attention' %}red
+          {% else %}grey{% endif %}
+        multiline_secondary: true
+
+      # ---- Wat kost het nu? ------------------------------------------------
+      - type: custom:mushroom-template-card
+        primary: >-
+          {% set p = states('sensor.pool_price_verdict') %}
+          {% if p == 'cheap' %}Stroom is nu goedkoop
+          {% elif p == 'normal' %}Stroom is normaal geprijsd
+          {% elif p == 'expensive' %}Stroom is nu duur
+          {% else %}Geen prijsinformatie{% endif %}
+        secondary: >-
+          {%- set v = state_attr('sensor.pool_price_verdict','price') -%}
+          {%- set lo = state_attr('sensor.pool_price_verdict','today_low') -%}
+          {%- set hi = state_attr('sensor.pool_price_verdict','today_high') -%}
+          {%- if v %}{{ '%.3f'|format(v) }} €/kWh
+          {%- if lo %} · vandaag {{ '%.2f'|format(lo) }} tot {{ '%.2f'|format(hi) }}{% endif %}
+          {%- endif %}
+        icon: mdi:cash-clock
+        icon_color: >-
+          {% set p = states('sensor.pool_price_verdict') %}
+          {% if p == 'cheap' %}green
+          {% elif p == 'normal' %}grey
+          {% elif p == 'expensive' %}orange
+          {% else %}grey{% endif %}
+        multiline_secondary: true
+
+      - type: custom:mushroom-chips-card
+        chips:
+          - type: entity
+            entity: sensor.pool_water_temperature
+            icon: mdi:thermometer-water
+          - type: entity
+            entity: binary_sensor.pool_covered
+            icon: mdi:layers
+          - type: template
+            icon: mdi:pump
+            content: >-
+              {% if is_state('binary_sensor.pool_circulating','on') %}Filtert
+              {% else %}Stil{% endif %}
+            icon_color: >-
+              {% if is_state('binary_sensor.pool_circulating','on') %}blue
+              {% else %}grey{% endif %}

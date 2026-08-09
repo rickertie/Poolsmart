@@ -8,6 +8,48 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.3.1] — Words For Every Field — 2026-08-08
+
+### Fixed
+- **Two settings screens were blank and one showed raw keys.** Reworking the
+  menu moved fields between steps and left their words behind. The tests checked
+  that dropdown *options* were translated and never that the steps holding them
+  were, so nothing caught it. Four new tests now cross-check every step and every
+  field against both languages
+- **Advanced settings crashed**, referring to a learning setting that had a
+  default in the model but was never registered as a config key
+- **Reading the manifest blocked the event loop.** The cache-busting version
+  added in 1.1.2 read a file from disk during setup, which Home Assistant reports
+  as a stability problem. The version was already in memory a function call away
+- **A solar collector no longer demands a heat pump switch.** Required entities
+  follow the heating source: a manual three-way valve has nothing to switch, and
+  a pool with no heating still benefits from filtration and water chemistry
+- **Sessions were being thrown away for succeeding.** A stable heating session
+  holds delta-T almost constant, so the probes either side of the heat pump stop
+  publishing — and after fifteen minutes were called stale. The better the
+  heating ran, the more certainly the session was discarded
+- **Sunshine counts.** The plausibility ceiling on a learned heating rate
+  ignored solar gain, so two real sessions of 0.99 and 0.87 °C/h were rejected as
+  impossible. Six square metres of water under an August sun takes in two to
+  three kilowatts, comparable to the heat pump itself. The ceiling now allows for
+  it, measured where a solar sensor exists and generously assumed in daylight
+  where none does
+
+### Changed
+- **Each measurement is judged on its own.** One fault used to discard a whole
+  session, and seven out of seven were lost on a real installation — several
+  holding perfectly good evidence of how fast the pool warms, ruined by a probe
+  that spoils the efficiency figure and says nothing about the temperature rise.
+  The session list now reports what a session taught, not only why it fell short
+
+### Added
+- **A simple dashboard** for everyone who did not set this up: warm enough, water
+  fine, when can I swim. Nothing on it changes a setting
+- **A price verdict** in words, judged against today's own range rather than a
+  fixed ceiling
+- Every field in setup now carries a short explanation, including what actually
+  distinguishes a frame pool from an above-ground one
+
 ## [1.3.0] — Not Everyone Has a Heat Pump — 2026-08-06
 
 ### Added
@@ -541,6 +583,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.3.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.3.1
 [1.3.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.3.0
 [1.2.3]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.3
 [1.2.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.2
