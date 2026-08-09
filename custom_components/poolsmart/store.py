@@ -304,6 +304,67 @@ class PoolStore:
         )
         return True
 
+    def adopt(self, history: dict) -> str:
+        """Take on learned history from elsewhere.
+
+        Merges rather than replaces where it can: an adopted heat loss is better
+        than no heat loss, but if this pool has already learned something of its
+        own since setup, that is measured on the actual installation and wins.
+        """
+        learned = history.get("learned") or {}
+        if not learned:
+            return "nothing to adopt"
+
+        incoming = LearnedValues.from_dict(learned)
+        taken: list[str] = []
+
+        for field in (
+            "heating_rate_c_per_h",
+            "heat_loss_c_per_h",
+            "heat_loss_covered_c_per_h",
+            "measured_flow_m3h",
+        ):
+            if getattr(self.learned, field) is None:
+                value = getattr(incoming, field)
+                if value is not None:
+                    setattr(self.learned, field, value)
+                    taken.append(field)
+
+        if not self.learned.cop_by_air_bucket and incoming.cop_by_air_bucket:
+            self.learned.cop_by_air_bucket = dict(incoming.cop_by_air_bucket)
+            self.learned.cop_sessions_by_bucket = dict(
+                incoming.cop_sessions_by_bucket
+            )
+            taken.append("cop_by_air_bucket")
+
+        for field in (
+            "session_count",
+            "heating_rate_sessions",
+            "heat_loss_samples",
+            "heat_loss_covered_samples",
+        ):
+            if not getattr(self.learned, field):
+                setattr(self.learned, field, getattr(incoming, field))
+
+        # The logs are the evidence the figures were derived from; adopting a
+        # summary without them leaves numbers nothing can check or improve.
+        if not self.session_log and history.get("session_log"):
+            self.session_log = list(history["session_log"])
+            taken.append("session_log")
+        if not self.dose_log and history.get("dose_log"):
+            self.dose_log = list(history["dose_log"])
+            taken.append("dose_log")
+        if self.last_water_test is None and history.get("last_water_test"):
+            try:
+                self.last_water_test = datetime.fromisoformat(
+                    history["last_water_test"]
+                )
+            except (TypeError, ValueError):
+                pass
+
+        self.backfill_cop_counts()
+        return ", ".join(taken) if taken else "nothing was missing"
+
     def reset_learned(self, name: str) -> bool:
         """Clear one learned value without discarding the rest.
 

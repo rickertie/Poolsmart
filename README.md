@@ -264,6 +264,60 @@ Point the integration at it and it outranks the fixed ceiling, because a ceiling
 cannot tell a cheap hour from an expensive day: with a limit of 0.20 and a day
 whose cheapest hour is 0.22, nothing would ever heat.
 
+## What heats your pool
+
+Setup asks three things before anything else: how the pool is built, what heats
+it, and whether there is a solar collector alongside. Those answers decide which
+of the later questions make sense at all.
+
+| Source | What it has |
+|---|---|
+| Heat pump | Efficiency curve, minimum air temperature, compressor protection |
+| Electric heater | None of those — always as efficient, works in any weather |
+| Solar collector | Usually a manual valve, so the integration advises rather than switches |
+| Gas heater | Fixed efficiency, no air temperature limit |
+| No heating | Filtration, water chemistry and frost protection only |
+
+These are not simplifications of a heat pump's behaviour; they are the absence
+of things a heat pump has. Asking an element owner for a COP curve produces a
+field they have to guess at, and a guess is worse than a default.
+
+**A solar collector is advised, not controlled.** Almost every one is plumbed
+through a manual three-way valve. The integration compares the collector against
+the pool and says when opening it is free heat — and, just as usefully, when the
+collector is colder than the pool and water sent through it would lose heat
+rather than gain it.
+
+**Pool construction sets a starting heat loss**, from 0.30 °C/h for an
+uninsulated inflatable to 0.08 for a built-in pool. It is only a starting point,
+replaced by measurement within days, but those first days are when someone is
+deciding whether this works at all.
+
+## Settings
+
+Eight topics rather than four sections and a bin marked "general". Saving
+returns to the menu instead of closing, so changing three things is one visit.
+
+**Advanced** is deliberately separate. Of the settings here, perhaps a third are
+ones anybody adjusts on purpose; the rest exist for when a measurement
+misbehaves. Mixing them made the first third harder to find.
+
+## Learned history survives a reinstall
+
+Removing an integration and adding it back gives it a new entry id, and the
+storage key is built from that id — so weeks of measured heat loss, a COP curve
+and a session history end up on disk under a key nothing reads any more.
+
+Setup now looks for it and offers to adopt it, describing what it found: *14
+sessions, heat loss 0.23 °C/h, last written 3 August.* Values this pool has
+already measured for itself are kept, because those were measured on the actual
+installation. The session and dose logs come across too — adopting a figure
+without the evidence behind it leaves a number nothing can check or improve.
+
+For backups and moving between systems there are `poolsmart.export_learning` and
+`poolsmart.import_learning`. An export deliberately leaves out today's quota and
+the current mode: those describe a moment rather than a pool.
+
 ## Units
 
 One setting at installation, metric or US customary, changes how volumes and

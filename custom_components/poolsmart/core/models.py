@@ -188,6 +188,9 @@ class PoolState:
     #: Whether the cover is on. ``None`` when no cover entity is configured.
     covered: bool | None = None
 
+    #: Temperature at the solar collector, where one is fitted.
+    collector_temp: SensorReading | None = None
+
     #: An external "this is a good moment to use power" signal, if configured.
     #:
     #: Integrations that publish dynamic tariffs often expose one, and it knows

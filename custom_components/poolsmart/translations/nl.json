@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Zwembad",
-        "description": "Filtratietijd, opwarmtijd en het energiebudget worden allemaal uit deze waarden berekend, dus je hoeft niets in uren op te geven.",
+        "title": "Wat voor bad is dit?",
+        "description": "Deze antwoorden bepalen waar de rest van de installatie naar vraagt. Een elektrisch element heeft geen rendementscurve en geen minimale buitentemperatuur, dus die vragen worden overgeslagen in plaats van gesteld en gegokt.",
         "data": {
           "name": "Naam",
           "volume_l": "Waterinhoud (liter)",
@@ -12,7 +12,13 @@
           "target_temp": "Gewenste temperatuur (°C)",
           "max_temp": "Maximale temperatuur (°C)",
           "unit_system": "Eenheden",
-          "sanitiser": "Hoe het water ontsmet wordt"
+          "sanitiser": "Hoe het water ontsmet wordt",
+          "heating_source": "Hoe wordt het water verwarmd?",
+          "pool_kind": "Type bad",
+          "has_solar_collector": "Heeft ook een zonnecollector",
+          "collector_sensor": "Temperatuur zonnecollector",
+          "collector_margin": "Collector moet warmer zijn dan bad met (°C)",
+          "adopt_from": "Leergeschiedenis overnemen van"
         },
         "data_description": {
           "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
@@ -21,7 +27,12 @@
           "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder.",
           "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
-          "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld."
+          "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
+          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies — een ongeïsoleerd opblaasbaar bad verliest een veelvoud van een ingebouwd bad. Het is alleen een startpunt; de echte waarde wordt binnen dagen gemeten.",
+          "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
+          "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
+          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
+          "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
         }
       },
       "pump": {
@@ -108,7 +119,8 @@
           "alkalinity_sensor": "Totale alkaliniteit (ppm)",
           "cyanuric_sensor": "Cyanuurzuur / stabilisator (ppm)",
           "hardness_sensor": "Totale hardheid (ppm)",
-          "salt_sensor": "Zout (ppm)"
+          "salt_sensor": "Zout (ppm)",
+          "collector_sensor": "Temperatuur zonnecollector"
         },
         "data_description": {
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
@@ -133,7 +145,29 @@
           "alkalinity_sensor": "De buffer die je pH stabiel houdt. Buiten bereik zwerft de pH vanzelf en wordt corrigeren een wekelijkse klus in plaats van een oplossing.",
           "cyanuric_sensor": "Stabilisator, die je chloor tegen zonlicht beschermt. Te weinig en chloor verdwijnt binnen uren; boven ongeveer 100 ppm houdt het je chloor gegijzeld en levert meer doseren niets op.",
           "hardness_sensor": "Zacht water trekt kalk uit voegen en fittingen; hard water zet af op de warmtewisselaar.",
-          "salt_sensor": "Alleen bij een zoutelektrolyse-installatie. Het ideale bereik hangt af van je cel, dus raadpleeg de handleiding."
+          "salt_sensor": "Alleen bij een zoutelektrolyse-installatie. Het ideale bereik hangt af van je cel, dus raadpleeg de handleiding.",
+          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken."
+        }
+      },
+      "adopt": {
+        "title": "Leergeschiedenis gevonden",
+        "description": "{count} eerdere installatie(s) hebben leergeschiedenis achtergelaten. Overnemen scheelt weken aan metingen opnieuw opbouwen."
+      },
+      "heating": {
+        "data": {
+          "heating_source": "Hoe wordt het water verwarmd?",
+          "pool_kind": "Type bad",
+          "has_solar_collector": "Heeft ook een zonnecollector",
+          "collector_sensor": "Temperatuur zonnecollector",
+          "collector_margin": "Collector moet warmer zijn dan bad met (°C)",
+          "adopt_from": "Leergeschiedenis overnemen van"
+        },
+        "data_description": {
+          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies — een ongeïsoleerd opblaasbaar bad verliest een veelvoud van een ingebouwd bad. Het is alleen een startpunt; de echte waarde wordt binnen dagen gemeten.",
+          "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
+          "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
+          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
+          "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
         }
       }
     }
@@ -245,11 +279,14 @@
       },
       "init": {
         "menu_options": {
-          "entities": "Entiteiten",
-          "hardware": "Zwembad en apparatuur",
-          "general": "Algemene instellingen",
-          "swimming": "Zwemtijden",
-          "notifications": "Notificaties"
+          "entities": "Sensoren en schakelaars",
+          "pool": "Zwembad en pomp",
+          "heating": "Verwarmingstoestel",
+          "when_to_heat": "Wanneer verwarmen",
+          "filtration": "Filtratie",
+          "water": "Waterbehandeling",
+          "notifications": "Meldingen",
+          "advanced": "Gevorderd"
         }
       },
       "entities": {
@@ -281,7 +318,8 @@
           "alkalinity_sensor": "Totale alkaliniteit (ppm)",
           "cyanuric_sensor": "Cyanuurzuur / stabilisator (ppm)",
           "hardness_sensor": "Totale hardheid (ppm)",
-          "salt_sensor": "Zout (ppm)"
+          "salt_sensor": "Zout (ppm)",
+          "collector_sensor": "Temperatuur zonnecollector"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
@@ -309,7 +347,8 @@
           "alkalinity_sensor": "De buffer die je pH stabiel houdt. Buiten bereik zwerft de pH vanzelf en wordt corrigeren een wekelijkse klus in plaats van een oplossing.",
           "cyanuric_sensor": "Stabilisator, die je chloor tegen zonlicht beschermt. Te weinig en chloor verdwijnt binnen uren; boven ongeveer 100 ppm houdt het je chloor gegijzeld en levert meer doseren niets op.",
           "hardness_sensor": "Zacht water trekt kalk uit voegen en fittingen; hard water zet af op de warmtewisselaar.",
-          "salt_sensor": "Alleen bij een zoutelektrolyse-installatie. Het ideale bereik hangt af van je cel, dus raadpleeg de handleiding."
+          "salt_sensor": "Alleen bij een zoutelektrolyse-installatie. Het ideale bereik hangt af van je cel, dus raadpleeg de handleiding.",
+          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken."
         }
       },
       "hardware": {
@@ -361,6 +400,44 @@
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld."
         }
+      },
+      "pool": {
+        "title": "Zwembad en pomp"
+      },
+      "heating": {
+        "title": "Verwarmingstoestel",
+        "description": "Instellingen voor {source}. Niet van toepassing hier: {not_applicable}.",
+        "data": {
+          "heating_source": "Hoe wordt het water verwarmd?",
+          "pool_kind": "Type bad",
+          "has_solar_collector": "Heeft ook een zonnecollector",
+          "collector_sensor": "Temperatuur zonnecollector",
+          "collector_margin": "Collector moet warmer zijn dan bad met (°C)",
+          "adopt_from": "Leergeschiedenis overnemen van"
+        },
+        "data_description": {
+          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies — een ongeïsoleerd opblaasbaar bad verliest een veelvoud van een ingebouwd bad. Het is alleen een startpunt; de echte waarde wordt binnen dagen gemeten.",
+          "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
+          "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
+          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
+          "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
+        }
+      },
+      "when_to_heat": {
+        "title": "Wanneer verwarmen",
+        "description": "Doeltemperaturen, zwemtijd, en wat verwarmen de moeite waard maakt — prijs en zon."
+      },
+      "filtration": {
+        "title": "Filtratie",
+        "description": "Hoeveel circulatie het bad per dag nodig heeft, en wanneer dat mag."
+      },
+      "water": {
+        "title": "Waterbehandeling",
+        "description": "Welke middelen je gebruikt, zodat een meting een hoeveelheid wordt die je kunt afmeten."
+      },
+      "advanced": {
+        "title": "Gevorderd",
+        "description": "Dingen die je alleen aanpast als een meting zich vreemd gedraagt. De standaardwaarden kloppen doorgaans."
       }
     }
   },
@@ -377,7 +454,8 @@
         "glass": "Filterglas",
         "balls": "Filterballen",
         "cartridge": "Cartridge",
-        "none": "Geen filter in de lijn"
+        "none": "Geen filter in de lijn",
+        "de": "Diatomeeënaarde (DE)"
       }
     },
     "flow_unit": {
@@ -413,6 +491,23 @@
         "chlorine": "Chloor",
         "bromine": "Broom",
         "salt": "Zoutelektrolyse"
+      }
+    },
+    "heating_source": {
+      "options": {
+        "heat_pump": "Warmtepomp",
+        "electric": "Elektrische verwarmer of element",
+        "solar": "Zonnecollector (handbediende klep)",
+        "gas": "Gasverwarmer",
+        "none": "Geen verwarming — alleen filtratie en water"
+      }
+    },
+    "pool_kind": {
+      "options": {
+        "inflatable": "Opblaasbaar",
+        "frame": "Framebad",
+        "above_ground": "Opbouwbad",
+        "in_ground": "Ingebouwd bad"
       }
     }
   },

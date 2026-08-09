@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Pool",
-        "description": "Filtration time, heating time and the energy budget are all calculated from these figures, so nothing has to be entered in hours.",
+        "title": "What kind of pool is this?",
+        "description": "These answers decide what the rest of the setup asks about. An immersion element has no efficiency curve and no minimum outdoor temperature, so those questions are skipped rather than asked and guessed at.",
         "data": {
           "name": "Name",
           "volume_l": "Water volume (litres)",
@@ -12,7 +12,13 @@
           "target_temp": "Desired temperature (°C)",
           "max_temp": "Maximum temperature (°C)",
           "unit_system": "Units",
-          "sanitiser": "How the water is sanitised"
+          "sanitiser": "How the water is sanitised",
+          "heating_source": "How is the water heated?",
+          "pool_kind": "Pool construction",
+          "has_solar_collector": "Also has a solar collector",
+          "collector_sensor": "Solar collector temperature",
+          "collector_margin": "Collector must be warmer by (°C)",
+          "adopt_from": "Adopt learned history from"
         },
         "data_description": {
           "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
@@ -21,7 +27,12 @@
           "target_temp": "28 °C is comfortable for most people. 26 is brisk, 30 is bath-like and noticeably more expensive.",
           "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat.",
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
-          "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing."
+          "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing.",
+          "pool_kind": "Sets a realistic starting figure for heat loss — an uninsulated inflatable loses several times faster than a built-in pool. It is only a starting point; the real figure is measured within days.",
+          "heating_source": "Changes which questions follow. A solar collector is usually on a manual three-way valve, so the integration advises when to open it rather than switching anything.",
+          "has_solar_collector": "Tick if you have a collector alongside another heater. Free heat is always preferred over paid heat.",
+          "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool.",
+          "collector_margin": "Below this difference, water sent through the collector gains too little to be worth circulating — and below zero it actively loses heat."
         }
       },
       "pump": {
@@ -108,7 +119,8 @@
           "alkalinity_sensor": "Total alkalinity (ppm)",
           "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
           "hardness_sensor": "Total hardness (ppm)",
-          "salt_sensor": "Salt (ppm)"
+          "salt_sensor": "Salt (ppm)",
+          "collector_sensor": "Solar collector temperature"
         },
         "data_description": {
           "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
@@ -133,7 +145,29 @@
           "alkalinity_sensor": "The buffer that holds pH steady. Out of range, pH drifts on its own and correcting it is a weekly chore rather than a fix.",
           "cyanuric_sensor": "Stabiliser, which shields chlorine from sunlight. Too little and chlorine burns off in hours; above about 100 ppm it holds chlorine hostage and adding more achieves nothing.",
           "hardness_sensor": "Soft water pulls calcium out of grout and fittings; hard water scales the heat exchanger.",
-          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual."
+          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual.",
+          "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool."
+        }
+      },
+      "adopt": {
+        "title": "Learned history found",
+        "description": "{count} earlier installation(s) left learned history behind. Adopting it saves rebuilding weeks of measurements."
+      },
+      "heating": {
+        "data": {
+          "heating_source": "How is the water heated?",
+          "pool_kind": "Pool construction",
+          "has_solar_collector": "Also has a solar collector",
+          "collector_sensor": "Solar collector temperature",
+          "collector_margin": "Collector must be warmer by (°C)",
+          "adopt_from": "Adopt learned history from"
+        },
+        "data_description": {
+          "pool_kind": "Sets a realistic starting figure for heat loss — an uninsulated inflatable loses several times faster than a built-in pool. It is only a starting point; the real figure is measured within days.",
+          "heating_source": "Changes which questions follow. A solar collector is usually on a manual three-way valve, so the integration advises when to open it rather than switching anything.",
+          "has_solar_collector": "Tick if you have a collector alongside another heater. Free heat is always preferred over paid heat.",
+          "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool.",
+          "collector_margin": "Below this difference, water sent through the collector gains too little to be worth circulating — and below zero it actively loses heat."
         }
       }
     }
@@ -245,11 +279,14 @@
       },
       "init": {
         "menu_options": {
-          "entities": "Entities",
-          "hardware": "Pool and equipment",
-          "general": "General settings",
-          "swimming": "Swimming times",
-          "notifications": "Notifications"
+          "entities": "Sensors and switches",
+          "pool": "Pool and pump",
+          "heating": "Heating appliance",
+          "when_to_heat": "When to heat",
+          "filtration": "Filtration",
+          "water": "Water treatment",
+          "notifications": "Notifications",
+          "advanced": "Advanced"
         }
       },
       "entities": {
@@ -281,7 +318,8 @@
           "alkalinity_sensor": "Total alkalinity (ppm)",
           "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
           "hardness_sensor": "Total hardness (ppm)",
-          "salt_sensor": "Salt (ppm)"
+          "salt_sensor": "Salt (ppm)",
+          "collector_sensor": "Solar collector temperature"
         },
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",
@@ -309,7 +347,8 @@
           "alkalinity_sensor": "The buffer that holds pH steady. Out of range, pH drifts on its own and correcting it is a weekly chore rather than a fix.",
           "cyanuric_sensor": "Stabiliser, which shields chlorine from sunlight. Too little and chlorine burns off in hours; above about 100 ppm it holds chlorine hostage and adding more achieves nothing.",
           "hardness_sensor": "Soft water pulls calcium out of grout and fittings; hard water scales the heat exchanger.",
-          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual."
+          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual.",
+          "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool."
         }
       },
       "hardware": {
@@ -361,6 +400,44 @@
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
           "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing."
         }
+      },
+      "pool": {
+        "title": "Pool and pump"
+      },
+      "heating": {
+        "title": "Heating appliance",
+        "description": "Settings for {source}. Not applicable here: {not_applicable}.",
+        "data": {
+          "heating_source": "How is the water heated?",
+          "pool_kind": "Pool construction",
+          "has_solar_collector": "Also has a solar collector",
+          "collector_sensor": "Solar collector temperature",
+          "collector_margin": "Collector must be warmer by (°C)",
+          "adopt_from": "Adopt learned history from"
+        },
+        "data_description": {
+          "pool_kind": "Sets a realistic starting figure for heat loss — an uninsulated inflatable loses several times faster than a built-in pool. It is only a starting point; the real figure is measured within days.",
+          "heating_source": "Changes which questions follow. A solar collector is usually on a manual three-way valve, so the integration advises when to open it rather than switching anything.",
+          "has_solar_collector": "Tick if you have a collector alongside another heater. Free heat is always preferred over paid heat.",
+          "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool.",
+          "collector_margin": "Below this difference, water sent through the collector gains too little to be worth circulating — and below zero it actively loses heat."
+        }
+      },
+      "when_to_heat": {
+        "title": "When to heat",
+        "description": "Target temperatures, swimming time, and what makes heating worth doing — price and sun."
+      },
+      "filtration": {
+        "title": "Filtration",
+        "description": "How much circulation the pool needs each day, and when it may happen."
+      },
+      "water": {
+        "title": "Water treatment",
+        "description": "Which products you use, so a reading becomes an amount you can measure out."
+      },
+      "advanced": {
+        "title": "Advanced",
+        "description": "Things you only change when a measurement misbehaves. Sensible defaults are already in place."
       }
     }
   },
@@ -377,7 +454,8 @@
         "glass": "Glass media",
         "balls": "Filter balls",
         "cartridge": "Cartridge",
-        "none": "No filter in line"
+        "none": "No filter in line",
+        "de": "Diatomaceous earth (DE)"
       }
     },
     "flow_unit": {
@@ -413,6 +491,23 @@
         "chlorine": "Chlorine",
         "bromine": "Bromine",
         "salt": "Salt chlorinator"
+      }
+    },
+    "heating_source": {
+      "options": {
+        "heat_pump": "Heat pump",
+        "electric": "Electric heater or immersion element",
+        "solar": "Solar collector (manual valve)",
+        "gas": "Gas heater",
+        "none": "No heating — filtration and water only"
+      }
+    },
+    "pool_kind": {
+      "options": {
+        "inflatable": "Inflatable",
+        "frame": "Frame pool",
+        "above_ground": "Above ground",
+        "in_ground": "In ground"
       }
     }
   },

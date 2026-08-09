@@ -262,7 +262,6 @@ class PoolSmartPanel extends HTMLElement {
                       background: color-mix(in srgb, var(--primary-color,#03a9f4) 20%,
                                   transparent);
                       color: var(--primary-text-color,#212121); }
-
         .ring { width:56px; height:56px; border-radius:50%; display:grid; place-items:center; }
         .ring span { width:40px; height:40px; border-radius:50%;
                      background: var(--card-background-color,#fff); display:grid;

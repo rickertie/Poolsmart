@@ -400,6 +400,18 @@ def heat_pump_available(
         )
         return False, blocking.message
 
+    # A source with no air temperature limits has no envelope to check. An
+    # immersion element works at any outdoor temperature, so refusing to heat
+    # because the outdoor probe is missing would be inventing a restriction the
+    # hardware does not have.
+    if not config.source_has("air_temp_limits"):
+        if not config.source_has("controllable"):
+            return False, (
+                "This heating source is operated by hand, so the integration "
+                "advises rather than switching it."
+            )
+        return True, "No operating envelope applies to this heating source."
+
     if not state.air_temp.available:
         return False, "Outdoor temperature is unknown, so the operating envelope cannot be checked."
 
@@ -429,3 +441,65 @@ def heat_pump_available(
         )
 
     return True, "Within the operating envelope."
+
+
+def solar_collector_advice(
+    state: PoolState, config: PoolConfig
+) -> tuple[bool, str, dict]:
+    """Whether water should be going through the solar collector.
+
+    Almost every solar collector is plumbed through a manual three-way valve, so
+    there is nothing here to switch. What the integration can do is watch the
+    collector against the pool and say when turning the valve is worth the walk
+    outside -- and, just as usefully, when it is not, because water pushed
+    through a cold collector loses heat rather than gaining it.
+    """
+    if not (config.has_solar_collector or config.heating_source == "solar"):
+        return False, "", {}
+
+    collector = state.collector_temp
+    if collector is None or not collector.available:
+        return (
+            False,
+            "No collector temperature sensor, so there is nothing to compare.",
+            {},
+        )
+    if not state.water_temp.available:
+        return False, "The pool temperature is unknown.", {}
+
+    difference = collector.value - state.water_temp.value
+    numbers = {
+        "collector": round(collector.value, 1),
+        "pool": round(state.water_temp.value, 1),
+        "difference": round(difference, 1),
+        "margin": config.collector_margin,
+    }
+
+    if difference >= config.collector_margin:
+        return (
+            True,
+            (
+                f"The collector is at {collector.value:.1f} C against "
+                f"{state.water_temp.value:.1f} C in the pool. Opening the valve "
+                "is free heat."
+            ),
+            numbers,
+        )
+    if difference <= 0:
+        return (
+            False,
+            (
+                f"The collector is at {collector.value:.1f} C, colder than the "
+                "pool. Water sent through it now would lose heat rather than "
+                "gain it, so keep the valve closed."
+            ),
+            numbers,
+        )
+    return (
+        False,
+        (
+            f"The collector is only {difference:.1f} C above the pool, under the "
+            f"{config.collector_margin:.1f} C worth bothering with."
+        ),
+        numbers,
+    )

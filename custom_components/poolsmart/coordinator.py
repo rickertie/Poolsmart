@@ -24,6 +24,8 @@ from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
 from .core.trace import NearMissLog, Trace
 from .core.config import (
+    INITIAL_HEAT_LOSS,
+    PoolKind,
     display_amount,
     FILTER_MEDIA_DERATE,
     ComfortSettings,
@@ -306,8 +308,16 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 ),
             ),
             learning=LearningSettings(
+                initial_heat_loss_c_per_h=INITIAL_HEAT_LOSS.get(
+                    PoolKind(self._conf(c.CONF_POOL_KIND, "frame")), 0.22
+                ),
                 enabled=bool(self._conf(c.CONF_LEARNING_ENABLED, True))
             ),
+            heating_source=self._conf(c.CONF_HEATING_SOURCE, "heat_pump"),
+            pool_kind=self._conf(c.CONF_POOL_KIND, "frame"),
+            has_solar_collector=bool(self._conf(c.CONF_HAS_SOLAR_COLLECTOR, False)),
+            collector_margin=float(self._conf(c.CONF_COLLECTOR_MARGIN, 3.0)),
+            unit_system=self._conf(c.CONF_UNIT_SYSTEM, "metric"),
             sensor_aliases=frozenset(aliases),
         )
 
@@ -545,6 +555,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             pump_outlet=self._read(c.CONF_PUMP_OUTLET_SENSOR, "pump_outlet"),
             hp_inlet=self._read(c.CONF_HP_INLET_SENSOR, "hp_inlet"),
             hp_outlet=self._read(c.CONF_HP_OUTLET_SENSOR, "hp_outlet"),
+            collector_temp=self._read(c.CONF_COLLECTOR_SENSOR, "collector"),
             flow_m3h=self._read_flow(),
             pump_power_w=self._read(c.CONF_PUMP_POWER_SENSOR, "pump_power"),
             hp_power_w=self._read(c.CONF_HP_POWER_SENSOR, "hp_power"),

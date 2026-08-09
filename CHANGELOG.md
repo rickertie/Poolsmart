@@ -8,13 +8,45 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.3.0] — Not Everyone Has a Heat Pump — 2026-08-06
+
+### Added
+- **Heating source at setup.** Heat pump, electric heater, solar collector, gas,
+  or none at all. The questions that follow adapt: an immersion element has no
+  efficiency curve and no minimum outdoor temperature, so those are skipped
+  rather than asked and guessed at. Compressor protection and the operating
+  envelope apply only where they exist
+- **Solar collectors are advised, not controlled.** Almost every one is on a
+  manual three-way valve, so the integration compares collector against pool and
+  says when opening it is free heat — and when the collector is colder and water
+  sent through it would lose heat instead
+- **Pool construction** sets a believable starting heat loss, from 0.30 °C/h for
+  an uninsulated inflatable to 0.08 for a built-in pool
+- **Learned history survives a reinstall.** A new entry id meant a new storage
+  key, leaving weeks of measurement on disk under a key nothing read. Setup finds
+  it and offers to adopt it, describing what it found. Locally measured values
+  win over adopted ones; the session and dose logs come across too
+- `export_learning` and `import_learning` services for backups and moving
+  between systems
+
+### Changed
+- **Settings reorganised into eight topics**: sensors, pool, heating, when to
+  heat, filtration, water, notifications, advanced. The old "general" screen held
+  twenty-eight unrelated settings, which is not a category but what was left over
+  after categorising everything else
+- **Saving returns to the menu** instead of closing the dialog. Changing three
+  things used to mean opening Configure three times
+- Advanced settings are separate on purpose: roughly a third of the settings here
+  are ones anybody changes deliberately, and mixing them with the rest made those
+  harder to find
+
 ## [1.2.3] — Tablets Are Counted — 2026-08-06
 
 ### Fixed
 - **The panel header ignored the theme.** A fixed navy block looked right in a
   dark mockup and wrong on a light Home Assistant, which is most installations.
   It now tints the accent colour, giving the same emphasis either way
-- **\"Add 11 g of chlorine tablet\" is not an instruction anyone can follow.**
+- **"Add 11 g of chlorine tablet" is not an instruction anyone can follow.**
   Tablets come in fixed sizes, cannot usefully be halved, and take days to
   dissolve — which makes them the wrong product for a reading that is low right
   now. The recommendation is a whole number of tablets, says how that compares
@@ -509,8 +541,8 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.3.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.3.0
 [1.2.3]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.3
-
 [1.2.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.2
 [1.2.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.1
 [1.2.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.0

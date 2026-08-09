@@ -89,6 +89,56 @@ async def async_load_defaults(hass) -> dict:
     return defaults
 
 
+def _kind_schema(d: dict) -> vol.Schema:
+    """The questions that change every question after them.
+
+    Asked first and on their own, because the answers decide which of the later
+    steps make sense at all. A pool with an immersion element has no COP curve
+    to describe and no minimum air temperature; asking anyway produces fields
+    someone has to guess at, and guesses are worse than defaults.
+    """
+    return vol.Schema(
+        {
+            vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
+            vol.Required(
+                c.CONF_POOL_KIND, default=d[c.CONF_POOL_KIND]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["inflatable", "frame", "above_ground", "in_ground"],
+                    translation_key="pool_kind",
+                )
+            ),
+            vol.Required(
+                c.CONF_HEATING_SOURCE, default=d[c.CONF_HEATING_SOURCE]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["heat_pump", "electric", "solar", "gas", "none"],
+                    translation_key="heating_source",
+                )
+            ),
+            vol.Required(
+                c.CONF_HAS_SOLAR_COLLECTOR,
+                default=d[c.CONF_HAS_SOLAR_COLLECTOR],
+            ): bool,
+            vol.Required(
+                c.CONF_UNIT_SYSTEM, default=d[c.CONF_UNIT_SYSTEM]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["metric", "imperial"], translation_key="unit_system"
+                )
+            ),
+            vol.Required(
+                c.CONF_SANITISER, default=d[c.CONF_SANITISER]
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["chlorine", "bromine", "salt"],
+                    translation_key="sanitiser",
+                )
+            ),
+        }
+    )
+
+
 def _pool_schema(d: dict) -> vol.Schema:
     return vol.Schema(
         {
@@ -105,21 +155,6 @@ def _pool_schema(d: dict) -> vol.Schema:
             ),
             vol.Required(c.CONF_MAX_TEMP, default=d[c.CONF_MAX_TEMP]): _positive(
                 10, 40, 0.5
-            ),
-            vol.Required(
-                c.CONF_UNIT_SYSTEM, default=d[c.CONF_UNIT_SYSTEM]
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=["metric", "imperial"], translation_key="unit_system"
-                )
-            ),
-            vol.Required(
-                c.CONF_SANITISER, default=d[c.CONF_SANITISER]
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=["chlorine", "bromine", "salt"],
-                    translation_key="sanitiser",
-                )
             ),
         }
     )
@@ -147,6 +182,78 @@ def _pump_schema(d: dict) -> vol.Schema:
             ),
         }
     )
+
+
+def _heating_schema(d: dict, source: str) -> vol.Schema:
+    """Only the questions this heating source can answer.
+
+    An immersion element is exactly as efficient at every temperature and works
+    in any weather, so a COP curve and an operating envelope are not simplified
+    for it -- they do not exist. A solar collector is not switched by the
+    integration at all.
+    """
+    from .core.config import SOURCE_TRAITS, HeatingSource
+
+    traits = SOURCE_TRAITS[HeatingSource(source)]
+
+    if source == "none":
+        return vol.Schema({})
+
+    if source == "solar":
+        return vol.Schema(
+            {
+                vol.Optional(
+                    c.CONF_COLLECTOR_MARGIN, default=d.get(c.CONF_COLLECTOR_MARGIN, 3.0)
+                ): _positive(0.5, 15, 0.5),
+            }
+        )
+
+    fields: dict = {
+        vol.Required(c.CONF_HP_INPUT_KW, default=d[c.CONF_HP_INPUT_KW]): _positive(
+            0.05, 50, 0.01
+        ),
+        vol.Required(
+            c.CONF_HP_THERMAL_KW, default=d[c.CONF_HP_THERMAL_KW]
+        ): _positive(0.1, 200, 0.1),
+    }
+
+    if traits["efficiency_varies"]:
+        fields.update(
+            {
+                vol.Required(
+                    c.CONF_HP_COP_REF_TEMP, default=d[c.CONF_HP_COP_REF_TEMP]
+                ): _positive(-10, 45, 0.5),
+                vol.Optional(c.CONF_HP_COP_LOW): _positive(1, 15, 0.01),
+                vol.Optional(
+                    c.CONF_HP_COP_LOW_TEMP, default=d[c.CONF_HP_COP_LOW_TEMP]
+                ): _positive(-10, 45, 0.5),
+            }
+        )
+
+    if traits["air_temp_limits"]:
+        fields.update(
+            {
+                vol.Required(
+                    c.CONF_HP_AIR_TEMP_MIN, default=d[c.CONF_HP_AIR_TEMP_MIN]
+                ): _positive(-20, 30, 0.5),
+                vol.Required(
+                    c.CONF_HP_AIR_TEMP_MAX, default=d[c.CONF_HP_AIR_TEMP_MAX]
+                ): _positive(20, 60, 0.5),
+                vol.Required(
+                    c.CONF_HP_FLOW_MIN_M3H, default=d[c.CONF_HP_FLOW_MIN_M3H]
+                ): _positive(0, 50, 0.1),
+                vol.Required(
+                    c.CONF_HP_FLOW_MIN_BLOCKING,
+                    default=d[c.CONF_HP_FLOW_MIN_BLOCKING],
+                ): bool,
+                vol.Required(
+                    c.CONF_HP_FLOW_MIN_VERIFIED,
+                    default=d[c.CONF_HP_FLOW_MIN_VERIFIED],
+                ): bool,
+            }
+        )
+
+    return vol.Schema(fields)
 
 
 def _heat_pump_schema(d: dict) -> vol.Schema:
@@ -256,21 +363,30 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
         self._defaults: dict[str, Any] = {}
+        self._orphans: list = []
 
     async def async_step_user(self, user_input: dict | None = None) -> ConfigFlowResult:
         if not self._defaults:
             self._defaults = await async_load_defaults(self.hass)
         if user_input is not None:
+            self._data.update(user_input)
+            return await self.async_step_pool()
+        return self.async_show_form(
+            step_id="user", data_schema=_kind_schema(self._defaults)
+        )
+
+    async def async_step_pool(self, user_input: dict | None = None) -> ConfigFlowResult:
+        if user_input is not None:
             self._data.update(derive_pool_shape(dict(user_input)))
             return await self.async_step_pump()
         return self.async_show_form(
-            step_id="user", data_schema=_pool_schema(self._defaults)
+            step_id="pool", data_schema=_pool_schema(self._defaults)
         )
 
     async def async_step_pump(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update(user_input)
-            return await self.async_step_heat_pump()
+            return await self.async_step_heating()
 
         return self.async_show_form(
             step_id="pump",
@@ -278,6 +394,33 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 "derate": f"{int(100 * 0.7)}",
             },
+        )
+
+    async def async_step_heating(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """Only what this heating source has."""
+        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
+
+        if user_input is not None:
+            if source in ("heat_pump", "electric", "gas"):
+                input_kw = float(user_input.get(c.CONF_HP_INPUT_KW, 0) or 0)
+                thermal_kw = float(user_input.get(c.CONF_HP_THERMAL_KW, 0) or 0)
+                cop_ref = thermal_kw / input_kw if input_kw else 1.0
+                user_input[c.CONF_HP_COP_REF] = round(cop_ref, 3)
+                if not user_input.get(c.CONF_HP_COP_LOW):
+                    # A source whose efficiency does not vary gets a flat curve
+                    # rather than a curve pretending to vary.
+                    user_input[c.CONF_HP_COP_LOW] = round(cop_ref, 3)
+                    user_input[c.CONF_HP_COP_LOW_TEMP] = user_input.get(
+                        c.CONF_HP_COP_REF_TEMP, 26.0
+                    )
+            self._data.update(user_input)
+            return await self.async_step_entities()
+
+        recommended = float(self._data.get(c.CONF_MAX_TEMP, 32.0)) + 2.0
+        return self.async_show_form(
+            step_id="heating",
+            data_schema=_heating_schema(self._defaults, source),
+            description_placeholders={"recommended_setpoint": f"{recommended:.0f}"},
         )
 
     async def async_step_heat_pump(self, user_input: dict | None = None) -> ConfigFlowResult:
@@ -310,8 +453,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_optional(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
             self._data.update({k: v for k, v in user_input.items() if v})
-            title = self._data.pop(CONF_NAME, DEFAULT_NAME)
-            return self.async_create_entry(title=title, data=self._data)
+            return await self.async_step_adopt()
 
         volume = float(self._data.get(c.CONF_VOLUME_L, 0))
         flow = float(self._data.get(c.CONF_PUMP_FLOW_M3H, 1))
@@ -329,6 +471,53 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
                 "daily_hours": f"{daily_h:.1f}",
                 "block_minutes": f"{daily_h / 3 * 60:.0f}",
             },
+        )
+
+    async def async_step_adopt(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """Offer learned history left behind by an earlier installation.
+
+        Removing an integration and adding it again gives a new entry id, and the
+        storage key is built from that id — so weeks of measured heat loss, a COP
+        curve and a session history are still on disk under a key nothing reads
+        any more. Rebuilding that takes days of idle periods and completed
+        sessions, which is a poor thing to ask of someone who only wanted to
+        change a setting.
+        """
+        from .recovery import find_orphans
+
+        if user_input is not None:
+            chosen = user_input.get(c.CONF_ADOPT_FROM)
+            if chosen and chosen != "none":
+                self._data[c.CONF_ADOPT_FROM] = chosen
+            title = self._data.pop(CONF_NAME, DEFAULT_NAME)
+            return self.async_create_entry(title=title, data=self._data)
+
+        active = {entry.entry_id for entry in self._async_current_entries()}
+        orphans = await self.hass.async_add_executor_job(
+            find_orphans, self.hass, active
+        )
+        if not orphans:
+            title = self._data.pop(CONF_NAME, DEFAULT_NAME)
+            return self.async_create_entry(title=title, data=self._data)
+
+        self._orphans = orphans
+        options = [{"value": "none", "label": "Start fresh"}] + [
+            {"value": orphan.path, "label": orphan.describe()} for orphan in orphans
+        ]
+        return self.async_show_form(
+            step_id="adopt",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        c.CONF_ADOPT_FROM, default=orphans[0].path
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options, mode=selector.SelectSelectorMode.LIST
+                        )
+                    )
+                }
+            ),
+            description_placeholders={"count": str(len(orphans))},
         )
 
     @staticmethod
@@ -355,9 +544,50 @@ class PoolSmartOptionsFlow(OptionsFlow):
         self._pending: dict[str, Any] = {}
 
     async def async_step_init(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """One menu item per topic, rather than one bin marked "general".
+
+        Twenty-eight unrelated settings under a single heading is not a category,
+        it is what is left after categorising everything else. Each item below is
+        one subject someone might arrive wanting to change.
+        """
         return self.async_show_menu(
             step_id="init",
-            menu_options=["entities", "hardware", "general", "swimming", "notifications"],
+            menu_options=[
+                "entities",
+                "pool",
+                "heating",
+                "when_to_heat",
+                "filtration",
+                "water",
+                "notifications",
+                "advanced",
+            ],
+        )
+
+    def _save(self, updates: dict) -> ConfigFlowResult:
+        """Store a section and return to the menu instead of closing.
+
+        Saving used to end the dialog, so changing three things meant opening
+        Configure three times. Returning to the menu costs nothing and matches
+        what anyone adjusting settings is actually doing.
+        """
+        self._pending.update(updates)
+        self.hass.config_entries.async_update_entry(
+            self.config_entry,
+            options={**self.config_entry.options, **updates},
+        )
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=[
+                "entities",
+                "pool",
+                "heating",
+                "when_to_heat",
+                "filtration",
+                "water",
+                "notifications",
+                "advanced",
+            ],
         )
 
     async def async_step_entities(self, user_input: dict | None = None) -> ConfigFlowResult:
@@ -374,8 +604,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
             for key in c.OPTIONAL_ENTITY_KEYS:
                 if key not in cleaned:
                     cleaned[key] = ""
-            options = {**self.config_entry.options, **cleaned}
-            return self.async_create_entry(data=options)
+            return self._save(dict(user_input))
 
         current = {**self.config_entry.data, **self.config_entry.options}
 
@@ -431,7 +660,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
         )
         return self.async_show_form(step_id="entities", data_schema=schema)
 
-    async def async_step_hardware(self, user_input: dict | None = None) -> ConfigFlowResult:
+    async def async_step_pool(self, user_input: dict | None = None) -> ConfigFlowResult:
         """Correct the pool, pump and heat pump figures after setup."""
         if user_input is not None:
             data = derive_pool_shape(dict(user_input))
@@ -442,8 +671,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 if not data.get(c.CONF_HP_COP_LOW):
                     data[c.CONF_HP_COP_LOW] = data[c.CONF_HP_COP_REF]
                     data[c.CONF_HP_COP_LOW_TEMP] = data.get(c.CONF_HP_COP_REF_TEMP, 26.0)
-            options = {**self.config_entry.options, **data}
-            return self.async_create_entry(data=options)
+            return self._save(dict(user_input))
 
         current = {**self.config_entry.data, **self.config_entry.options}
 
@@ -514,6 +742,135 @@ class PoolSmartOptionsFlow(OptionsFlow):
         )
         return self.async_show_form(step_id="hardware", data_schema=schema)
 
+    async def async_step_heating(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """The heating appliance, and only the parts it actually has.
+
+        Fields that do not apply are shown anyway, disabled, with the reason.
+        Hiding them entirely would leave someone who later fits a heat pump
+        wondering where the settings went, and it would hide why certain
+        branches of the ladder never fire.
+        """
+        from .core.config import SOURCE_TRAITS, HeatingSource
+
+        if user_input is not None:
+            return self._save(user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        source = current.get(c.CONF_HEATING_SOURCE, "heat_pump")
+        traits = SOURCE_TRAITS[HeatingSource(source)]
+
+        fields: dict = {
+            vol.Optional(
+                c.CONF_HEATING_SOURCE, default=source
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["heat_pump", "electric", "solar", "gas", "none"],
+                    translation_key="heating_source",
+                )
+            ),
+            vol.Optional(
+                c.CONF_HAS_SOLAR_COLLECTOR,
+                default=current.get(c.CONF_HAS_SOLAR_COLLECTOR, False),
+            ): bool,
+        }
+
+        if source != "none" and traits["controllable"]:
+            fields[
+                vol.Optional(
+                    c.CONF_HP_INPUT_KW, default=current.get(c.CONF_HP_INPUT_KW, 0.58)
+                )
+            ] = _positive(0.05, 50, 0.01)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_THERMAL_KW,
+                    default=current.get(c.CONF_HP_THERMAL_KW, 3.0),
+                )
+            ] = _positive(0.1, 200, 0.1)
+
+        if traits["efficiency_varies"]:
+            fields[
+                vol.Optional(
+                    c.CONF_HP_COP_REF, default=current.get(c.CONF_HP_COP_REF, 5.17)
+                )
+            ] = _positive(1, 15, 0.01)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_COP_REF_TEMP,
+                    default=current.get(c.CONF_HP_COP_REF_TEMP, 26.0),
+                )
+            ] = _positive(-10, 45, 0.5)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_COP_LOW, default=current.get(c.CONF_HP_COP_LOW, 4.18)
+                )
+            ] = _positive(1, 15, 0.01)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_COP_LOW_TEMP,
+                    default=current.get(c.CONF_HP_COP_LOW_TEMP, 15.0),
+                )
+            ] = _positive(-10, 45, 0.5)
+
+        if traits["air_temp_limits"]:
+            fields[
+                vol.Optional(
+                    c.CONF_HP_AIR_TEMP_MIN,
+                    default=current.get(c.CONF_HP_AIR_TEMP_MIN, 11.0),
+                )
+            ] = _positive(-20, 30, 0.5)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_AIR_TEMP_MAX,
+                    default=current.get(c.CONF_HP_AIR_TEMP_MAX, 43.0),
+                )
+            ] = _positive(20, 60, 0.5)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_FLOW_MIN_M3H,
+                    default=current.get(c.CONF_HP_FLOW_MIN_M3H, 2.0),
+                )
+            ] = _positive(0, 50, 0.1)
+            fields[
+                vol.Optional(
+                    c.CONF_HP_FLOW_MIN_BLOCKING,
+                    default=current.get(c.CONF_HP_FLOW_MIN_BLOCKING, False),
+                )
+            ] = bool
+            fields[
+                vol.Optional(
+                    c.CONF_HP_FLOW_MIN_VERIFIED,
+                    default=current.get(c.CONF_HP_FLOW_MIN_VERIFIED, False),
+                )
+            ] = bool
+
+        if current.get(c.CONF_HAS_SOLAR_COLLECTOR) or source == "solar":
+            fields[
+                vol.Optional(
+                    c.CONF_COLLECTOR_MARGIN,
+                    default=current.get(c.CONF_COLLECTOR_MARGIN, 3.0),
+                )
+            ] = _positive(0.5, 15, 0.5)
+
+        inapplicable = [
+            name
+            for name, has in (
+                ("efficiency curve", traits["efficiency_varies"]),
+                ("operating envelope", traits["air_temp_limits"]),
+                ("compressor protection", traits["compressor"]),
+            )
+            if not has
+        ]
+        return self.async_show_form(
+            step_id="heating",
+            data_schema=vol.Schema(fields),
+            description_placeholders={
+                "source": source.replace("_", " "),
+                "not_applicable": ", ".join(inapplicable) or "none",
+            },
+        )
+
     async def async_step_swimming(self, user_input: dict | None = None) -> ConfigFlowResult:
         """When the pool should be at temperature.
 
@@ -522,8 +879,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
         from a list of deadlines either way.
         """
         if user_input is not None:
-            options = {**self.config_entry.options, **user_input}
-            return self.async_create_entry(data=options)
+            return self._save(user_input)
 
         current = {**self.config_entry.data, **self.config_entry.options}
         schema = vol.Schema(
@@ -555,8 +911,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
         """
         if user_input is not None:
             targets = {k: v for k, v in user_input.items() if v}
-            options = {**self.config_entry.options, c.CONF_NOTIFY_TARGETS: targets}
-            return self.async_create_entry(data=options)
+            return self._save({c.CONF_NOTIFY_TARGETS: targets})
 
         current = (self.config_entry.options.get(c.CONF_NOTIFY_TARGETS) or {})
         notify_selector = selector.EntitySelector(
@@ -569,10 +924,248 @@ class PoolSmartOptionsFlow(OptionsFlow):
             step_id="notifications", data_schema=vol.Schema(fields)
         )
 
+    async def async_step_filtration(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """How much circulation the pool needs, and when it may happen."""
+        if user_input is not None:
+            return self._save(user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        return self.async_show_form(
+            step_id="filtration",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        c.CONF_TURNOVER_FACTOR,
+                        default=current.get(c.CONF_TURNOVER_FACTOR, 3.0),
+                    ): _positive(0.5, 6.0, 0.1),
+                    vol.Optional(
+                        c.CONF_MIN_DAILY_HOURS,
+                        default=current.get(c.CONF_MIN_DAILY_HOURS, 4.0),
+                    ): _positive(0.5, 24.0, 0.5),
+                    vol.Optional(
+                        c.CONF_MIN_BLOCK_MINUTES,
+                        default=current.get(c.CONF_MIN_BLOCK_MINUTES, 20),
+                    ): _positive(5, 240, 1),
+                    vol.Optional(
+                        c.CONF_NIGHT_START,
+                        default=current.get(c.CONF_NIGHT_START, "22:00"),
+                    ): str,
+                    vol.Optional(
+                        c.CONF_NIGHT_END,
+                        default=current.get(c.CONF_NIGHT_END, "07:00"),
+                    ): str,
+                    vol.Optional(
+                        c.CONF_PUMP_RUNDOWN_MINUTES,
+                        default=current.get(c.CONF_PUMP_RUNDOWN_MINUTES, 5),
+                    ): _positive(0, 60, 1),
+                }
+            ),
+        )
+
+    async def async_step_when_to_heat(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Temperatures, swimming times, price and sun in one place.
+
+        These belong together because they answer one question between them --
+        when is heating worth doing -- and separating the target temperature
+        from the price ceiling meant visiting two screens to change one policy.
+        """
+        if user_input is not None:
+            return self._save(user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        return self.async_show_form(
+            step_id="when_to_heat",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        c.CONF_TARGET_TEMP,
+                        default=current.get(c.CONF_TARGET_TEMP, 28.0),
+                    ): _positive(10, 40, 0.5),
+                    vol.Optional(
+                        c.CONF_MAX_TEMP, default=current.get(c.CONF_MAX_TEMP, 32.0)
+                    ): _positive(10, 40, 0.5),
+                    vol.Optional(
+                        c.CONF_MIN_WATER_TEMP,
+                        default=current.get(c.CONF_MIN_WATER_TEMP, 10.0),
+                    ): _positive(0, 25, 0.5),
+                    vol.Optional(
+                        c.CONF_FROST_AIR_TEMP,
+                        default=current.get(c.CONF_FROST_AIR_TEMP, 3.0),
+                    ): _positive(-10, 10, 0.5),
+                    vol.Optional(
+                        c.CONF_MAX_PRICE,
+                        default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
+                    ): _positive(0, 5, 0.01),
+                    vol.Optional(
+                        c.CONF_ECO_PRICE_FACTOR,
+                        default=current.get(c.CONF_ECO_PRICE_FACTOR, 0.7),
+                    ): _positive(0.1, 1.0, 0.05),
+                    vol.Optional(
+                        c.CONF_NEGATIVE_PRICE_BASIS,
+                        default=current.get(c.CONF_NEGATIVE_PRICE_BASIS, "total"),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["total", "market"],
+                            translation_key="negative_price_basis",
+                        )
+                    ),
+                    vol.Optional(
+                        c.CONF_SOLAR_THRESHOLD_W,
+                        description={
+                            "suggested_value": current.get(c.CONF_SOLAR_THRESHOLD_W)
+                        },
+                    ): _positive(0, 20000, 50),
+                    vol.Optional(
+                        c.CONF_SOLAR_MARGIN_W,
+                        default=current.get(c.CONF_SOLAR_MARGIN_W, 200),
+                    ): _positive(0, 5000, 50),
+                    vol.Optional(
+                        c.CONF_SOLAR_HYSTERESIS_W,
+                        default=current.get(c.CONF_SOLAR_HYSTERESIS_W, 300),
+                    ): _positive(0, 5000, 50),
+                    vol.Optional(
+                        c.CONF_SWIM_TIME,
+                        default=current.get(c.CONF_SWIM_TIME, "16:00"),
+                    ): str,
+                }
+            ),
+        )
+
+    async def async_step_water(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Which products are used, and how they are dosed."""
+        if user_input is not None:
+            return self._save(user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        chem_select = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    "acid_15", "acid_37", "ph_plus",
+                    "chlorine_granules_70", "chlorine_liquid_15",
+                    "shock", "shock_non_chlorine", "algaecide", "tablet",
+                ],
+                translation_key="chem_product",
+            )
+        )
+        return self.async_show_form(
+            step_id="water",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        c.CONF_SANITISER,
+                        default=current.get(c.CONF_SANITISER, "chlorine"),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["chlorine", "bromine", "salt"],
+                            translation_key="sanitiser",
+                        )
+                    ),
+                    vol.Optional(
+                        c.CONF_ACID_PRODUCT,
+                        default=current.get(c.CONF_ACID_PRODUCT, "acid_15"),
+                    ): chem_select,
+                    vol.Optional(
+                        c.CONF_CHLORINE_PRODUCT,
+                        default=current.get(
+                            c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70"
+                        ),
+                    ): chem_select,
+                    vol.Optional(
+                        c.CONF_TABLET_GRAMS,
+                        default=current.get(c.CONF_TABLET_GRAMS, 20),
+                    ): _positive(5, 1000, 5),
+                    vol.Optional(
+                        c.CONF_CHEMISTRY_MINUTES,
+                        default=current.get(c.CONF_CHEMISTRY_MINUTES, 60),
+                    ): _positive(5, 1440, 5),
+                    vol.Optional(
+                        c.CONF_FILTER_MEDIA,
+                        default=current.get(c.CONF_FILTER_MEDIA, "sand"),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["sand", "glass", "cartridge", "balls", "de"],
+                            translation_key="filter_media",
+                        )
+                    ),
+                }
+            ),
+        )
+
+    async def async_step_advanced(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """What you only touch when something is wrong.
+
+        Kept apart deliberately. Of the settings this integration has, perhaps a
+        third are ones anybody adjusts on purpose; the rest exist for when a
+        measurement misbehaves. Mixing the two makes the first third harder to
+        find, which was the whole complaint about a screen called "general".
+        """
+        if user_input is not None:
+            return self._save(user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        return self.async_show_form(
+            step_id="advanced",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        c.CONF_MIN_ON_MINUTES,
+                        default=current.get(c.CONF_MIN_ON_MINUTES, 15),
+                    ): _positive(1, 120, 1),
+                    vol.Optional(
+                        c.CONF_MIN_OFF_MINUTES,
+                        default=current.get(c.CONF_MIN_OFF_MINUTES, 10),
+                    ): _positive(1, 120, 1),
+                    vol.Optional(
+                        c.CONF_COMPRESSOR_MIN_OFF,
+                        default=current.get(c.CONF_COMPRESSOR_MIN_OFF, 10),
+                    ): _positive(0, 60, 1),
+                    vol.Optional(
+                        c.CONF_COMPRESSOR_MIN_ON,
+                        default=current.get(c.CONF_COMPRESSOR_MIN_ON, 10),
+                    ): _positive(0, 60, 1),
+                    vol.Optional(
+                        c.CONF_TEMP_HYSTERESIS,
+                        default=current.get(c.CONF_TEMP_HYSTERESIS, 0.3),
+                    ): _positive(0.1, 3.0, 0.1),
+                    vol.Optional(
+                        c.CONF_PUMP_STARTUP_GRACE,
+                        default=current.get(c.CONF_PUMP_STARTUP_GRACE, 120),
+                    ): _positive(0, 900, 10),
+                    vol.Optional(
+                        c.CONF_CALIBRATION_TOLERANCE,
+                        default=current.get(c.CONF_CALIBRATION_TOLERANCE, 0.6),
+                    ): _positive(0.1, 5.0, 0.1),
+                    vol.Optional(
+                        c.CONF_STALE_WARNING_SECONDS,
+                        default=current.get(c.CONF_STALE_WARNING_SECONDS, 900),
+                    ): _positive(60, 86400, 60),
+                    vol.Optional(
+                        c.CONF_STALE_BLOCKING_SECONDS,
+                        default=current.get(c.CONF_STALE_BLOCKING_SECONDS, 3600),
+                    ): _positive(60, 86400, 60),
+                    vol.Optional(
+                        c.CONF_LEARNING_ENABLED,
+                        default=current.get(c.CONF_LEARNING_ENABLED, True),
+                    ): bool,
+                    vol.Optional(
+                        c.CONF_MAX_STEP_RATIO,
+                        default=current.get(c.CONF_MAX_STEP_RATIO, 0.15),
+                    ): _positive(0.01, 1.0, 0.01),
+                }
+            ),
+        )
+
     async def async_step_general(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            options = {**self.config_entry.options, **user_input}
-            return self.async_create_entry(data=options)
+            return self._save(user_input)
 
         current = {**self.config_entry.data, **self.config_entry.options}
 

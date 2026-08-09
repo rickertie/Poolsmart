@@ -39,6 +39,104 @@ FILTER_MEDIA_DERATE = {
 }
 
 
+class HeatingSource(str, Enum):
+    """What warms the water, which changes far more than a label.
+
+    A heat pump has a COP that varies with air temperature, a minimum air
+    temperature below which it may not start, and a compressor that must not be
+    short cycled. An immersion element has none of those: it is always exactly
+    as efficient, works at any temperature, and can be switched freely. A solar
+    collector is usually plumbed through a manual three-way valve, which the
+    integration cannot operate at all -- so there it advises rather than
+    controls.
+
+    Asking the same questions for all of them, as earlier versions did, means
+    asking most people about things that do not exist on their installation.
+    """
+
+    HEAT_PUMP = "heat_pump"
+    ELECTRIC = "electric"
+    SOLAR = "solar"
+    GAS = "gas"
+    NONE = "none"
+
+
+#: Which capabilities each heating source actually has. Everything the ladder
+#: and the settings screens do with a source is derived from this rather than
+#: from scattered comparisons, so adding a source later is one entry here.
+SOURCE_TRAITS = {
+    HeatingSource.HEAT_PUMP: {
+        "efficiency_varies": True,   # COP curve worth learning
+        "air_temp_limits": True,     # may not run below a minimum
+        "compressor": True,          # needs protection from short cycling
+        "controllable": True,        # the integration can switch it
+        "free": False,               # costs money to run
+        "label_key": "heat_pump",
+    },
+    HeatingSource.ELECTRIC: {
+        "efficiency_varies": False,  # always 1.0, nothing to learn
+        "air_temp_limits": False,
+        "compressor": False,
+        "controllable": True,
+        "free": False,
+        "label_key": "electric",
+    },
+    HeatingSource.SOLAR: {
+        "efficiency_varies": False,
+        "air_temp_limits": False,
+        "compressor": False,
+        # Usually a manual three-way valve. The integration can see the water
+        # getting warmer and say when the valve is worth opening; it cannot turn
+        # anything on, and pretending otherwise would produce a decision log full
+        # of instructions nobody carried out.
+        "controllable": False,
+        "free": True,
+        "label_key": "solar",
+    },
+    HeatingSource.GAS: {
+        "efficiency_varies": False,
+        "air_temp_limits": False,
+        "compressor": False,
+        "controllable": True,
+        "free": False,
+        "label_key": "gas",
+    },
+    HeatingSource.NONE: {
+        "efficiency_varies": False,
+        "air_temp_limits": False,
+        "compressor": False,
+        "controllable": False,
+        "free": False,
+        "label_key": "none",
+    },
+}
+
+
+class PoolKind(str, Enum):
+    """Construction, which sets a sensible starting heat loss.
+
+    An uninsulated inflatable standing in the wind loses heat several times
+    faster than a built-in pool, and starting everyone at the same figure means
+    starting most people at the wrong one. It is only a starting point -- the
+    real figure is measured within days -- but the first days are exactly when
+    someone is deciding whether the thing works.
+    """
+
+    INFLATABLE = "inflatable"
+    FRAME = "frame"
+    ABOVE_GROUND = "above_ground"
+    IN_GROUND = "in_ground"
+
+
+#: Starting heat loss in °C/h, before anything has been measured.
+INITIAL_HEAT_LOSS = {
+    PoolKind.INFLATABLE: 0.30,
+    PoolKind.FRAME: 0.22,
+    PoolKind.ABOVE_GROUND: 0.15,
+    PoolKind.IN_GROUND: 0.08,
+}
+
+
 class UnitSystem(str, Enum):
     """Which units the user thinks in.
 
@@ -410,6 +508,23 @@ class PoolConfig:
 
     #: Which units to present figures in. Calculation stays metric regardless.
     unit_system: str = UnitSystem.METRIC
+
+    #: What warms the water, and how the pool is built.
+    heating_source: str = HeatingSource.HEAT_PUMP
+    pool_kind: str = PoolKind.FRAME
+    #: A second, free source alongside the main one -- a solar collector next to
+    #: a heat pump. Free heat should always be preferred over paid heat.
+    has_solar_collector: bool = False
+
+    #: How much warmer the collector must be than the pool before sending water
+    #: through it is worth doing. Too small a margin and the pump circulates
+    #: water through a collector that is barely helping; too large and free heat
+    #: goes unused on a mild day.
+    collector_margin: float = 3.0
+
+    def source_has(self, trait: str) -> bool:
+        """Whether the configured heating source has a given capability."""
+        return bool(SOURCE_TRAITS[HeatingSource(self.heating_source)].get(trait))
 
     #: Logical sensor roles that resolve to the same physical entity. Aliased
     #: roles are excluded from cross-comparison, otherwise the plausibility

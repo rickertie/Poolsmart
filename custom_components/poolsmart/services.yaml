@@ -61,3 +61,31 @@ reset_learned:
               value: measured_flow
             - label: COP curve
               value: cop
+
+export_learning:
+  name: Export learned history
+  description: >-
+    Write the learned values, session log and dose log to a file. Useful before
+    rebuilding a system, or to carry a pool's history to another Home Assistant.
+    Today's quota and the current mode are deliberately left out: they describe
+    a moment rather than a pool.
+  fields:
+    path:
+      name: File path
+      required: false
+      example: /config/poolsmart_learning.json
+      selector:
+        text:
+
+import_learning:
+  name: Import learned history
+  description: >-
+    Read a previously exported file. Values this pool has already measured for
+    itself are kept, because they were measured on the actual installation.
+  fields:
+    path:
+      name: File path
+      required: true
+      example: /config/poolsmart_learning.json
+      selector:
+        text:

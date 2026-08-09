@@ -18,6 +18,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import slugify
 
 from . import websocket as poolsmart_ws
+from .const import CONF_ADOPT_FROM as MIGRATION_ADOPT
 from .const import DOMAIN, MIGRATION_FLAG, PANEL_URL
 from .coordinator import PoolSmartCoordinator
 
@@ -131,6 +132,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = PoolSmartCoordinator(hass, entry)
     await coordinator.async_restore()
+    await _async_adopt_history(hass, entry, coordinator)
     await coordinator.async_config_entry_first_refresh()
 
     coordinator.actions.async_start()
@@ -183,6 +185,78 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 _LOGGER.info("Reset learned value: %s", call.data["value"])
 
     hass.services.async_register(DOMAIN, "reset_learned", _reset)
+
+    async def _export(call) -> None:
+        from .recovery import export_payload
+
+        path = call.data.get("path") or hass.config.path("poolsmart_learning.json")
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            payload = export_payload(coordinator.store)
+
+            def _write() -> None:
+                Path(path).write_text(
+                    json.dumps(payload, indent=2), encoding="utf-8"
+                )
+
+            await hass.async_add_executor_job(_write)
+            _LOGGER.info("Exported learned history to %s", path)
+
+    hass.services.async_register(DOMAIN, "export_learning", _export)
+
+    async def _import(call) -> None:
+        from .recovery import validate_import
+
+        path = call.data["path"]
+
+        def _read() -> dict:
+            return json.loads(Path(path).read_text(encoding="utf-8"))
+
+        try:
+            payload = await hass.async_add_executor_job(_read)
+        except (OSError, ValueError) as err:
+            _LOGGER.error("Could not read %s: %s", path, err)
+            return
+
+        usable, why = validate_import(payload)
+        if not usable:
+            # Refused outright rather than half-applied: a partial load leaves
+            # the model in a state nobody can reason about.
+            _LOGGER.error("Refusing to import %s: %s", path, why)
+            return
+
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            taken = coordinator.store.adopt(payload)
+            await coordinator.store.async_save()
+            await coordinator.async_request_refresh()
+            _LOGGER.info("Imported learned history from %s: %s", path, taken)
+
+    hass.services.async_register(DOMAIN, "import_learning", _import)
+
+
+async def _async_adopt_history(hass, entry, coordinator) -> None:
+    """Take on learned history the user chose during setup.
+
+    Done once and then forgotten: the marker is cleared from the entry so a
+    later restart does not re-adopt over figures this pool has since measured
+    for itself.
+    """
+    from .recovery import read_history
+
+    source = entry.data.get(MIGRATION_ADOPT)
+    if not source:
+        return
+
+    history = await hass.async_add_executor_job(read_history, source)
+    if history:
+        taken = coordinator.store.adopt(history)
+        await coordinator.store.async_save()
+        _LOGGER.info("Adopted learned history from a previous installation: %s", taken)
+    else:
+        _LOGGER.warning("Could not read the learned history at %s", source)
+
+    data = dict(entry.data)
+    data.pop(MIGRATION_ADOPT, None)
+    hass.config_entries.async_update_entry(entry, data=data)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

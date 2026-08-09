@@ -567,6 +567,12 @@ def _compressor_guard(
     if candidate.branch is Branch.EMERGENCY_STOP:
         return candidate
 
+    # An immersion element has no compressor and no pressures to equalise, so
+    # holding it off for ten minutes would be a restriction invented out of
+    # nothing.
+    if not config.source_has("compressor"):
+        return candidate
+
     # Starting: has it been off long enough?
     if candidate.heat_pump and not state.heat_pump_on:
         stopped = state.heat_pump_stopped_at

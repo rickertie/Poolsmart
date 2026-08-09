@@ -117,6 +117,12 @@ CONF_HARDNESS_SENSOR = "hardness_sensor"
 CONF_SALT_SENSOR = "salt_sensor"
 CONF_SANITISER = "sanitiser"
 CONF_UNIT_SYSTEM = "unit_system"
+CONF_HEATING_SOURCE = "heating_source"
+CONF_POOL_KIND = "pool_kind"
+CONF_HAS_SOLAR_COLLECTOR = "has_solar_collector"
+CONF_COLLECTOR_SENSOR = "collector_sensor"
+CONF_COLLECTOR_MARGIN = "collector_margin"
+CONF_ADOPT_FROM = "adopt_from"
 
 #: Which config key holds which chemistry reading, so the whole set can be read
 #: in one pass rather than named individually everywhere.
@@ -152,6 +158,7 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_SOLAR_FORECAST_SENSOR,
     CONF_WEATHER_ENTITY,
     CONF_COVER_ENTITY,
+    CONF_COLLECTOR_SENSOR,
 )
 
 #: Which capability each optional entity unlocks. Used to tell the user exactly
@@ -246,6 +253,9 @@ SETUP_DEFAULTS: dict[str, object] = {
     CONF_FLOW_UNIT: "l_min",
     CONF_UNIT_SYSTEM: "metric",
     CONF_SANITISER: "chlorine",
+    CONF_HEATING_SOURCE: "heat_pump",
+    CONF_POOL_KIND: "frame",
+    CONF_HAS_SOLAR_COLLECTOR: False,
 }
 
 #: Optional file in the configuration directory that overrides SETUP_DEFAULTS.

@@ -10,6 +10,7 @@ MODULES = [
     "test_trace",
     "test_v1",
     "test_v11",
+    "test_v12",
 ]
 
 passed, failed = 0, []
