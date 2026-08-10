@@ -85,5 +85,6 @@ def load_store():
     install()
     load("const", "const.py")
     load("core", "core/__init__.py")
+    load("core.config", "core/config.py")
     load("core.learning", "core/learning.py")
     return load("store", "store.py")
