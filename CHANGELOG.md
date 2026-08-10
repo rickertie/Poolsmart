@@ -8,6 +8,24 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.3.2] — One Answer Per Import — 2026-08-10
+
+### Fixed
+- **The test suite passed locally and failed on CI**, for a reason that took a
+  while to see. This machine has no Home Assistant, so the stand-in modules in
+  `tests/ha_stubs.py` were always used; the runner installs the real package, so
+  the two collided. The failure surfaced as a circular import inside `asyncio`,
+  nowhere near the cause. The stubs now stand aside entirely when the real
+  package is importable, and never replace a module already present
+- `unittest.mock` is imported only when stubbing actually happens, so a runner
+  with the real package does not drag it in for nothing
+
+### Changed
+- CI runs the suite **twice**: once with no dependencies at all, and again
+  against the real Home Assistant. Only one of those paths was ever being
+  checked, which is exactly how the collision went unnoticed
+- `tests/requirements-test.txt` documents that everything in it is optional
+
 ## [1.3.1] — Words For Every Field — 2026-08-08
 
 ### Fixed
@@ -583,6 +601,7 @@ never published, so everything listed there is part of this release.
 - Seasonal planning no longer treats a short price forecast as a whole day of
   capacity
 
+[1.3.2]: https://github.com/rickertie/Poolsmart/releases/tag/v1.3.2
 [1.3.1]: https://github.com/rickertie/Poolsmart/releases/tag/v1.3.1
 [1.3.0]: https://github.com/rickertie/Poolsmart/releases/tag/v1.3.0
 [1.2.3]: https://github.com/rickertie/Poolsmart/releases/tag/v1.2.3

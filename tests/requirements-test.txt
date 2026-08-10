@@ -1,3 +1,9 @@
+# Optional. The suite is designed to run without any of this: the decision core
+# has no Home Assistant imports, and tests/ha_stubs.py stands in for the rest.
+#
+# Installing the real Home Assistant here exercises the same code against the
+# real package instead of against a stand-in, which is worth doing -- but it is
+# the reason ha_stubs.py must give way rather than compete. Two answers to one
+# import is worse than either answer alone.
 pyyaml
-pytest
-pytest-homeassistant-custom-component
+homeassistant

@@ -282,7 +282,7 @@ def test_t93_orphan_detection_and_adoption():
     ha_stubs.load("const", "const.py")
     ha_stubs.load("core", "core/__init__.py")
     ha_stubs.load("core.learning", "core/learning.py")
-    store_module = ha_stubs.load("store", "store.py")
+    store_module = ha_stubs.load_store()
 
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     store.learned = store_module.LearnedValues()
@@ -317,12 +317,7 @@ def test_t93b_locally_measured_values_win():
     """A figure measured on this installation beats an imported one."""
     import ha_stubs
 
-    ha_stubs.install()
-    ha_stubs.load("const", "const.py")
-    ha_stubs.load("core", "core/__init__.py")
-    ha_stubs.load("core.learning", "core/learning.py")
-    store_module = ha_stubs.load("store", "store.py")
-
+    store_module = ha_stubs.load_store()
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     store.learned = store_module.LearnedValues(heat_loss_c_per_h=0.19)
     store.session_log, store.dose_log, store.last_water_test = [], [], None
@@ -637,3 +632,60 @@ def test_t99c_the_simple_dashboard_is_valid_and_read_only():
     # Nothing on this page changes anything.
     for interactive in ("input_number.", "input_boolean.", "call-service", "button."):
         assert interactive not in text, f"the simple page should not include {interactive}"
+
+
+# ---------------------------------------------------------------------------
+# T100 - the stubs must give way to a real Home Assistant
+# ---------------------------------------------------------------------------
+
+def test_t100_stubs_defer_to_the_real_package():
+    """Two answers to one import is worse than either answer alone.
+
+    The suite passed here and failed on CI for a reason that took a while to
+    see: this machine has no Home Assistant, so the stubs were always used, and
+    the runner installs the real one, so they collided. The failure surfaced as
+    a circular import inside `asyncio` — nowhere near the cause.
+    """
+    import ha_stubs
+
+    assert hasattr(ha_stubs, "HAVE_REAL_HA")
+    if ha_stubs.HAVE_REAL_HA:
+        # Nothing stubbed, and the real modules left untouched.
+        assert ha_stubs._INSTALLED is False
+        import homeassistant
+
+        assert homeassistant.__file__ is not None, "the real package was replaced"
+    else:
+        assert ha_stubs._INSTALLED is True
+        assert "homeassistant" in sys.modules
+
+
+def test_t100b_stubs_never_overwrite_an_existing_module():
+    """An entry already in sys.modules is either the real package or an earlier
+    stub, and both are better than a fresh empty one."""
+    import ha_stubs
+
+    source = Path(ha_stubs.__file__).read_text()
+    module_fn = source[source.index("def _module") :]
+    module_fn = module_fn[: module_fn.index("\ndef ")]
+
+    assert "sys.modules.get(name)" in module_fn
+    assert "if module is None" in module_fn
+    # Never an unconditional assignment over what is already there.
+    assert "sys.modules[name] = types.ModuleType" not in module_fn
+
+
+def test_t100c_the_store_loads_either_way():
+    """Whichever path was taken, the storage layer must actually execute."""
+    import ha_stubs
+
+    store_module = ha_stubs.load_store()
+    assert hasattr(store_module, "PoolStore")
+    assert hasattr(store_module, "LearnedValues")
+
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    store.learned = store_module.LearnedValues(
+        cop_by_air_bucket={"25-30": 3.4}, cop_sessions_by_bucket={}
+    )
+    store.session_log = []
+    assert store.backfill_cop_counts() is True
