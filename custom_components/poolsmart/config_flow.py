@@ -297,22 +297,18 @@ def _required_entities(source: str) -> vol.Schema:
     return vol.Schema(fields)
 
 
-#: Kept for the options flow, where every field is optional anyway.
-STEP_REQUIRED_ENTITIES = vol.Schema(
-    {
-        vol.Required(c.CONF_PUMP_SWITCH): SWITCH,
-        vol.Required(c.CONF_HP_SWITCH): SWITCH,
-        vol.Required(c.CONF_WATER_TEMP_SENSOR): TEMP_SENSOR,
-    }
-)
+def _optional_entities(source: str, has_solar: bool = False) -> vol.Schema:
+    """The optional sensors, only the ones this installation can answer.
 
-STEP_OPTIONAL_ENTITIES = vol.Schema(
-    {
+    A pool without a heat pump has no heat pump inlet, outlet or power draw to
+    measure, and a collector sensor is only meaningful when there is a
+    collector to compare against the pool. Asking for them anyway is how the
+    wizard ended up mentioning a heat pump to someone who has none.
+    """
+    fields: dict = {
         vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
-        vol.Optional(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
-        vol.Optional(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_FLOW_UNIT, default="l_min"): selector.SelectSelector(
                     selector.SelectSelectorConfig(
@@ -321,7 +317,6 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
                     )
                 ),
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
-        vol.Optional(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
@@ -337,16 +332,24 @@ STEP_OPTIONAL_ENTITIES = vol.Schema(
         vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
-        vol.Optional(c.CONF_COLLECTOR_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=["cover", "binary_sensor", "input_boolean"])
         ),
     }
-)
+
+    if source == "heat_pump":
+        fields[vol.Optional(c.CONF_HP_INLET_SENSOR)] = TEMP_SENSOR
+        fields[vol.Optional(c.CONF_HP_OUTLET_SENSOR)] = TEMP_SENSOR
+        fields[vol.Optional(c.CONF_HP_POWER_SENSOR)] = POWER_SENSOR
+
+    if has_solar or source == "solar":
+        fields[vol.Optional(c.CONF_COLLECTOR_SENSOR)] = TEMP_SENSOR
+
+    return vol.Schema(fields)
 
 
 class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Guide the user through the five setup steps."""
+    """Guide the user through the setup steps."""
 
     VERSION = 1
 
@@ -406,6 +409,11 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update(user_input)
             return await self.async_step_entities()
 
+        # A pool without heating has no questions to answer here; a screen of
+        # nothing would make it look like something was missing.
+        if source == "none":
+            return await self.async_step_entities()
+
         recommended = float(self._data.get(c.CONF_MAX_TEMP, 32.0)) + 2.0
         return self.async_show_form(
             step_id="heating",
@@ -415,10 +423,20 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
     async def async_step_entities(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """The switches and the pool water temperature.
+
+        What is required follows the heating source: a pool without heating has
+        no heat pump switch to name, and a collector on a manual valve has
+        nothing to switch. Asking anyway produces a field someone has to guess
+        at, and a guessed switch is worse than none.
+        """
+        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
         if user_input is not None:
             self._data.update(user_input)
             return await self.async_step_optional()
-        return self.async_show_form(step_id="entities", data_schema=STEP_REQUIRED_ENTITIES)
+        return self.async_show_form(
+            step_id="entities", data_schema=_required_entities(source)
+        )
 
     async def async_step_optional(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
@@ -434,9 +452,11 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         # so quoting only the turnover figure would understate the real runtime.
         daily_h = max(turnover_h, 4.0)
 
+        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
+        has_solar = bool(self._data.get(c.CONF_HAS_SOLAR_COLLECTOR, False))
         return self.async_show_form(
             step_id="optional",
-            data_schema=STEP_OPTIONAL_ENTITIES,
+            data_schema=_optional_entities(source, has_solar),
             description_placeholders={
                 "daily_hours": f"{daily_h:.1f}",
                 "block_minutes": f"{daily_h / 3 * 60:.0f}",
@@ -582,67 +602,84 @@ class PoolSmartOptionsFlow(OptionsFlow):
             marker = vol.Required if required else vol.Optional
             return marker(key, description={"suggested_value": current.get(key) or None})
 
-        schema = vol.Schema(
-            {
-                field(c.CONF_PUMP_SWITCH, True): SWITCH,
-                field(c.CONF_HP_SWITCH, True): SWITCH,
-                field(c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
-                field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
-                field(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
-                field(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
-                field(c.CONF_HP_INLET_SENSOR): TEMP_SENSOR,
-                field(c.CONF_HP_OUTLET_SENSOR): TEMP_SENSOR,
-                field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
-                vol.Optional(
-                    c.CONF_FLOW_UNIT,
-                    default=current.get(c.CONF_FLOW_UNIT, "l_min"),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
-                        translation_key="flow_unit",
-                    )
-                ),
-                field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
-                field(c.CONF_HP_POWER_SENSOR): POWER_SENSOR,
-                field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
-                field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
-                field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain=["binary_sensor", "input_boolean"]
-                    )
-                ),
-                field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
-                field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
-                field(c.CONF_WEATHER_ENTITY): WEATHER,
-                field(c.CONF_COLLECTOR_SENSOR): TEMP_SENSOR,
-                field(c.CONF_COVER_ENTITY): selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain=["cover", "binary_sensor", "input_boolean"]
-                    )
-                ),
-            }
-        )
+        fields = {
+            field(c.CONF_PUMP_SWITCH, True): SWITCH,
+            field(c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
+            field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
+            field(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
+            field(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
+            field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
+            vol.Optional(
+                c.CONF_FLOW_UNIT,
+                default=current.get(c.CONF_FLOW_UNIT, "l_min"),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
+                    translation_key="flow_unit",
+                )
+            ),
+            field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
+            field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+            field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
+            field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=["binary_sensor", "input_boolean"]
+                )
+            ),
+            field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
+            field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
+            field(c.CONF_WEATHER_ENTITY): WEATHER,
+            field(c.CONF_COVER_ENTITY): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=["cover", "binary_sensor", "input_boolean"]
+                )
+            ),
+        }
+
+        #: A pool whose heating source has nothing to switch has no heat pump
+        #: switch to name. Forcing the question on it would produce a required
+        #: field that can never be answered.
+        from .core.config import SOURCE_TRAITS, HeatingSource
+
+        source = current.get(c.CONF_HEATING_SOURCE, "heat_pump")
+        if SOURCE_TRAITS[HeatingSource(source)]["controllable"]:
+            fields[field(c.CONF_HP_SWITCH, True)] = SWITCH
+
+        #: The heat pump's own sensors exist to measure how well it converts
+        #: electricity into heat. For an immersion element, a solar collector or
+        #: no heating at all they are questions about hardware that is not
+        #: installed, so they follow the source like the heat pump switch does.
+        if source == "heat_pump":
+            fields[field(c.CONF_HP_INLET_SENSOR)] = TEMP_SENSOR
+            fields[field(c.CONF_HP_OUTLET_SENSOR)] = TEMP_SENSOR
+            fields[field(c.CONF_HP_POWER_SENSOR)] = POWER_SENSOR
+
+        #: The collector sensor exists to compare collector against pool; with
+        #: no collector there is nothing to compare.
+        if current.get(c.CONF_HAS_SOLAR_COLLECTOR) or source == "solar":
+            fields[field(c.CONF_COLLECTOR_SENSOR)] = TEMP_SENSOR
+
+        schema = vol.Schema(fields)
         return self.async_show_form(step_id="entities", data_schema=schema)
 
     async def async_step_pool(self, user_input: dict | None = None) -> ConfigFlowResult:
-        """Correct the pool, pump and heat pump figures after setup."""
+        """Correct the pool and pump figures after setup.
+
+        The heat pump figures live under "Heating appliance", because the
+        questions a heat pump can answer depend on what heats the water. Asking
+        them here, on a screen that is the same for every pool, would mean
+        asking a pool without heating about a heat pump that does not exist.
+        """
         if user_input is not None:
             data = derive_pool_shape(dict(user_input))
-            input_kw = float(data.get(c.CONF_HP_INPUT_KW) or 0)
-            thermal_kw = float(data.get(c.CONF_HP_THERMAL_KW) or 0)
-            if input_kw:
-                data[c.CONF_HP_COP_REF] = round(thermal_kw / input_kw, 3)
-                if not data.get(c.CONF_HP_COP_LOW):
-                    data[c.CONF_HP_COP_LOW] = data[c.CONF_HP_COP_REF]
-                    data[c.CONF_HP_COP_LOW_TEMP] = data.get(c.CONF_HP_COP_REF_TEMP, 26.0)
-            return self._save(dict(user_input))
+            return self._save(data)
 
         current = {**self.config_entry.data, **self.config_entry.options}
 
@@ -658,14 +695,6 @@ class PoolSmartOptionsFlow(OptionsFlow):
             num(c.CONF_MAX_TEMP, 32.0, 10, 40, 0.5),
             num(c.CONF_PUMP_FLOW_M3H, 3.0, 0.1, 100, 0.001),
             num(c.CONF_PUMP_POWER_KW, 0.1, 0.01, 10, 0.01),
-            num(c.CONF_HP_INPUT_KW, 1.0, 0.05, 50, 0.01),
-            num(c.CONF_HP_THERMAL_KW, 4.0, 0.1, 200, 0.1),
-            num(c.CONF_HP_COP_REF_TEMP, 26.0, -10, 45, 0.5),
-            num(c.CONF_HP_COP_LOW, 4.0, 1, 15, 0.01),
-            num(c.CONF_HP_COP_LOW_TEMP, 15.0, -10, 45, 0.5),
-            num(c.CONF_HP_AIR_TEMP_MIN, 11.0, -20, 30, 0.5),
-            num(c.CONF_HP_AIR_TEMP_MAX, 43.0, 20, 60, 0.5),
-            num(c.CONF_HP_FLOW_MIN_M3H, 2.0, 0, 50, 0.1),
         ]
         schema = vol.Schema(dict(pairs))
         schema = schema.extend(
@@ -701,17 +730,9 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         translation_key="filter_media",
                     )
                 ),
-                vol.Optional(
-                    c.CONF_HP_FLOW_MIN_BLOCKING,
-                    default=current.get(c.CONF_HP_FLOW_MIN_BLOCKING, False),
-                ): bool,
-                vol.Optional(
-                    c.CONF_HP_FLOW_MIN_VERIFIED,
-                    default=current.get(c.CONF_HP_FLOW_MIN_VERIFIED, False),
-                ): bool,
             }
         )
-        return self.async_show_form(step_id="hardware", data_schema=schema)
+        return self.async_show_form(step_id="pool", data_schema=schema)
 
     async def async_step_heating(
         self, user_input: dict | None = None
@@ -726,6 +747,21 @@ class PoolSmartOptionsFlow(OptionsFlow):
         from .core.config import SOURCE_TRAITS, HeatingSource
 
         if user_input is not None:
+            if any(
+                key in user_input for key in (c.CONF_HP_INPUT_KW, c.CONF_HP_THERMAL_KW)
+            ):
+                input_kw = float(user_input.get(c.CONF_HP_INPUT_KW, 0) or 0)
+                thermal_kw = float(user_input.get(c.CONF_HP_THERMAL_KW, 0) or 0)
+                if input_kw:
+                    cop_ref = round(thermal_kw / input_kw, 3)
+                    user_input[c.CONF_HP_COP_REF] = cop_ref
+                    if not user_input.get(c.CONF_HP_COP_LOW):
+                        # A source whose efficiency does not vary gets a flat
+                        # curve rather than a curve pretending to vary.
+                        user_input[c.CONF_HP_COP_LOW] = cop_ref
+                        user_input[c.CONF_HP_COP_LOW_TEMP] = user_input.get(
+                            c.CONF_HP_COP_REF_TEMP, 26.0
+                        )
             return self._save(user_input)
 
         current = {**self.config_entry.data, **self.config_entry.options}

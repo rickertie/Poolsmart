@@ -8,6 +8,24 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [Unreleased]
+
+### Fixed
+- **A heat pump existed at "No heating".** The heating source decided what was
+  required but stopped there: the setup wizard's optional step and the options
+  "Sensors and switches" screen still asked for the heat pump's inlet, outlet
+  and power sensors — and for a collector sensor — even when there was no heat
+  pump or no collector to hang them on. Those now follow the heating source
+  everywhere, like the heat pump switch already did, so picking "none" or a
+  solar collector stops the questions about hardware that is not installed
+- **The heating step was a screen of nothing.** A pool without heating was
+  walked through a "Heating appliance" step that asked no questions, which made
+  it look as if something was missing; the step is now skipped for such a pool.
+  The step's translation also carried words for fields that step never asks, so
+  it showed raw keys and no title. Both languages now describe exactly what the
+  step asks, including the thermostat recommendation filled in with the pool's
+  own numbers
+
 ## [1.3.2] — One Answer Per Import — 2026-08-10
 
 ### Fixed

@@ -112,19 +112,32 @@
         "description": "{count} eerdere installatie(s) hebben leergeschiedenis achtergelaten. Overnemen scheelt weken aan metingen opnieuw opbouwen."
       },
       "heating": {
+        "title": "Verwarmingstoestel",
+        "description": "Alleen de vragen die deze verwarmingsbron kan beantwoorden. Heeft je warmtepomp een eigen thermostaat, zet die dan op {recommended_setpoint} °C — je hoogste doel plus twee graden — zodat de software volledige controle houdt en de hardware nog kan ingrijpen als de software uitvalt.",
         "data": {
-          "heating_source": "Hoe wordt het water verwarmd?",
-          "pool_kind": "Type bad",
-          "has_solar_collector": "Heeft ook een zonnecollector",
-          "collector_sensor": "Temperatuur zonnecollector",
-          "collector_margin": "Collector moet warmer zijn dan bad met (°C)",
-          "adopt_from": "Leergeschiedenis overnemen van"
+          "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
+          "hp_thermal_kw": "Thermisch vermogen (kW)",
+          "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
+          "hp_cop_low": "COP bij een tweede, lagere luchttemperatuur",
+          "hp_cop_low_temp": "Die tweede luchttemperatuur (°C)",
+          "hp_air_temp_min": "Minimale luchttemperatuur (°C)",
+          "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
+          "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
+          "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
+          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "collector_margin": "Collector moet warmer zijn dan bad met (°C)"
         },
         "data_description": {
-          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies — een ongeïsoleerd opblaasbaar bad verliest een veelvoud van een ingebouwd bad. Het is alleen een startpunt; de echte waarde wordt binnen dagen gemeten.",
-          "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
-          "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
-          "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken.",
+          "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
+          "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
+          "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
+          "hp_cop_low": "Optioneel. De COP bij een koudere luchttemperatuur, als de brochure een tweede waarde noemt. Leeg laten geeft een vlakke curve.",
+          "hp_cop_low_temp": "De luchttemperatuur die bij die tweede COP hoort, meestal 15 °C.",
+          "hp_air_temp_min": "Daaronder start het apparaat niet. De meeste zwembadwarmtepompen stoppen tussen 10 en 15 °C. Weet je het niet, dan is 11 een veilige gok.",
+          "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
+          "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
+          "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
+          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
           "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
         }
       },
@@ -297,7 +310,9 @@
           "cyanuric_sensor": "Cyanuurzuur / stabilisator (ppm)",
           "hardness_sensor": "Totale hardheid (ppm)",
           "salt_sensor": "Zout (ppm)",
-          "collector_sensor": "Temperatuur zonnecollector"
+          "collector_sensor": "Temperatuur zonnecollector",
+          "heating_source": "Verwarmingsbron",
+          "has_solar_collector": "Heeft een zonnecollector"
         },
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",

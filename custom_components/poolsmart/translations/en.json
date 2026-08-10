@@ -112,19 +112,32 @@
         "description": "{count} earlier installation(s) left learned history behind. Adopting it saves rebuilding weeks of measurements."
       },
       "heating": {
+        "title": "Heating appliance",
+        "description": "Only the questions this heating source can answer. If your heat pump has a thermostat of its own, set it to {recommended_setpoint} °C — your highest target plus two degrees — so the software keeps full control and the hardware can still step in if the software fails.",
         "data": {
-          "heating_source": "How is the water heated?",
-          "pool_kind": "Pool construction",
-          "has_solar_collector": "Also has a solar collector",
-          "collector_sensor": "Solar collector temperature",
-          "collector_margin": "Collector must be warmer by (°C)",
-          "adopt_from": "Adopt learned history from"
+          "hp_input_kw": "Electrical input power (kW)",
+          "hp_thermal_kw": "Thermal output (kW)",
+          "hp_cop_ref_temp": "Air temperature for that output (°C)",
+          "hp_cop_low": "COP at a second, lower air temperature",
+          "hp_cop_low_temp": "That second air temperature (°C)",
+          "hp_air_temp_min": "Minimum air temperature (°C)",
+          "hp_air_temp_max": "Maximum air temperature (°C)",
+          "hp_flow_min_m3h": "Minimum flow required (m³/h)",
+          "hp_flow_min_blocking": "Pause heating below the minimum flow",
+          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation",
+          "collector_margin": "Collector must be warmer by (°C)"
         },
         "data_description": {
-          "pool_kind": "Sets a realistic starting figure for heat loss — an uninsulated inflatable loses several times faster than a built-in pool. It is only a starting point; the real figure is measured within days.",
-          "heating_source": "Changes which questions follow. A solar collector is usually on a manual three-way valve, so the integration advises when to open it rather than switching anything.",
-          "has_solar_collector": "Tick if you have a collector alongside another heater. Free heat is always preferred over paid heat.",
-          "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool.",
+          "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
+          "hp_thermal_kw": "The heat it delivers, usually the headline figure such as '3 kW'. Normally 4 to 5 times the input power.",
+          "hp_cop_ref_temp": "The air temperature the heat output was measured at. Datasheets usually say 26 °C or 24 °C. If unsure, leave at 26.",
+          "hp_cop_low": "Optional. The COP at a colder air temperature, if the datasheet lists a second figure. Leave blank for a flat curve.",
+          "hp_cop_low_temp": "The air temperature belonging to that second COP, usually 15 °C.",
+          "hp_air_temp_min": "Below this the unit refuses to start. Most pool heat pumps stop somewhere between 10 and 15 °C. If unsure, 11 is a safe guess.",
+          "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
+          "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
+          "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
+          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach.",
           "collector_margin": "Below this difference, water sent through the collector gains too little to be worth circulating — and below zero it actively loses heat."
         }
       },
@@ -297,7 +310,9 @@
           "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
           "hardness_sensor": "Total hardness (ppm)",
           "salt_sensor": "Salt (ppm)",
-          "collector_sensor": "Solar collector temperature"
+          "collector_sensor": "Solar collector temperature",
+          "heating_source": "Heating source",
+          "has_solar_collector": "Has a solar collector"
         },
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",

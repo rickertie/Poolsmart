@@ -56,8 +56,12 @@ circulate, which is enough, because moving water does not freeze.
 1. Add this repository to HACS as a custom repository and install PoolSmart.
 2. Restart Home Assistant.
 3. Settings → Devices & Services → Add Integration → PoolSmart.
-4. Work through the five steps. Only the last two ask for entities, and only
-   three of those are required.
+4. Work through the steps. How many there are depends on how the water is
+   heated: each step asks only what that heating source can answer, and a pool
+   with no heating skips the heating step entirely. Only the last two steps ask
+   for entities, and of those only the pump switch and the pool water
+   temperature are always required — a heat pump adds its own switch, and a
+   collector on a manual valve adds none.
 
 Every field arrives with a value already in it and a help line underneath
 explaining where to find the real number, with a worked example. Water surface
@@ -71,15 +75,18 @@ To start the wizard from your own figures instead, put a
 ### Changing things afterwards
 
 Nothing is locked in. Settings → Devices & Services → PoolSmart → **Configure**
-gives five sections:
+opens a menu of subjects:
 
 | Section | Contains |
 |---|---|
-| Entities | Every switch and sensor, including the required ones |
-| Pool and equipment | Volume, depth, pump flow, heat pump figures |
-| General settings | Turnover, hysteresis, prices, night quiet |
-| Swimming times | When the pool should be at temperature |
+| Sensors and switches | Every switch and sensor, including the required ones. The heat pump's own sensors and the collector sensor only appear when the heating source has them |
+| Pool and pump | Volume, depth, pump flow, pump power, units, sanitiser, filter medium |
+| Heating appliance | The heating source and everything that follows from it: heat pump figures, the efficiency curve, the operating envelope, the solar collector. A source without a heat pump is not asked about one |
+| When to heat | Target temperature, price ceiling, solar surplus, swimming time |
+| Filtration | Turnover, quiet hours, pump rundown |
+| Water treatment | Sanitiser, chemistry products, doses |
 | Notifications | Which message goes to which device |
+| Advanced | Timings and tolerances for when a measurement misbehaves |
 
 Picking the wrong temperature sensor during setup is easy to do, so the entity
 choices live in options where they can be corrected rather than in the entry data
