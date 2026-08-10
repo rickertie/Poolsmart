@@ -282,7 +282,7 @@ def test_t93_orphan_detection_and_adoption():
     ha_stubs.load("const", "const.py")
     ha_stubs.load("core", "core/__init__.py")
     ha_stubs.load("core.learning", "core/learning.py")
-    store_module = ha_stubs.load_store()
+    store_module = ha_stubs.load("store", "store.py")
 
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     store.learned = store_module.LearnedValues()
@@ -317,7 +317,12 @@ def test_t93b_locally_measured_values_win():
     """A figure measured on this installation beats an imported one."""
     import ha_stubs
 
-    store_module = ha_stubs.load_store()
+    ha_stubs.install()
+    ha_stubs.load("const", "const.py")
+    ha_stubs.load("core", "core/__init__.py")
+    ha_stubs.load("core.learning", "core/learning.py")
+    store_module = ha_stubs.load("store", "store.py")
+
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     store.learned = store_module.LearnedValues(heat_loss_c_per_h=0.19)
     store.session_log, store.dose_log, store.last_water_test = [], [], None
