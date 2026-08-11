@@ -74,7 +74,7 @@ making it safe for the ESP32.
 ## Wiring Overview
 
 <p align="center">
-  <img src="images/esp32c6_wiring_overview.png" width="550">
+  <img src="images/esp32c6_wiring_overview.svg" width="550">
 </p>
 
 ---
