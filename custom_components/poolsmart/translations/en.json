@@ -107,6 +107,26 @@
           "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool."
         }
       },
+      "optional_sensors": {
+        "title": "Core sensors",
+        "description": "Outdoor temperature, flow, pump data, and the weather and cover entities. These are the sensors most pools have."
+      },
+      "optional_chemistry": {
+        "title": "Water chemistry",
+        "description": "pH, chlorine, bromine, alkalinity, cyanuric acid, hardness, and salt. These can be sensors or input_number helpers you update after a test."
+      },
+      "optional_solar": {
+        "title": "Solar and price",
+        "description": "Solar production, solar forecast, collector temperature, and a cheap-price signal. Only relevant with solar panels or a dynamic tariff."
+      },
+      "optional_finish": {
+        "title": "Done",
+        "description": "Continue to the review step. All fields you left blank are saved as 'not configured' and their features are switched off."
+      },
+      "summary": {
+        "title": "Review your setup",
+        "description": "Check your selections below. Press submit to create the PoolSmart entry, or go back in your browser to change something."
+      },
       "adopt": {
         "title": "Learned history found",
         "description": "{count} earlier installation(s) left learned history behind. Adopting it saves rebuilding weeks of measurements."
@@ -179,9 +199,17 @@
           "swim_days": "Which weekdays the times above apply to."
         }
       },
+      "optional": {
+        "menu_options": {
+          "optional_sensors": "Core sensors",
+          "optional_chemistry": "Water chemistry",
+          "optional_solar": "Solar and price",
+          "optional_finish": "Done"
+        }
+      },
       "notifications": {
         "title": "Notifications",
-        "description": "Faults repeat with a widening interval until they clear; informational messages fire once. Leave a field blank to use the default target.",
+        "description": "Choose who receives each kind of message. Select one or more targets per event; the message goes to all of them. Leave blank to use the default target.",
         "data_description": {
           "default": "Where anything without its own destination goes.",
           "heating_started": "Sent when a heating session begins.",

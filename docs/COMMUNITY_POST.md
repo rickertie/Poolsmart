@@ -1,4 +1,6 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md) • **Community Post**
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
+
+---
 
 ---
 
@@ -117,6 +119,6 @@ show up.
 ## See Also
 
 - [README](../README.md) — Main project documentation.
-- [docs/architecture.md](architecture.md) — Architecture & decision core.
-- [docs/SENSORS.md](SENSORS.md) — Sensor mapping & calibration.
+- [docs/ARCHITECTURE.MD](ARCHITECTURE.MD) — Architecture & decision core.
+- [docs/SENSORS.MD](SENSORS.MD) — Sensor mapping & calibration.
 - [CHANGELOG.md](../CHANGELOG.md) — Full changelog.

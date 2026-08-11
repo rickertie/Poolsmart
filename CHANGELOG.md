@@ -16,7 +16,61 @@ For release notes on major milestones, see
 [docs/RELEASE_NOTES_1.0.0.md](docs/RELEASE_NOTES_1.0.0.md) and
 [docs/RELEASE_NOTES_0.8.0.md](docs/RELEASE_NOTES_0.8.0.md).
 
-## [1.4.0] — Every Step But the Last One
+## [1.4.0] — No More "Submit And Pray"
+
+### Added
+- **Setup now says where you are.** A progress indicator shows "Step X of Y" on
+  every wizard screen, so you know how much is left before you commit. A final
+  review step lets you check your selections before the entry is created
+- **Optional sensors are grouped by purpose.** The single overwhelming screen of
+  twenty-odd fields is replaced by four focused menus: core sensors, water
+  chemistry, solar, and a finish step. Each asks only about hardware you actually
+  have, and every field may still be left blank
+- **Notifications can reach more than one person.** Each event type now accepts
+  multiple targets: select everyone who should hear about a fault, and they all
+  get the message
+- **Skeleton loading in the management panel.** While data is being fetched the
+  panel now shows shimmer placeholders instead of a blank page, so it is clear
+  something is happening
+- **Keyboard navigation in the panel.** Tabs can be reached with arrow keys,
+  Home and End, following the WAI-ARIA tablist pattern. Focus is visible, managed
+  on tab switch, and never trapped
+- **Accessible error states.** When the snapshot cannot be loaded the panel shows
+  a clear banner with a retry button, announced to screen readers, rather than a
+  small red line of text
+- **Loading and empty states on the dashboards.** The Lovelace views now handle
+  "unknown" entities gracefully: a spinner replaces the temperature readout, and
+  a placeholder card says data is loading instead of showing a broken template
+- **Improved dashboards** with better responsive layout, consistent status colors,
+  and conditional sections that appear only when relevant
+- **Shorter notification button labels.** "Heat now anyway" is now "Heat now",
+  "One degree warmer" is "+1° warmer" -- mobile notification buttons truncate
+  long labels, so they now fit and remain readable
+
+### Changed
+- **Going back no longer leaves stale data behind.** Changing the heating source or
+  pool construction in the first step now clears all downstream answers that no
+  longer apply, so you never end up with a heat pump configuration for a pool with
+  no heating
+- **Action buttons in the panel** show a busy state while their service call is in
+  flight, so you know your tap was registered even before the data refreshes
+- **Notification descriptions updated** to explain that multiple recipients are
+  now supported per event type
+
+### Fixed
+- **"Entity is neither a valid entity ID nor a valid UUID" when saving
+  notifications.** The notify target picker now accepts multiple entity selections
+  and stores them as a list, so a valid selection is no longer rejected
+- **The setup wizard showed no progress.** Seven sequential forms with no
+  indication of how many steps remain, which made the process feel longer than it
+  was
+- **Optional sensors were a wall of fields.** Presenting twenty fields at once,
+  many of them technical, overwhelmed users into skipping the step entirely
+- **A heat pump configuration survived removing the heat pump.** Going back and
+  changing the heating source left the old heating data in place, producing a
+  configuration that contradicted itself
+- **The panel was silent during loads.** No loading state, no error feedback
+  beyond a single line of red text -- just nothing, which reads as broken
 
 ### Added
 - **Setup now says where you are.** A progress indicator shows "Step X of Y" on
@@ -512,7 +566,7 @@ First stable release.
 - Calibration offsets as number entities on the board: adjustable without
   reflashing, and they survive a restart
 - A running pulse total, so the flow meter can be calibrated with a bucket
-- `docs/SENSORS.md`, covering probe calibration, flow calibration and which
+- `docs/SENSORS.MD`, covering probe calibration, flow calibration and which
   sensor maps to which field
 
 ### Fixed

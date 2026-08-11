@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • **Architecture** • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -12,6 +12,8 @@ that improves predictions over time, see [learning.md](learning.md).
 ---
 
 ## The Priority Decision Ladder
+
+![Priority Decision Ladder flowchart](images/priority-ladder.svg)
 
 Every 30 seconds, PoolSmart evaluates the current state of your pool against a
 strict priority ladder. The evaluation walks from the top down; **the first
@@ -136,7 +138,7 @@ cd tests && python run_tests.py
 - [hardware.md](hardware.md) — Physical installation, wiring, and component
   selection for the sensor board.
 - [esphome.md](esphome.md) — ESPHome configuration and calibration procedures.
-- [SENSORS.md](SENSORS.md) — How to map and calibrate your temperature probes
+- [sensors.md](sensors.md) — How to map and calibrate your temperature probes
   and flow meter.
 - [heating.md](heating.md) — Heating sources, solar collectors, and pool construction.
 - [configuration.md](configuration.md) — How to adjust settings after setup.

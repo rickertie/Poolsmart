@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • **Learning** • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -23,6 +23,8 @@ After each heating session, PoolSmart updates three core parameters:
    outdoor temperature bracket (e.g., 10–15 °C, 15–20 °C, 20–25 °C). Because
    non-inverter heat pumps operate at fixed output, one COP value per temperature
    band is sufficient.
+
+![COP curve showing how efficiency varies with outdoor temperature](docs/images/cop-curve.svg)
 
 ---
 
@@ -66,6 +68,6 @@ step in troubleshooting.
   price optimization and heat scheduling.
 - [architecture.md](architecture.md) — Entity fallback behavior when heat pump
   inlet/outlet sensors are missing.
-- [SENSORS.md](SENSORS.md) — How to calibrate the probes that feed the learning
+- [sensors.md](sensors.md) — How to calibrate the probes that feed the learning
   model.
 - [heating.md](heating.md) — Heating sources and how pool construction affects heat loss.

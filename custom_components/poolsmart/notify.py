@@ -31,26 +31,31 @@ ESCALATION_MINUTES = (0, 15, 60, 240, 720)
 #:
 #: Only mobile app targets render these; other notify platforms ignore the extra
 #: data, so nothing breaks when they are sent regardless.
+#:
+#: Labels are kept short -- mobile notification buttons have limited space and
+#: are truncated after roughly twenty characters in most apps.
 EVENT_ACTIONS: dict[str, tuple[tuple[str, str], ...]] = {
     "heating_postponed": (
-        ("BOOST", "Heat now anyway"),
-        ("STANDBY", "Do not heat today"),
+        ("BOOST", "Heat now"),
+        ("STANDBY", "Skip today"),
     ),
     "target_reached": (
         ("STANDBY", "Stop heating"),
-        ("EXTEND_1C", "One degree warmer"),
+        ("EXTEND_1C", "+1° warmer"),
     ),
     "flow_fault": (
-        ("PUMP_ONLY", "Circulate only"),
-        ("OFF", "Switch everything off"),
+        ("PUMP_ONLY", "Pump only"),
+        ("OFF", "All off"),
     ),
-    "sensor_fault": (("OFF", "Switch everything off"),),
-    "filter_service": (("PUMP_ONLY", "Circulate only"),),
+    "sensor_fault": (("OFF", "All off"),),
+    "filter_service": (("PUMP_ONLY", "Circulate"),),
     "high_energy_cost": (
-        ("BOOST", "Heat now anyway"),
+        ("BOOST", "Use free power"),
         ("STANDBY", "Wait"),
     ),
-    "ai_recommendation": (("ACCEPT_SUGGESTION", "Apply the suggestion"),),
+    "ai_recommendation": (("ACCEPT_SUGGESTION", "Apply"),),
+    "heating_started": (),
+    "chemistry_alarm": (),
 }
 
 
@@ -76,16 +81,32 @@ class NotificationManager:
 
     # -- Configuration -----------------------------------------------------
 
-    def _target(self, event: str) -> str | None:
-        """Which notify service handles this event type."""
+    def _targets(self, event: str) -> list[str]:
+        """Which notify services handle this event type.
+
+        Returns a list of targets so a message can reach more than one person.
+        Falls back to the default target if no event-specific one is set.
+        """
         targets = self.coordinator._conf(c.CONF_NOTIFY_TARGETS, {}) or {}
         specific = targets.get(event)
         if specific:
-            return specific
-        return targets.get("default")
+            if isinstance(specific, list):
+                return specific
+            return [specific]
+        default = targets.get("default")
+        if default:
+            if isinstance(default, list):
+                return default
+            return [default]
+        return []
+
+    def _target(self, event: str) -> str | None:
+        """Legacy single-target lookup; returns the first target or None."""
+        all_targets = self._targets(event)
+        return all_targets[0] if all_targets else None
 
     async def _send(self, event: str, title: str, message: str) -> None:
-        """Deliver one message.
+        """Deliver one message to all configured targets.
 
         There are two kinds of notify target and they are not interchangeable.
         Older integrations register a *service* per device, called as
@@ -95,14 +116,10 @@ class NotificationManager:
         so both have to work: calling an entity as though it were a service is
         what produced "Could not deliver".
         """
-        target = self._target(event)
-        if not target:
+        targets = self._targets(event)
+        if not targets:
             _LOGGER.debug("No notify target configured for %s", event)
             return
-
-        service = target.split(".", 1)[-1]
-        entity_exists = self.hass.states.get(target) is not None
-        service_exists = self.hass.services.has_service("notify", service)
 
         payload: dict = {"title": title, "message": message}
         actions = EVENT_ACTIONS.get(event)
@@ -115,21 +132,37 @@ class NotificationManager:
                 "tag": f"{c.DOMAIN}_{event}",
             }
 
+        for target in targets:
+            self._send_one(target, payload, event)
+
+    def _send_one(self, target: str, payload: dict, event: str) -> None:
+        """Send to a single target."""
+        service = target.split(".", 1)[-1]
+        entity_exists = self.hass.states.get(target) is not None
+        service_exists = self.hass.services.has_service("notify", service)
+
         try:
             if service_exists:
-                await self.hass.services.async_call(
-                    "notify",
-                    service,
-                    payload,
-                    blocking=False,
+                self.hass.async_create_task(
+                    self.hass.services.async_call(
+                        "notify",
+                        service,
+                        payload,
+                        blocking=False,
+                    )
                 )
             elif entity_exists:
-                # Notify entities take no action payload; the text still lands.
-                await self.hass.services.async_call(
-                    "notify",
-                    "send_message",
-                    {"entity_id": target, "title": title, "message": message},
-                    blocking=False,
+                self.hass.async_create_task(
+                    self.hass.services.async_call(
+                        "notify",
+                        "send_message",
+                        {
+                            "entity_id": target,
+                            "title": payload.get("title", ""),
+                            "message": payload.get("message", ""),
+                        },
+                        blocking=False,
+                    )
                 )
             else:
                 _LOGGER.warning(

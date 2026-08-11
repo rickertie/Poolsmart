@@ -107,9 +107,29 @@
           "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken."
         }
       },
+      "optional_sensors": {
+        "title": "Kernsensoren",
+        "description": "Buitentemperatuur, doorstroming, pompgegevens, en de weer- en afdekentiteiten. Dit zijn de sensoren die de meeste zwembaden hebben."
+      },
+      "optional_chemistry": {
+        "title": "Waterchemie",
+        "description": "pH, chloor, broom, alkaliniteit, cyanuurzuur, hardheid en zout. Dit kunnen sensoren of input_number helpers zijn die je bijwerkt na een test."
+      },
+      "optional_solar": {
+        "title": "Zon en prijs",
+        "description": "Zonoproductie, zonverwachting, collectortemperatuur en een goedkope-prijs signaal. Alleen relevant met zonnepanelen of een dynamisch tarief."
+      },
+      "optional_finish": {
+        "title": "Klaar",
+        "description": "Doorgaan naar de reviewstap. Alle velden die je leeg laat worden opgeslagen als 'niet geconfigureerd' en de bijbehorende functies worden uitgeschakeld."
+      },
+      "summary": {
+        "title": "Controleer je installatie",
+        "description": "Controleer je selecties hieronder. Druk op opslaan om de PoolSmart entry te maken, of ga terug in je browser om iets te wijzigen."
+      },
       "adopt": {
-        "title": "Leergeschiedenis gevonden",
-        "description": "{count} eerdere installatie(s) hebben leergeschiedenis achtergelaten. Overnemen scheelt weken aan metingen opnieuw opbouwen."
+        "title": "Geleerde geschiedenis gevonden",
+        "description": "{count} eerdere installatie(s) hebben geleerde geschiedenis achtergelaten. Overnemen bespaat het opbouwen van weken aan metingen."
       },
       "heating": {
         "title": "Verwarmingstoestel",
@@ -179,9 +199,17 @@
           "swim_days": "Op welke weekdagen bovenstaande tijden gelden."
         }
       },
+      "optional": {
+        "menu_options": {
+          "optional_sensors": "Kernsensoren",
+          "optional_chemistry": "Waterchemie",
+          "optional_solar": "Zon en prijs",
+          "optional_finish": "Klaar"
+        }
+      },
       "notifications": {
-        "title": "Notificaties",
-        "description": "Storingen worden herhaald met een oplopend interval tot ze opgelost zijn; informatieve meldingen komen één keer. Laat een veld leeg om het standaarddoel te gebruiken.",
+        "title": "Meldingen",
+        "description": "Kies wie elk soort melding ontvangt. Selecteer een of meerdere doelen per gebeurtenis; de melding gaat naar allebei. Laat leeg om het standaarddoel te gebruiken.",
         "data_description": {
           "default": "Waar alles heen gaat wat geen eigen bestemming heeft.",
           "heating_started": "Wordt verstuurd als een verwarmingssessie begint.",

@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • **Hardware** • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -7,7 +7,7 @@
 This document covers the physical installation: component selection, pinouts,
 voltage step-down circuits, and pipe mounting. For the ESPHome YAML
 configuration and sensor calibration, see [esphome.md](esphome.md). For mapping
-sensors to integration fields, see [SENSORS.md](SENSORS.md).
+sensors to integration fields, see [sensors.md](sensors.md).
 
 ---
 
@@ -82,7 +82,7 @@ making it safe for the ESP32.
 ## See Also
 
 - [esphome.md](esphome.md) — ESPHome YAML configuration that matches this wiring.
-- [SENSORS.md](SENSORS.md) — How to calibrate the probes and flow meter after
+- [sensors.md](sensors.md) — How to calibrate the probes and flow meter after
   installation.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration with pin assignments and calibration offsets.

@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -32,6 +32,8 @@ Chlorine burns off faster in warm water and algae grow faster in it, so a fixed
 three-day reminder is too often in spring and not often enough in a heatwave.
 The pool already knows its own temperature: five days below 20 °C, down to
 daily above 30 °C.
+
+![Chemistry test intervals based on water temperature](docs/images/chemistry-intervals.svg)
 
 ### Circulation That Matches the Product
 

@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • **Planning** • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -13,6 +13,8 @@ that supplies the COP curve and heat loss figures the planner relies on, see
 ---
 
 ## Maintenance vs. Seasonal Mode
+
+![Heating planning timeline showing maintenance vs seasonal mode](docs/images/heating-timeline.svg)
 
 Depending on the difference between the target temperature and current water
 temperature, the optimizer operates in one of two distinct modes:
@@ -74,5 +76,5 @@ answer.
   gates heating sessions (Branch 6 of the decision ladder).
 - [learning.md](learning.md) — How the COP curve per temperature band and
   thermal loss rates are learned over time and fed into the planner.
-- [SENSORS.md](SENSORS.md) — How to map your price sensor and solar sensors.
+- [sensors.md](sensors.md) — How to map your price sensor and solar sensors.
 - [heating.md](heating.md) — Heating sources and how solar collectors are handled.

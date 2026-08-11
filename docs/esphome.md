@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • **ESPHome** • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -8,7 +8,7 @@ This document covers the ESPHome configuration for the sensor board: why
 calculations live in the integration rather than on the board, and how to
 calibrate the temperature probes and flow meter. For the physical wiring guide,
 see [hardware.md](hardware.md). For mapping sensors to integration fields, see
-[SENSORS.md](SENSORS.md).
+[sensors.md](sensors.md).
 
 ---
 
@@ -76,7 +76,7 @@ mounting angles affect real flow.
 ## See Also
 
 - [hardware.md](hardware.md) — Physical wiring, pinouts, and component selection.
-- [SENSORS.md](SENSORS.md) — Sensor mapping, probe calibration, and flow meter
+- [sensors.md](sensors.md) — Sensor mapping, probe calibration, and flow meter
   wiring.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration with calibration offsets and heartbeat filters.

@@ -1,4 +1,4 @@
-[← Back to README](../../README.md) • **Dashboard**
+> [← Back to README](../../README.md) | [Getting Started](../GETTING_STARTED.MD) | [Architecture](../ARCHITECTURE.MD) | [Configuration](../CONFIGURATION.MD) | [Troubleshooting](../TROUBLESHOOTING.MD)
 
 ---
 
@@ -87,5 +87,5 @@ This dashboard is for using the pool. The panel is for understanding it.
 - [simple.yaml](simple.yaml) — Simplified single-view dashboard for household
   members.
 - [simple_page.yaml](simple_page.yaml) — Single-page variant.
-- [docs/SENSORS.md](../SENSORS.md) — Sensor mapping & calibration.
-- [docs/panel.md](../panel.md) — The management panel (a separate interface).
+- [docs/SENSORS.MD](../SENSORS.MD) — Sensor mapping & calibration.
+- [docs/PANEL.MD](../PANEL.MD) — The management panel (a separate interface).

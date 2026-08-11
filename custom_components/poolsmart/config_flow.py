@@ -1104,20 +1104,47 @@ class PoolSmartOptionsFlow(OptionsFlow):
         """Route each kind of message to its own destination.
 
         Faults can go to one phone and "the pool is warm" to everyone.
+        Multiple recipients are supported: the same message goes to each target
+        listed.
         """
         if user_input is not None:
-            targets = {k: v for k, v in user_input.items() if v}
+            targets: dict[str, list | str] = {}
+            for key, value in user_input.items():
+                if not value:
+                    continue
+                if isinstance(value, list):
+                    targets[key] = value
+                else:
+                    targets[key] = value
             return self._save({c.CONF_NOTIFY_TARGETS: targets})
 
         current = (self.config_entry.options.get(c.CONF_NOTIFY_TARGETS) or {})
+
         notify_selector = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="notify")
+            selector.EntitySelectorConfig(domain="notify", multiple=True)
         )
-        fields = {vol.Optional("default", default=current.get("default", "")): notify_selector}
+
+        def _default(key: str):
+            val = current.get(key, [])
+            if isinstance(val, list):
+                return val
+            return [val] if val else []
+
+        fields = {
+            vol.Optional("default", default=_default("default")): notify_selector,
+        }
         for event in c.NOTIFY_EVENTS:
-            fields[vol.Optional(event, default=current.get(event, ""))] = notify_selector
+            fields[
+                vol.Optional(event, default=_default(event))
+            ] = notify_selector
+
         return self.async_show_form(
-            step_id="notifications", data_schema=vol.Schema(fields)
+            step_id="notifications",
+            data_schema=vol.Schema(fields),
+            description_placeholders={
+                "multi_note": "Select one or more notification targets per event. "
+                              "Leave blank to skip that event type.",
+            },
         )
 
     async def async_step_filtration(

@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
+> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
 
 ---
 
@@ -7,7 +7,7 @@
 This document covers how PoolSmart calculates daily filtration runtime, the two
 rules that set the requirement, filter media effects, flow measurement, and
 filter resistance. For sensor calibration (including the flow meter bucket test),
-see [SENSORS.md](SENSORS.md). For the decision ladder that executes filtration
+see [sensors.md](sensors.md). For the decision ladder that executes filtration
 blocks, see [architecture.md](architecture.md).
 
 ---
@@ -27,6 +27,8 @@ Filtered water mixes back in with unfiltered water, so one turnover does not
 clean the pool once — it cleans about 63% of it. Two turnovers reach 86%, three
 reach 95%, four reach 98%. Three is where the gains flatten, so that is the
 default.
+
+![Turnover infographic showing cumulative filtration effectiveness](docs/images/turnover-infographic.svg)
 
 ### Rule 2: Daily Minimum (time-based)
 
@@ -136,6 +138,6 @@ Without that credit the system would filter far more than needed on heating days
 
 ## See Also
 
-- [SENSORS.md](SENSORS.md) — Flow meter calibration (the bucket test) and probe calibration
+- [sensors.md](sensors.md) — Flow meter calibration (the bucket test) and probe calibration
 - [architecture.md](architecture.md) — The filtration calculation formula and decision ladder
 - [configuration.md](configuration.md) — How to adjust turnover, quiet hours, and pump rundown
