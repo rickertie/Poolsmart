@@ -1,4 +1,4 @@
-# :swimming-pool: PoolSmart
+# :swimmer: PoolSmart
 
 > Intelligent swimming pool controller for Home Assistant — ESPHome measures, HA decides.
 
@@ -14,18 +14,18 @@ and everything else is derived.
 
 ---
 
-## :check-circle: Features
+## :white_check_mark: Features
 
-- :pump: **Smart filtration** — runtime from pool volume and measured flow, not a fixed timer
+- :recycle: **Smart filtration** — runtime from pool volume and measured flow, not a fixed timer
 - :thermometer: **Heat pump control** — plans heating around dynamic prices and solar surplus
-- :chart-bell-curve: **Self-learning** — learns heat loss, heating rate, and COP from every session
-- :water: **Water chemistry** — turns pH readings into doses using your pool's volume
-- :sun-weather: **Solar optimization** — heats with free surplus, advises on manual collector valves
+- :chart_with_upwards_trend: **Self-learning** — learns heat loss, heating rate, and COP from every session
+- :droplet: **Water chemistry** — turns pH readings into doses using your pool's volume
+- :sunny: **Solar optimization** — heats with free surplus, advises on manual collector valves
 - :calendar: **Price-aware scheduling** — works backwards from when you want to swim
-- :shield-check: **Compressor protection** — minimum off/run times enforced independently
+- :shield: **Compressor protection** — minimum off/run times enforced independently
 - :robot: **AI advisory** — suggests settings, applies nothing without approval
 - :bell: **Actionable notifications** — "heat now anyway", "circulate only", "apply suggestion"
-- :monitor-dashboard: **Dashboards** — detailed three-tab view and simple household page
+- :desktop_computer: **Dashboards** — detailed three-tab view and simple household page
 
 ---
 
@@ -36,12 +36,12 @@ and everything else is derived.
 3. **Settings → Devices & Services → Add Integration → PoolSmart**
 4. Work through the wizard — every field arrives pre-filled with a help line
 
-> :information-outline: To start the wizard with your own figures, see
+> :information_source: To start the wizard with your own figures, see
 > [docs/DEFAULTS.md](docs/DEFAULTS.md).
 
 ---
 
-## :file-document: Documentation
+## :page_facing_up: Documentation
 
 | Topic | Document | What you will find |
 |---|---|---|
@@ -73,17 +73,17 @@ and everything else is derived.
 filtration, water, notifications, advanced. Nothing is locked in. Optional
 entities may be left blank; the matching capability switches off cleanly.
 
-> :file-document-outline: [docs/configuration.md](docs/configuration.md)
+> :page_with_curl: [docs/configuration.md](docs/configuration.md)
 
 ---
 
-## :chart-line: Self-Learning
+## :chart_with_upwards_trend: Self-Learning
 
 Learns heat loss, heating rate, and COP per 5 °C outdoor band from every cleanly
 closed session. Three rules keep it honest: clean sessions only, capped updates,
 physical outlier rejection. Learned history survives a reinstall.
 
-> :file-document-outline: [docs/learning.md](docs/learning.md)
+> :page_with_curl: [docs/learning.md](docs/learning.md)
 
 ---
 
@@ -93,37 +93,37 @@ physical outlier rejection. Learned history survives a reinstall.
 cold pool (reports a date). Reads price forecasts, weights cost by COP, falls back
 to heating on demand. Supports heat pump, electric, solar, gas, or none.
 
-> :file-document-outline: [docs/planning.md](docs/planning.md) |
+> :page_with_curl: [docs/planning.md](docs/planning.md) |
 > Sources: [docs/heating.md](docs/heating.md)
 
 ---
 
-## :water: Water Chemistry
+## :droplet: Water Chemistry
 
 Turns pH 7.82 into "add 18 ml of pH-minus" using your volume. Test intervals
 follow temperature: five days below 20 °C, daily above 30 °C. Circulation
 matches the product: 30 min for non-chlorine shock, a full night for chlorine
 shock, none for tablets in a floater.
 
-> :file-document-outline: [docs/chemistry.md](docs/chemistry.md)
+> :page_with_curl: [docs/chemistry.md](docs/chemistry.md)
 
 ---
 
-## :monitor-dashboard: Dashboards
+## :desktop_computer: Dashboards
 
 `dashboard.yaml` — three tabs, every figure. `simple.yaml` — is it warm, is the
 water fine, when can I swim. Both in `docs/lovelace/`.
 
-> :file-document-outline: [docs/lovelace/README.md](docs/lovelace/README.md)
+> :page_with_curl: [docs/lovelace/README.md](docs/lovelace/README.md)
 
 ---
 
-## :shield-check: Safety
+## :shield: Safety
 
 The control decision is the only part of a tick that may not fail. Compressor
 minimum off/run times are enforced separately; no branch can override them.
 
-> :file-document-outline: [docs/architecture.md](docs/architecture.md)
+> :page_with_curl: [docs/architecture.md](docs/architecture.md)
 
 ---
 
@@ -133,7 +133,7 @@ Optional and advisory. Reads session history, suggests settings changes, waits.
 Nothing applied without pressing accept. Validated against hard ranges — a safety
 limit cannot be suggested away.
 
-> :file-document-outline: [docs/architecture.md#ai-advisory-layer](docs/architecture.md)
+> :page_with_curl: [docs/architecture.md#ai-advisory-layer](docs/architecture.md)
 
 ---
 
@@ -143,10 +143,10 @@ Faults are isolated per subsystem. Everything that failed shows up in Diagnostic
 and the status sensor's attributes. Heat pump minimum flow is a warning, not a
 stop. Download diagnostics from the device menu.
 
-> :file-document-outline: [docs/troubleshooting.md](docs/troubleshooting.md)
+> :page_with_curl: [docs/troubleshooting.md](docs/troubleshooting.md)
 
 ---
 
-## :scale-balance: License
+## :balance_scale: License
 
 AGPL-3.0-or-later
