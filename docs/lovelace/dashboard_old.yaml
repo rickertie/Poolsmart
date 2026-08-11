@@ -1,5 +1,5 @@
 # ===========================================================================
-# PoolSmart dashboard — UX Improved Version
+# PoolSmart dashboard
 #
 # PASTE THIS WHOLE FILE into the raw configuration editor:
 #   open the dashboard -> pencil (top right) -> three dots -> Raw configuration
@@ -28,14 +28,6 @@
 #   Sensor readings, delta-T, COP, learned values, session history and the
 #   decision log all live in the PoolSmart panel in the sidebar. Repeating them
 #   here would mean maintaining the same thing twice.
-#
-# UX IMPROVEMENTS IN THIS VERSION
-#   - Loading states with skeleton placeholders
-#   - Responsive layout with mobile-friendly stacks
-#   - Better error/empty state handling
-#   - Improved visual hierarchy and spacing
-#   - Consistent color coding for status
-#   - Progress indicators for filtration
 # ===========================================================================
 
 views:
@@ -130,19 +122,6 @@ views:
               --card-primary-font-weight: 300;
               padding: 18px 16px;
             }
-
-      # ---- Loading state (entities niet beschikbaar) -----------------------
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: sensor.pool_status
-            state: "unknown"
-        card:
-          type: markdown
-          content: >
-            ### ⏳ Gegevens laden...
-
-            De poolgegevens worden opgehaald. Dit kan even duren na een herstart.
 
       # ---- Klaar om / klaar op (alleen tijdens verwarmen) ------------------
       - type: conditional
@@ -247,7 +226,7 @@ views:
             state: "on"
         card:
           type: markdown
-          content: >
+          content: >-
             ### ⚠️ Let op
 
             {% for m in state_attr('binary_sensor.pool_fault','messages') %}
@@ -268,7 +247,7 @@ views:
           icon_color: grey
           multiline_secondary: true
 
-      # ---- Hardware (responsive: stapel op mobiel) -------------------------
+      # ---- Hardware ------------------------------------------------------
       - type: horizontal-stack
         cards:
           - type: custom:mushroom-entity-card
@@ -358,7 +337,6 @@ views:
                     - text-align: left
                     - height: 48px
                     - margin-bottom: 6px
-                    - transition: all .2s ease
                   name:
                     - font-size: 14px
                     - font-weight: "600"
