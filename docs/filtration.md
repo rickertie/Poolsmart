@@ -28,7 +28,7 @@ clean the pool once — it cleans about 63% of it. Two turnovers reach 86%, thre
 reach 95%, four reach 98%. Three is where the gains flatten, so that is the
 default.
 
-![Turnover infographic showing cumulative filtration effectiveness](docs/images/turnover-infographic.svg)
+![Turnover infographic showing cumulative filtration effectiveness](images/turnover-infographic.svg)
 
 ### Rule 2: Daily Minimum (time-based)
 

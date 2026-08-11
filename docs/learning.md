@@ -24,7 +24,7 @@ After each heating session, PoolSmart updates three core parameters:
    non-inverter heat pumps operate at fixed output, one COP value per temperature
    band is sufficient.
 
-![COP curve showing how efficiency varies with outdoor temperature](docs/images/cop-curve.svg)
+![COP curve showing how efficiency varies with outdoor temperature](images/cop-curve.svg)
 
 ---
 

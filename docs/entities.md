@@ -36,7 +36,7 @@ The water and outdoor temperatures ride along as attributes on
 `sensor.<name>_status` so a card can show them next to the reason, but a graph
 should point at your own sensor.
 
-![Data flow and entity relationship map](docs/images/data-flow.svg)
+![Data flow and entity relationship map](images/data-flow.svg)
 
 ---
 

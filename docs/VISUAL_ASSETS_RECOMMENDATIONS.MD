@@ -65,7 +65,7 @@ only". Clean sans-serif labels, soft rounded rectangles, Home Assistant blue
 isometric-flat hybrid style, technical documentation quality, no people
 ```
 
-**File naming**: `docs/images/architecture-overview.svg`
+**File naming**: `images/architecture-overview.svg`
 
 ---
 
@@ -99,7 +99,7 @@ shadows, white background, Home Assistant color palette, engineering diagram
 quality, no decorative elements
 ```
 
-**File naming**: `docs/images/priority-ladder.svg`
+**File naming**: `images/priority-ladder.svg`
 
 ---
 
@@ -137,7 +137,7 @@ typography, grid lines in light gray, white background, academic/scientific
 chart quality, no decorative elements
 ```
 
-**File naming**: `docs/images/cop-curve.svg`
+**File naming**: `images/cop-curve.svg`
 
 ---
 
@@ -172,7 +172,7 @@ rectangles, Home Assistant blue palette, white background, infographic
 quality, subtle shadows, sans-serif labels
 ```
 
-**File naming**: `docs/images/heating-timeline.svg`
+**File naming**: `images/heating-timeline.svg`
 
 ---
 
@@ -208,7 +208,7 @@ Pool blue gradient background for pool illustrations, clean sans-serif labels,
 white overall background, educational infographic quality
 ```
 
-**File naming**: `docs/images/turnover-infographic.svg`
+**File naming**: `images/turnover-infographic.svg`
 
 ---
 
@@ -243,7 +243,7 @@ available, pool blue (#00ACC1) for circulation only, white background,
 engineering diagram quality
 ```
 
-**File naming**: `docs/images/operating-envelope.svg`
+**File naming**: `images/operating-envelope.svg`
 
 ---
 
@@ -275,7 +275,7 @@ typography, rounded zones, yellow (#FFC107) and green (#4CAF50) colors,
 white background, educational diagram quality
 ```
 
-**File naming**: `docs/images/solar-surplus.svg`
+**File naming**: `images/solar-surplus.svg`
 
 ---
 
@@ -308,7 +308,7 @@ orange for solar. Clean sans-serif labels, rounded rectangles, white
 background, systems diagram quality
 ```
 
-**File naming**: `docs/images/data-flow.svg`
+**File naming**: `images/data-flow.svg`
 
 ---
 
@@ -345,7 +345,7 @@ heat escaping. Clean sans-serif labels, white background, comparison
 infographic quality, no decorative elements
 ```
 
-**File naming**: `docs/images/heat-loss-comparison.svg`
+**File naming**: `images/heat-loss-comparison.svg`
 
 ---
 ---

@@ -33,7 +33,7 @@ three-day reminder is too often in spring and not often enough in a heatwave.
 The pool already knows its own temperature: five days below 20 °C, down to
 daily above 30 °C.
 
-![Chemistry test intervals based on water temperature](docs/images/chemistry-intervals.svg)
+![Chemistry test intervals based on water temperature](images/chemistry-intervals.svg)
 
 ### Circulation That Matches the Product
 

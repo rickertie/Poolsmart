@@ -60,7 +60,7 @@ integration off the dashboard. Entities stay available as long as a decision
 exists, because the decision the pool is actually running on remains valid even
 if an optional subsystem hiccuped.
 
-![Heat pump operating envelope showing temperature thresholds](docs/images/operating-envelope.svg)
+![Heat pump operating envelope showing temperature thresholds](images/operating-envelope.svg)
 
 Anything that did fail shows up under Diagnostics in the panel and in the status
 sensor's attributes, with the full traceback in the Home Assistant log.
