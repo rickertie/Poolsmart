@@ -64,10 +64,10 @@ making it safe for the ESP32.
 
 | Component | Image | Mounting Details |
 | :--- | :---: | :--- |
-| **Filter pump** | <img src="images/Bestway_pump.webp" width="160"> | Installed in the main circulation loop. |
-| **Heat pump** | <img src="images/w_eau_mini_power_3kw_warmtepomp.webp" width="160"> | Installed downstream of the filter pump. |
-| **Temperature sensors** | <img src="images/Pipe_clamp.jpg" width="160"> | DS18B20 probes attached to the PVC pipe using thermal paste and pipe clamps for accurate surface readings. |
-| **Flow meter** | <img src="images/Flow_meter.jpg" width="160"> | DN50 Hall-effect flow meter installed in the return line from the heat pump. |
+| **Filter pump** | <img src="images/Bestway_pump.svg" width="160"> | Installed in the main circulation loop. |
+| **Heat pump** | <img src="images/w_eau_mini_power_3kw_warmtepomp.svg" width="160"> | Installed downstream of the filter pump. |
+| **Temperature sensors** | <img src="images/Pipe_clamp.svg" width="160"> | DS18B20 probes attached to the PVC pipe using thermal paste and pipe clamps for accurate surface readings. |
+| **Flow meter** | <img src="images/Flow_meter.svg" width="160"> | DN50 Hall-effect flow meter installed in the return line from the heat pump. |
 
 ---
 
