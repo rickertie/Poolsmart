@@ -178,6 +178,8 @@ class PoolSmartPanel extends HTMLElement {
     this._tab = "overview";
     this._snapshot = null;
     this._error = null;
+    this._loading = true;
+    this._refreshing = false;
     this._timer = null;
     this.attachShadow({ mode: "open" });
   }
@@ -198,20 +200,39 @@ class PoolSmartPanel extends HTMLElement {
 
   async _refresh() {
     if (!this._hass) return;
+    this._refreshing = true;
+    this._render();
     try {
       this._snapshot = await this._hass.connection.sendMessagePromise({
         type: "poolsmart/snapshot",
       });
       this._error = null;
+      this._loading = false;
     } catch (err) {
       this._error = err && err.message ? err.message : "Could not load pool data";
+      this._loading = false;
     }
+    this._refreshing = false;
     this._render();
   }
 
   async _callService(domain, service, data) {
-    await this._hass.callService(domain, service, data);
-    setTimeout(() => this._refresh(), 800);
+    const btn = this.shadowRoot.querySelector(`[data-service="${domain}.${service}"][data-payload='${data ? JSON.stringify(data) : "{}"}']`);
+    if (btn) {
+      btn.setAttribute("aria-busy", "true");
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+    }
+    try {
+      await this._hass.callService(domain, service, data);
+      setTimeout(() => this._refresh(), 800);
+    } finally {
+      if (btn) {
+        btn.removeAttribute("aria-busy");
+        btn.disabled = false;
+        btn.style.opacity = "";
+      }
+    }
   }
 
   _render() {
@@ -222,12 +243,35 @@ class PoolSmartPanel extends HTMLElement {
                 color: var(--primary-text-color, #212121); background: var(--primary-background-color, #fafafa); }
         h1 { font-size:22px; margin:0 0 4px; }
         .sub { color: var(--secondary-text-color,#666); margin-bottom:16px; font-size:14px; }
+        .sub .refreshing { opacity:.5; }
         nav { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:16px; border-bottom:1px solid var(--divider-color,#e0e0e0); }
         nav button { background:none; border:none; padding:10px 14px; cursor:pointer; font-size:14px;
-                     color: var(--secondary-text-color,#666); border-bottom:2px solid transparent; }
+                     color: var(--secondary-text-color,#666); border-bottom:2px solid transparent;
+                     transition: color .15s, border-color .15s; }
+        nav button:hover { color: var(--primary-text-color,#212121); }
+        nav button:focus-visible { outline: 2px solid var(--primary-color,#03a9f4); outline-offset: 2px; border-radius: 4px; }
         nav button.active { color: var(--primary-color,#03a9f4); border-bottom-color: var(--primary-color,#03a9f4); }
         .card { background: var(--card-background-color,#fff); border-radius:14px; padding:16px; margin-bottom:12px;
                 box-shadow:0 1px 3px rgba(0,0,0,.12); }
+        .card:focus-within { box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+        .skeleton { background: linear-gradient(90deg, var(--divider-color,#eee) 25%, var(--card-background-color,#fff) 50%, var(--divider-color,#eee) 75%);
+                    background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-title { height: 20px; width: 40%; margin-bottom: 12px; }
+        .skeleton-line { height: 14px; margin-bottom: 8px; }
+        .skeleton-line:last-child { width: 70%; }
+        .skeleton-temp { height: 48px; width: 50%; margin-bottom: 8px; }
+        .skeleton-nav { height: 36px; width: 100%; margin-bottom: 16px; }
+        .error-banner { background: color-mix(in srgb, #c62828 12%, var(--card-background-color,#fff));
+                        border: 1px solid color-mix(in srgb, #c62828 30%, transparent);
+                        border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+        .error-banner .error-title { color: #c62828; font-weight: 600; margin-bottom: 4px; }
+        .error-banner .error-detail { color: var(--secondary-text-color,#666); font-size: 13px; }
+        .error-banner button { margin-top: 8px; background: var(--primary-color,#03a9f4); color: #fff;
+                               border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+        .error-banner button:focus-visible { outline: 2px solid var(--primary-text-color,#212121); outline-offset: 2px; }
+        .empty-state { text-align: center; padding: 32px 16px; color: var(--secondary-text-color,#888); }
+        .empty-state .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: .5; }
         /* Direction A: dense monospace readouts, for the tabs meant for reading
            closely rather than glancing at. */
         .mono { font-family: ui-monospace,"IBM Plex Mono",Menlo,monospace; }
@@ -295,24 +339,60 @@ class PoolSmartPanel extends HTMLElement {
         .slot { display:flex; justify-content:space-between; padding:4px 0; font-size:13px; }
       </style>
       <h1>${esc(s ? s.title : "PoolSmart")}</h1>
-      <div class="sub">${
-        this._error ? `<span class="warn">${esc(this._error)}</span>` : esc(s ? s.decision?.reason ?? "" : "Loading…")
-      }</div>
-      <nav>${TABS.map(
-        (t) =>
-          `<button data-tab="${t.id}" class="${
-            this._tab === t.id ? "active" : ""
-          }">${esc(this.t(t.id) || t.label)}</button>`
-      ).join("")}</nav>
-      <div id="content">${s ? this._renderTab(s) : ""}</div>
+      ${
+        this._error
+          ? `<div class="error-banner" role="alert" aria-live="assertive">
+               <div class="error-title">Unable to load</div>
+               <div class="error-detail">${esc(this._error)}</div>
+               <button onclick="this.getRootNode().host._refresh()" aria-label="Retry loading data">Retry</button>
+             </div>`
+          : `<div class="sub ${this._refreshing ? "refreshing" : ""}">${
+              esc(s ? s.decision?.reason ?? "" : "Loading…")
+            }</div>`
+      }
+      ${
+        this._loading
+          ? `<div class="skeleton skeleton-nav" aria-hidden="true"></div>
+             <div class="skeleton skeleton-temp" aria-hidden="true"></div>
+             <div class="skeleton skeleton-title" aria-hidden="true"></div>
+             <div class="skeleton skeleton-line" aria-hidden="true"></div>
+             <div class="skeleton skeleton-line" aria-hidden="true"></div>
+             <div class="skeleton skeleton-line" aria-hidden="true"></div>`
+          : `<nav role="tablist" aria-label="PoolSmart sections">${TABS.map(
+              (t) =>
+                `<button role="tab" id="tab-${t.id}" data-tab="${t.id}" class="${
+                  this._tab === t.id ? "active" : ""
+                }" aria-selected="${this._tab === t.id}" aria-controls="panel-${t.id}"
+                tabindex="${this._tab === t.id ? "0" : "-1"}">${esc(this.t(t.id) || t.label)}</button>`
+            ).join("")}</nav>
+            <div id="content" role="tabpanel" id="panel-${this._tab}" aria-labelledby="tab-${this._tab}">${
+              s ? this._renderTab(s) : ""
+            }</div>`
+      }
     `;
 
-    this.shadowRoot.querySelectorAll("nav button").forEach((b) =>
+    this.shadowRoot.querySelectorAll("nav button").forEach((b, idx, arr) =>
       b.addEventListener("click", () => {
         this._tab = b.dataset.tab;
         this._render();
+        this.shadowRoot.querySelector(`#tab-${this._tab}`)?.focus();
       })
     );
+    this.shadowRoot.querySelector("nav")?.addEventListener("keydown", (ev) => {
+      const tabs = TABS.map((t) => t.id);
+      const idx = tabs.indexOf(this._tab);
+      let next = null;
+      if (ev.key === "ArrowRight") next = tabs[(idx + 1) % tabs.length];
+      else if (ev.key === "ArrowLeft") next = tabs[(idx - 1 + tabs.length) % tabs.length];
+      else if (ev.key === "Home") next = tabs[0];
+      else if (ev.key === "End") next = tabs[tabs.length - 1];
+      if (next) {
+        ev.preventDefault();
+        this._tab = next;
+        this._render();
+        this.shadowRoot.querySelector(`#tab-${next}`)?.focus();
+      }
+    });
     this.shadowRoot.querySelectorAll("[data-service]").forEach((b) =>
       b.addEventListener("click", () => {
         const [domain, service] = b.dataset.service.split(".");
@@ -761,7 +841,8 @@ class PoolSmartPanel extends HTMLElement {
                 ? `<button class="action" style="margin-top:10px;background:transparent;
                      border:1px solid var(--divider-color);color:var(--secondary-text-color)"
                      data-service="poolsmart.reset_learned"
-                     data-payload='{"value":"${v.key}"}'>${esc(
+                     data-payload='{"value":"${v.key}"}'
+                     aria-label="${esc(this.t("resetThis"))}: ${esc(v.key)}">${esc(
                      this.t("resetThis")
                    )}</button>`
                 : ""
@@ -804,7 +885,8 @@ class PoolSmartPanel extends HTMLElement {
       ${this._advisorCard(s)}
       <div class="card">
         <button class="action" data-service="button.press"
-          data-payload='{"entity_id":"button.pool_reset_learned_values"}'>Reset learned values</button>
+          data-payload='{"entity_id":"button.pool_reset_learned_values"}'
+          aria-label="Reset all learned values">Reset learned values</button>
         <div class="reason muted">Updates are capped, so a single odd session cannot move a
           value far. Resetting is only needed after changing hardware.</div>
       </div>

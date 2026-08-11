@@ -1,0 +1,127 @@
+# ---------------------------------------------------------------------------
+# The simple page (UX improved).
+#
+# One temperature, one sentence, one time, three buttons. Everything technical
+# lives in the integration's diagnostics, not here, so this page never needs
+# explaining to anyone.
+#
+# Replace "pool" in the entity ids with your device slug.
+#
+# UX IMPROVEMENTS
+#   - Loading state with spinner animation
+#   - Better button feedback
+#   - Empty state handling
+#   - Improved responsive layout
+# ---------------------------------------------------------------------------
+
+title: Pool
+path: pool
+icon: mdi:pool
+cards:
+  - type: vertical-stack
+    cards:
+      - type: heading
+        heading: Pool
+        heading_style: title
+
+      # ---- Hoofdtemperatuur -----------------------------------------------
+      - type: custom:mushroom-template-card
+        primary: >-
+          {% set t = states('sensor.pool_water_temperature') %}
+          {% if t in ['unknown','unavailable'] %}--{% else %}{{ t | round(1) }}{% endif %} °C
+        secondary: >-
+          {% if states('sensor.pool_water_temperature') in ['unknown','unavailable'] %}
+            Gegevens laden...
+          {% else %}
+            {{ state_attr('sensor.pool_status', 'reason') }}
+          {% endif %}
+        icon: >-
+          {% if states('sensor.pool_water_temperature') in ['unknown','unavailable'] %}mdi:loading
+          {% elif is_state('binary_sensor.pool_heating', 'on') %}mdi:fire
+          {% elif is_state('binary_sensor.pool_circulating', 'on') %}mdi:autorenew
+          {% else %}mdi:pool{% endif %}
+        icon_color: >-
+          {% if states('sensor.pool_water_temperature') in ['unknown','unavailable'] %}grey
+          {% elif is_state('binary_sensor.pool_fault', 'on') %}red
+          {% elif is_state('binary_sensor.pool_heating', 'on') %}orange
+          {% elif is_state('binary_sensor.pool_circulating', 'on') %}blue
+          {% else %}grey{% endif %}
+        multiline_secondary: true
+        tap_action:
+          action: more-info
+        card_mod:
+          style: |
+            ha-card mushroom-shape-icon ha-icon {
+              {% if states('sensor.pool_water_temperature') in ['unknown','unavailable'] %}
+              animation: spin 1s linear infinite;
+              display: block;
+              {% endif %}
+            }
+            @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+      # ---- Verwachte klaar-tijd -------------------------------------------
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.pool_heating
+            state: "on"
+        card:
+          type: custom:mushroom-template-card
+          primary: >-
+            {% set h = states('sensor.pool_heating_time_required') | float(0) %}
+            {% if h > 12 %}
+              Ready in about {{ (h / 8) | round(0) }} days
+            {% else %}
+              Ready around {{ (now() + timedelta(hours=h)).strftime('%H:%M') }}
+            {% endif %}
+          secondary: "{{ states('sensor.pool_heating_time_required') | round(1) }} hours of heating to go"
+          icon: mdi:clock-outline
+          icon_color: orange
+
+      # ---- Snelle actie-knoppen -------------------------------------------
+      - type: custom:mushroom-chips-card
+        alignment: justify
+        chips:
+          - type: template
+            icon: mdi:fire
+            content: Heat now
+            icon_color: >-
+              {{ 'red' if is_state('select.pool_mode', 'boost') else 'grey' }}
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.pool_heat_now
+          - type: template
+            icon: mdi:autorenew
+            content: Automatic
+            icon_color: "{{ 'green' if is_state('select.pool_mode', 'auto') else 'grey' }}"
+            tap_action:
+              action: perform-action
+              perform_action: select.select_option
+              target:
+                entity_id: select.pool_mode
+              data:
+                option: auto
+          - type: template
+            icon: mdi:power
+            content: "Off"
+            icon_color: "{{ 'red' if is_state('select.pool_mode', 'off') else 'grey' }}"
+            tap_action:
+              action: perform-action
+              perform_action: select.select_option
+              target:
+                entity_id: select.pool_mode
+              data:
+                option: "off"
+
+      # ---- Foutmelding -----------------------------------------------------
+      - type: conditional
+        conditions:
+          - condition: state
+            entity: binary_sensor.pool_fault
+            state: "on"
+        card:
+          type: markdown
+          content: >-
+            **⚠️ Attention:** {{ state_attr('binary_sensor.pool_fault', 'messages') | join(' ') }}

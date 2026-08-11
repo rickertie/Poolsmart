@@ -360,6 +360,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         ("heating", "Heating"),
         ("entities", "Devices"),
         ("optional", "Sensors"),
+        ("summary", "Review"),
         ("adopt", "Finish"),
     ]
 
@@ -370,14 +371,23 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     def _progress(self, step_id: str) -> dict:
         """Return progress placeholders for the current step."""
-        for i, (sid, label) enumerate(self._STEPS):
+        visible_steps = [s for s in self._STEPS if s[0] not in ("adopt", "summary")]
+        total = len(visible_steps) + 1
+        for i, (sid, label) in enumerate(self._STEPS):
             if sid == step_id:
+                if sid in ("adopt", "summary"):
+                    return {
+                        "step_current": str(total),
+                        "step_total": str(total),
+                        "step_label": label,
+                    }
+                current = visible_steps.index((sid, label)) + 1 if (sid, label) in visible_steps else i + 1
                 return {
-                    "step_current": str(i + 1),
-                    "step_total": str(len([s for s in self._STEPS if s[0] != "adopt"])),
+                    "step_current": str(current),
+                    "step_total": str(total),
                     "step_label": label,
                 }
-        return {"step_current": "1", "step_total": "6", "step_label": step_id}
+        return {"step_current": "1", "step_total": str(total), "step_label": step_id}
 
     def _progress_description(self, step_id: str) -> str:
         """Build a progress line for the form description."""
@@ -388,7 +398,23 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self._defaults:
             self._defaults = await async_load_defaults(self.hass)
         if user_input is not None:
+            old_source = self._data.get(c.CONF_HEATING_SOURCE)
+            old_kind = self._data.get(c.CONF_POOL_KIND)
             self._data.update(user_input)
+            if old_source and old_source != user_input.get(c.CONF_HEATING_SOURCE):
+                for key in (
+                    c.CONF_HP_INPUT_KW, c.CONF_HP_THERMAL_KW, c.CONF_HP_COP_REF,
+                    c.CONF_HP_COP_REF_TEMP, c.CONF_HP_COP_LOW, c.CONF_HP_COP_LOW_TEMP,
+                    c.CONF_HP_AIR_TEMP_MIN, c.CONF_HP_AIR_TEMP_MAX,
+                    c.CONF_HP_FLOW_MIN_M3H, c.CONF_HP_FLOW_MIN_BLOCKING,
+                    c.CONF_HP_FLOW_MIN_VERIFIED, c.CONF_COLLECTOR_MARGIN,
+                    c.CONF_HP_SWITCH, c.CONF_HP_INLET_SENSOR, c.CONF_HP_OUTLET_SENSOR,
+                    c.CONF_HP_POWER_SENSOR, c.CONF_COLLECTOR_SENSOR,
+                ):
+                    self._data.pop(key, None)
+            if old_kind and old_kind != user_input.get(c.CONF_POOL_KIND):
+                self._data.pop(c.CONF_DEPTH_M, None)
+                self._data.pop(c.CONF_SURFACE_M2, None)
             return await self.async_step_pool()
         return self.async_show_form(
             step_id="user",
@@ -475,27 +501,186 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_optional(self, user_input: dict | None = None) -> ConfigFlowResult:
+        """Entry point for optional sensors -- offers grouped sub-steps."""
         if user_input is not None:
             self._data.update({k: v for k, v in user_input.items() if v})
-            return await self.async_step_adopt()
+            return await self.async_step_optional_sensors()
 
         volume = float(self._data.get(c.CONF_VOLUME_L, 0))
         flow = float(self._data.get(c.CONF_PUMP_FLOW_M3H, 1))
         measured = bool(self._data.get(c.CONF_PUMP_FLOW_MEASURED, False))
         effective = flow if measured else flow * 0.7
         turnover_h = (volume * 3.0) / (effective * 1000) if effective else 0
-        # The daily minimum usually wins on pools with a generously sized pump,
-        # so quoting only the turnover figure would understate the real runtime.
         daily_h = max(turnover_h, 4.0)
 
-        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
-        has_solar = bool(self._data.get(c.CONF_HAS_SOLAR_COLLECTOR, False))
-        return self.async_show_form(
+        return self.async_show_menu(
             step_id="optional",
-            data_schema=_optional_entities(source, has_solar),
+            menu_options=[
+                "optional_sensors",
+                "optional_chemistry",
+                "optional_solar",
+                "optional_finish",
+            ],
             description_placeholders={
+                **self._progress("optional"),
                 "daily_hours": f"{daily_h:.1f}",
                 "block_minutes": f"{daily_h / 3 * 60:.0f}",
+            },
+        )
+
+    async def async_step_optional_sensors(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Core environmental sensors -- the ones most pools have."""
+        if user_input is not None:
+            self._data.update({k: v for k, v in user_input.items() if v})
+            return self.async_show_menu(
+                step_id="optional",
+                menu_options=[
+                    "optional_sensors",
+                    "optional_chemistry",
+                    "optional_solar",
+                    "optional_finish",
+                ],
+            )
+        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
+        from .core.config import SOURCE_TRAITS, HeatingSource
+
+        fields: dict = {
+            vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
+            vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
+            vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
+            vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
+            vol.Optional(
+                c.CONF_FLOW_UNIT, default="l_min"
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
+                    translation_key="flow_unit",
+                )
+            ),
+            vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
+            vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+            vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
+            vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=["cover", "binary_sensor", "input_boolean"]
+                )
+            ),
+        }
+        if source == "heat_pump" and SOURCE_TRAITS[HeatingSource(source)].get("air_temp_limits"):
+            fields[vol.Optional(c.CONF_HP_INLET_SENSOR)] = TEMP_SENSOR
+            fields[vol.Optional(c.CONF_HP_OUTLET_SENSOR)] = TEMP_SENSOR
+            fields[vol.Optional(c.CONF_HP_POWER_SENSOR)] = POWER_SENSOR
+        return self.async_show_form(
+            step_id="optional_sensors",
+            data_schema=vol.Schema(fields),
+            description_placeholders=self._progress("optional"),
+        )
+
+    async def async_step_optional_chemistry(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Water chemistry sensors -- optional helpers for dosing."""
+        if user_input is not None:
+            self._data.update({k: v for k, v in user_input.items() if v})
+            return self.async_show_menu(
+                step_id="optional",
+                menu_options=[
+                    "optional_sensors",
+                    "optional_chemistry",
+                    "optional_solar",
+                    "optional_finish",
+                ],
+            )
+        fields: dict = {
+            vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
+            vol.Optional(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
+        }
+        return self.async_show_form(
+            step_id="optional_chemistry",
+            data_schema=vol.Schema(fields),
+            description_placeholders=self._progress("optional"),
+        )
+
+    async def async_step_optional_solar(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Solar-related sensors -- only relevant with solar heating."""
+        if user_input is not None:
+            self._data.update({k: v for k, v in user_input.items() if v})
+            return self.async_show_menu(
+                step_id="optional",
+                menu_options=[
+                    "optional_sensors",
+                    "optional_chemistry",
+                    "optional_solar",
+                    "optional_finish",
+                ],
+            )
+        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
+        has_solar = bool(self._data.get(c.CONF_HAS_SOLAR_COLLECTOR, False))
+        fields: dict = {
+            vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
+            vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
+        }
+        if has_solar or source == "solar":
+            fields[vol.Optional(c.CONF_COLLECTOR_SENSOR)] = TEMP_SENSOR
+        if source == "heat_pump":
+            fields[vol.Optional(c.CONF_CHEAP_PRICE_SENSOR)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=["binary_sensor", "input_boolean"]
+                )
+            )
+        return self.async_show_form(
+            step_id="optional_solar",
+            data_schema=vol.Schema(fields),
+            description_placeholders=self._progress("optional"),
+        )
+
+    async def async_step_optional_finish(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Proceed to the adopt/finish step."""
+        return await self.async_step_summary()
+
+    async def async_step_summary(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Review selections before creating the entry."""
+        if user_input is not None:
+            return await self.async_step_adopt()
+
+        source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
+        kind = self._data.get(c.CONF_POOL_KIND, "in_ground")
+        has_solar = bool(self._data.get(c.CONF_HAS_SOLAR_COLLECTOR, False))
+        volume = float(self._data.get(c.CONF_VOLUME_L, 0))
+
+        summary_lines = [
+            f"Pool: {kind.replace('_', ' ')}",
+            f"Volume: {volume:,.0f} L",
+            f"Heating: {source.replace('_', ' ')}",
+            f"Solar collector: {'yes' if has_solar else 'no'}",
+        ]
+        if self._data.get(c.CONF_PH_SENSOR):
+            summary_lines.append("Water chemistry: configured")
+        if self._data.get(c.CONF_PRICE_SENSOR):
+            summary_lines.append("Price awareness: configured")
+
+        return self.async_show_form(
+            step_id="summary",
+            data_schema=vol.Schema(
+                {vol.Required("confirm", default=True): bool}
+            ),
+            description_placeholders={
+                **self._progress("summary"),
+                "summary": chr(10).join(summary_lines),
             },
         )
 
@@ -543,7 +728,10 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
                     )
                 }
             ),
-            description_placeholders={"count": str(len(orphans))},
+            description_placeholders={
+                **self._progress("adopt"),
+                "count": str(len(orphans)),
+            },
         )
 
     @staticmethod
