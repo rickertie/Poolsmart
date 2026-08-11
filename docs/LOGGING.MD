@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -7,7 +7,7 @@
 This document covers the three kinds of log entries PoolSmart produces, the
 notification system with action buttons, the full ladder trace, and how to
 export diagnostics for troubleshooting. For the management panel that displays
-diagnostics, see [panel.md](panel.md).
+diagnostics, see [PANEL.MD](PANEL.MD).
 
 ---
 
@@ -71,6 +71,6 @@ it. It is the fastest way to hand someone the whole picture.
 
 ## See Also
 
-- [panel.md](panel.md) — The management panel's Diagnostics tab
-- [architecture.md](architecture.md) — The decision ladder and branch evaluation
-- [troubleshooting.md](troubleshooting.md) — What to check when something goes wrong
+- [PANEL.MD](PANEL.MD) — The management panel's Diagnostics tab
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — The decision ladder and branch evaluation
+- [TROUBLESHOOTING.MD](TROUBLESHOOTING.MD) — What to check when something goes wrong

@@ -25,7 +25,13 @@ heat pump control, solar optimization, and water chemistry dosing — all integr
 Home Assistant. A priority-based decision engine evaluates your pool state every 30 seconds,
 balancing energy costs, swim schedules, and equipment protection.
 
-![PoolSmart System Architecture](docs/images/architecture-overview.svg)
+<p align="center">
+  <img src="docs/images/architecture-overview.svg" width="700" alt="PoolSmart System Architecture">
+</p>
+
+<p align="center">
+  <img src="docs/images/dashboard-mockup.svg" width="700" alt="PoolSmart Dashboard Mockup">
+</p>
 
 ---
 

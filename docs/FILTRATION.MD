@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -7,8 +7,8 @@
 This document covers how PoolSmart calculates daily filtration runtime, the two
 rules that set the requirement, filter media effects, flow measurement, and
 filter resistance. For sensor calibration (including the flow meter bucket test),
-see [sensors.md](sensors.md). For the decision ladder that executes filtration
-blocks, see [architecture.md](architecture.md).
+see [SENSORS.MD](SENSORS.MD). For the decision ladder that executes filtration
+blocks, see [ARCHITECTURE.MD](ARCHITECTURE.MD).
 
 ---
 
@@ -28,7 +28,9 @@ clean the pool once — it cleans about 63% of it. Two turnovers reach 86%, thre
 reach 95%, four reach 98%. Three is where the gains flatten, so that is the
 default.
 
-![Turnover infographic showing cumulative filtration effectiveness](images/turnover-infographic.svg)
+<p align="center">
+  <img src="images/turnover-infographic.svg" width="500" alt="Turnover infographic showing cumulative filtration effectiveness">
+</p>
 
 ### Rule 2: Daily Minimum (time-based)
 
@@ -51,6 +53,8 @@ daily figure is never an unexplained number.
 |---|---|---|---|---|
 | 3800 L | 3.6 m³/h | 3.2 h | 5 h | **5 h**, set by the minimum |
 | 50000 L | 8 m³/h | 18.8 h | 5 h | **18.8 h**, set by turnover |
+
+![Filtration rules comparison showing turnover vs daily minimum](images/filtration-rules-comparison.svg)
 
 ---
 
@@ -98,6 +102,8 @@ delta-T — not a low number against a datasheet.
 `sensor.<name>_flow_adequacy` reports the verdict: healthy under about 3 °C,
 marginal to 5 °C, starved above that.
 
+![Delta-T flow adequacy zones showing healthy, marginal, and starved ranges](images/delta-t-flow-adequacy.svg)
+
 ### Real-World Example
 
 1.05 m³/h against a 2.0 datasheet minimum, delta-T 1.56 °C, output 1.9 kW.
@@ -134,10 +140,12 @@ raises a service notification.
 Heating sessions run the pump too, so that runtime counts towards the quota.
 Without that credit the system would filter far more than needed on heating days.
 
+![Filter resistance graph showing flow decline over time as the filter fouls](images/filter-resistance-graph.svg)
+
 ---
 
 ## See Also
 
-- [sensors.md](sensors.md) — Flow meter calibration (the bucket test) and probe calibration
-- [architecture.md](architecture.md) — The filtration calculation formula and decision ladder
-- [configuration.md](configuration.md) — How to adjust turnover, quiet hours, and pump rundown
+- [SENSORS.MD](SENSORS.MD) — Flow meter calibration (the bucket test) and probe calibration
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — The filtration calculation formula and decision ladder
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to adjust turnover, quiet hours, and pump rundown

@@ -1,14 +1,12 @@
-> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
 # Troubleshooting
 
----
-
 This document covers common problems, how to diagnose them, and how to share
-diagnostics when you need help. For the full decision trace, see [logging.md](logging.md).
-For the management panel's Diagnostics tab, see [panel.md](panel.md).
+diagnostics when you need help. For the full decision trace, see [LOGGING.MD](LOGGING.MD).
+For the management panel's Diagnostics tab, see [PANEL.MD](PANEL.MD).
 
 ---
 
@@ -29,9 +27,9 @@ For the management panel's Diagnostics tab, see [panel.md](panel.md).
 | Symptom | Likely Cause | Fix |
 |---|---|---|
 | Temperature shows `unavailable` | Sensor entity not mapped or offline | Check sensor mapping in Configure → Sensors |
-| Temperature reading seems wrong | Wrong sensor mapped or offset needed | Remap in options; check probe calibration in [sensors.md](sensors.md) |
+| Temperature reading seems wrong | Wrong sensor mapped or offset needed | Remap in options; check probe calibration in [SENSORS.MD](SENSORS.MD) |
 | Water and air temperature swapped | Sensors mapped to wrong fields | Swap in Configure → Sensors and switches |
-| Flow meter shows zero when pump is running | Pulse counter not connected or miscalibrated | Run the bucket test (see [sensors.md](sensors.md)) |
+| Flow meter shows zero when pump is running | Pulse counter not connected or miscalibrated | Run the bucket test (see [SENSORS.MD](SENSORS.MD)) |
 
 ### Chemistry
 
@@ -60,7 +58,9 @@ integration off the dashboard. Entities stay available as long as a decision
 exists, because the decision the pool is actually running on remains valid even
 if an optional subsystem hiccuped.
 
-![Heat pump operating envelope showing temperature thresholds](images/operating-envelope.svg)
+<p align="center">
+  <img src="images/operating-envelope.svg" width="500" alt="Heat pump operating envelope showing temperature thresholds">
+</p>
 
 Anything that did fail shows up under Diagnostics in the panel and in the status
 sensor's attributes, with the full traceback in the Home Assistant log.
@@ -107,9 +107,9 @@ When sharing, include:
 
 ## See Also
 
-- [logging.md](logging.md) — Logbook entries, notifications, and the full trace
-- [panel.md](panel.md) — The management panel's Diagnostics tab
-- [architecture.md](architecture.md) — Entity fallback table and operating envelope
-- [filtration.md](filtration.md) — Flow adequacy and filter service warnings
-- [sensors.md](sensors.md) — Sensor calibration procedures
+- [LOGGING.MD](LOGGING.MD) — Logbook entries, notifications, and the full trace
+- [PANEL.MD](PANEL.MD) — The management panel's Diagnostics tab
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Entity fallback table and operating envelope
+- [FILTRATION.MD](FILTRATION.MD) — Flow adequacy and filter service warnings
+- [SENSORS.MD](SENSORS.MD) — Sensor calibration procedures
 - [GETTING_STARTED.MD](GETTING_STARTED.MD) — First-time setup guide

@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -6,7 +6,7 @@
 
 This document covers PoolSmart's water chemistry features: dosing calculations,
 test scheduling, circulation timing, and the dose log. For the decision ladder
-that executes chemistry cycles, see [architecture.md](architecture.md). For
+that executes chemistry cycles, see [ARCHITECTURE.MD](ARCHITECTURE.MD). For
 advanced water chemistry (saturation index, alkalinity, calcium hardness), use
 a diffrent intergation for that alongside PoolSmart.
 
@@ -26,6 +26,8 @@ Corrections larger than 0.4 pH are truncated and said so: pH is buffered by
 alkalinity in a way this arithmetic does not model, and attempting a whole point
 in one go overshoots.
 
+![Chemistry dosing workflow showing how readings become dose volumes](images/chemistry-dosing-workflow.svg)
+
 ### A Test Interval That Follows the Temperature
 
 Chlorine burns off faster in warm water and algae grow faster in it, so a fixed
@@ -33,7 +35,9 @@ three-day reminder is too often in spring and not often enough in a heatwave.
 The pool already knows its own temperature: five days below 20 °C, down to
 daily above 30 °C.
 
-![Chemistry test intervals based on water temperature](images/chemistry-intervals.svg)
+<p align="center">
+  <img src="images/chemistry-intervals.svg" width="500" alt="Chemistry test intervals based on water temperature">
+</p>
 
 ### Circulation That Matches the Product
 
@@ -80,6 +84,6 @@ nothing, pH and alkalinity both adrift with alkalinity as the one to fix first.
 
 ## See Also
 
-- [architecture.md](architecture.md) — How the chemistry cycle branch (Branch 3) fits in the decision ladder
-- [configuration.md](configuration.md) — How to configure sanitiser type, chemistry products, and doses
-- [filtration.md](filtration.md) — How chemistry circulation interacts with filtration runtime
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — How the chemistry cycle branch (Branch 3) fits in the decision ladder
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to configure sanitiser type, chemistry products, and doses
+- [FILTRATION.MD](FILTRATION.MD) — How chemistry circulation interacts with filtration runtime

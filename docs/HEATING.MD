@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -6,9 +6,9 @@
 
 This document covers the heating sources PoolSmart supports, how solar
 collectors are handled, and how pool construction affects heat loss. For the
-heating planner that schedules sessions, see [planning.md](planning.md). For
+heating planner that schedules sessions, see [PLANNING.MD](PLANNING.MD). For
 the self-learning model that improves heating predictions, see
-[learning.md](learning.md).
+[LEARNING.MD](LEARNING.MD).
 
 ---
 
@@ -25,6 +25,10 @@ of the later questions make sense at all.
 | Solar collector | Usually a manual valve, so the integration advises rather than switches |
 | Gas heater | Fixed efficiency, no air temperature limit |
 | No heating | Filtration, water chemistry and frost protection only |
+
+<p align="center">
+  <img src="images/heating-sources-comparison.svg" width="550" alt="Heating sources comparison showing efficiency and operating characteristics">
+</p>
 
 These are not simplifications of a heat pump's behaviour; they are the absence
 of things a heat pump has. Asking an element owner for a COP curve produces a
@@ -64,11 +68,15 @@ inflatable to 0.08 for a built-in pool. It is only a starting point, replaced by
 measurement within days, but those first days are when someone is deciding
 whether this works at all.
 
+<p align="center">
+  <img src="images/heat-loss-comparison.svg" width="500" alt="Heat loss comparison across different pool constructions">
+</p>
+
 ---
 
 ## See Also
 
-- [planning.md](planning.md) — How heating sessions are planned and optimized
-- [learning.md](learning.md) — How heat loss and heating rate are learned from sessions
-- [architecture.md](architecture.md) — The heat pump operating envelope and compressor protection
-- [configuration.md](configuration.md) — How to change heating settings after setup
+- [PLANNING.MD](PLANNING.MD) — How heating sessions are planned and optimized
+- [LEARNING.MD](LEARNING.MD) — How heat loss and heating rate are learned from sessions
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — The heat pump operating envelope and compressor protection
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to change heating settings after setup

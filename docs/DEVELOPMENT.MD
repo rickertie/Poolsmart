@@ -1,11 +1,11 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
 # Development
 
 This document covers how to run the test suite and contribute to PoolSmart.
-For the architecture of the decision core, see [architecture.md](architecture.md).
+For the architecture of the decision core, see [ARCHITECTURE.MD](ARCHITECTURE.MD).
 
 ---
 
@@ -44,6 +44,6 @@ up.
 
 ## See Also
 
-- [architecture.md](architecture.md) — Architecture & decision core
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Architecture & decision core
 - [CHANGELOG.md](../CHANGELOG.md) — Full changelog
-- [hardware.md](hardware.md) — Hardware & wiring guide
+- [HARDWARE.MD](HARDWARE.MD) — Hardware & wiring guide

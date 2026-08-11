@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -6,14 +6,16 @@
 
 This document covers how PoolSmart evaluates decisions, calculates daily
 filtration, and manages component failure. For the heating planner that consumes
-these decisions, see [planning.md](planning.md). For the self-learning model
-that improves predictions over time, see [learning.md](learning.md).
+these decisions, see [PLANNING.MD](PLANNING.MD). For the self-learning model
+that improves predictions over time, see [LEARNING.MD](LEARNING.MD).
 
 ---
 
 ## The Priority Decision Ladder
 
-![Priority Decision Ladder flowchart](images/priority-ladder.svg)
+<p align="center">
+  <img src="images/priority-ladder.svg" width="600" alt="Priority Decision Ladder flowchart">
+</p>
 
 Every 30 seconds, PoolSmart evaluates the current state of your pool against a
 strict priority ladder. The evaluation walks from the top down; **the first
@@ -131,14 +133,14 @@ cd tests && python run_tests.py
 
 ## See Also
 
-- [planning.md](planning.md) — How the heating planner uses the decision ladder
+- [PLANNING.MD](PLANNING.MD) — How the heating planner uses the decision ladder
   and learned COP values to optimize heating schedules.
-- [learning.md](learning.md) — How heating rate, heat loss, and COP are learned
+- [LEARNING.MD](LEARNING.MD) — How heating rate, heat loss, and COP are learned
   from each session and fed back into planning.
-- [hardware.md](hardware.md) — Physical installation, wiring, and component
+- [HARDWARE.MD](HARDWARE.MD) — Physical installation, wiring, and component
   selection for the sensor board.
-- [esphome.md](esphome.md) — ESPHome configuration and calibration procedures.
-- [sensors.md](sensors.md) — How to map and calibrate your temperature probes
+- [ESPHOME.MD](ESPHOME.MD) — ESPHome configuration and calibration procedures.
+- [SENSORS.MD](SENSORS.MD) — How to map and calibrate your temperature probes
   and flow meter.
-- [heating.md](heating.md) — Heating sources, solar collectors, and pool construction.
-- [configuration.md](configuration.md) — How to adjust settings after setup.
+- [HEATING.MD](HEATING.MD) — Heating sources, solar collectors, and pool construction.
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to adjust settings after setup.

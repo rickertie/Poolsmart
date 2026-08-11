@@ -119,6 +119,6 @@ show up.
 ## See Also
 
 - [README](../README.md) — Main project documentation.
-- [docs/ARCHITECTURE.MD](ARCHITECTURE.MD) — Architecture & decision core.
-- [docs/SENSORS.MD](SENSORS.MD) — Sensor mapping & calibration.
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Architecture & decision core.
+- [SENSORS.MD](SENSORS.MD) — Sensor mapping & calibration.
 - [CHANGELOG.md](../CHANGELOG.md) — Full changelog.

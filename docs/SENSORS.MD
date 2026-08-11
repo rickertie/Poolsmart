@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -7,12 +7,14 @@
 This document covers which sensor maps to which field, how to calibrate the
 temperature probes, and how to calibrate the flow meter with a bucket. For the
 ESPHome configuration that produces these sensor readings, see
-[esphome.md](esphome.md). For the physical wiring, see
-[hardware.md](hardware.md).
+[ESPHOME.MD](ESPHOME.MD). For the physical wiring, see
+[HARDWARE.MD](HARDWARE.MD).
 
 ---
 
 ## What Goes Where
+
+![Sensor overview showing all PoolSmart temperature probes and flow meter](images/Sensors.svg)
 
 | | Board | Integration |
 |---|---|---|
@@ -168,13 +170,13 @@ switches off cleanly when left blank, with the reason visible in the panel.
 
 ## See Also
 
-- [esphome.md](esphome.md) — ESPHome configuration and calibration workflow.
-- [hardware.md](hardware.md) — Physical wiring, pinouts, and component selection.
+- [ESPHOME.MD](ESPHOME.MD) — ESPHome configuration and calibration workflow.
+- [HARDWARE.MD](HARDWARE.MD) — Physical wiring, pinouts, and component selection.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration.
-- [architecture.md](architecture.md) — Entity fallback table showing what
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Entity fallback table showing what
   happens when optional sensors are left blank.
-- [learning.md](learning.md) — How calibrated sensor readings feed the
+- [LEARNING.MD](LEARNING.MD) — How calibrated sensor readings feed the
   self-learning model.
-- [filtration.md](filtration.md) — How flow measurements affect filtration duration.
-- [entities.md](entities.md) — Entity ID naming conventions.
+- [FILTRATION.MD](FILTRATION.MD) — How flow measurements affect filtration duration.
+- [ENTITIES.MD](ENTITIES.MD) — Entity ID naming conventions.

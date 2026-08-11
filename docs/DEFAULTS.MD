@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -89,6 +89,6 @@ Settings → Devices & services → PoolSmart → Configure → Pool and equipme
 - [README](../README.md) — Full installation walkthrough and configuration guide.
 - [poolsmart_defaults.example.json](poolsmart_defaults.example.json) — Ready-made
   example file you can copy and edit.
-- [sensors.md](sensors.md) — How to map your sensors after setup.
-- [configuration.md](configuration.md) — How to change settings after initial setup.
-- [heating.md](heating.md) — Heating sources and their configuration options.
+- [SENSORS.MD](SENSORS.MD) — How to map your sensors after setup.
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to change settings after initial setup.
+- [HEATING.MD](HEATING.MD) — Heating sources and their configuration options.

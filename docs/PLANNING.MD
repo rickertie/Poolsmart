@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -6,15 +6,17 @@
 
 This document covers how PoolSmart plans heating sessions to minimize cost while
 reaching your target temperature on time. For the decision ladder that executes
-these plans, see [architecture.md](architecture.md). For the self-learning model
+these plans, see [ARCHITECTURE.MD](ARCHITECTURE.MD). For the self-learning model
 that supplies the COP curve and heat loss figures the planner relies on, see
-[learning.md](learning.md).
+[LEARNING.MD](LEARNING.MD).
 
 ---
 
 ## Maintenance vs. Seasonal Mode
 
-![Heating planning timeline showing maintenance vs seasonal mode](images/heating-timeline.svg)
+<p align="center">
+  <img src="images/heating-timeline.svg" width="600" alt="Heating planning timeline showing maintenance vs seasonal mode">
+</p>
 
 Depending on the difference between the target temperature and current water
 temperature, the optimizer operates in one of two distinct modes:
@@ -45,6 +47,9 @@ or custom template sensors).
    self-learning COP curve. A slightly higher electricity price at 22 °C air
    temperature might actually be cheaper per thermal kWh than a lower price at
    12 °C air due to higher heat pump COP.
+
+![COP-weighted cost comparison showing effective cost per thermal kWh](images/cop-weighted-cost.svg)
+
 3. **Fallback mode:** If no valid price entity or forecast attribute is found,
    PoolSmart falls back to **heating on demand** whenever temperature drops
    below hysteresis.
@@ -68,13 +73,15 @@ afternoons.
 shortfall and the equipment draw as attributes, so "is this enough" has a visible
 answer.
 
+![Solar surplus threshold concept showing when heating is treated as free](images/solar-surplus.svg)
+
 ---
 
 ## See Also
 
-- [architecture.md](architecture.md) — How the heat pump's operating envelope
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — How the heat pump's operating envelope
   gates heating sessions (Branch 6 of the decision ladder).
-- [learning.md](learning.md) — How the COP curve per temperature band and
+- [LEARNING.MD](LEARNING.MD) — How the COP curve per temperature band and
   thermal loss rates are learned over time and fed into the planner.
-- [sensors.md](sensors.md) — How to map your price sensor and solar sensors.
-- [heating.md](heating.md) — Heating sources and how solar collectors are handled.
+- [SENSORS.MD](SENSORS.MD) — How to map your price sensor and solar sensors.
+- [HEATING.MD](HEATING.MD) — Heating sources and how solar collectors are handled.

@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -7,8 +7,8 @@
 This document covers the ESPHome configuration for the sensor board: why
 calculations live in the integration rather than on the board, and how to
 calibrate the temperature probes and flow meter. For the physical wiring guide,
-see [hardware.md](hardware.md). For mapping sensors to integration fields, see
-[sensors.md](sensors.md).
+see [HARDWARE.MD](HARDWARE.MD). For mapping sensors to integration fields, see
+[SENSORS.MD](SENSORS.MD).
 
 ---
 
@@ -57,6 +57,10 @@ calculations by over 30%.
 
 ### 2. Flow Meter Calibration (The Bucket Test)
 
+<p align="center">
+  <img src="images/bucket-test-calibration.svg" width="500" alt="Flow Meter Calibration — Bucket Test setup">
+</p>
+
 The datasheet pulse ratio (30 × Q) is a starting point, but pipe geometry and
 mounting angles affect real flow.
 
@@ -75,9 +79,9 @@ mounting angles affect real flow.
 
 ## See Also
 
-- [hardware.md](hardware.md) — Physical wiring, pinouts, and component selection.
-- [sensors.md](sensors.md) — Sensor mapping, probe calibration, and flow meter
+- [HARDWARE.MD](HARDWARE.MD) — Physical wiring, pinouts, and component selection.
+- [SENSORS.MD](SENSORS.MD) — Sensor mapping, probe calibration, and flow meter
   wiring.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration with calibration offsets and heartbeat filters.
-- [filtration.md](filtration.md) — How flow calibration affects filtration duration.
+- [FILTRATION.MD](FILTRATION.MD) — How flow calibration affects filtration duration.

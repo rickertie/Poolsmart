@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • **Changelog**
+[? Back to README](../README.md) • **Changelog**
 
 ---
 

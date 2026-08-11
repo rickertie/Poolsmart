@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -38,6 +38,6 @@ thing.
 ## See Also
 
 - [lovelace/README.md](../lovelace/README.md) — Lovelace dashboards for household members
-- [logging.md](logging.md) — Logbook entries and the full trace
-- [troubleshooting.md](troubleshooting.md) — What to check when something goes wrong
-- [architecture.md](architecture.md) — The decision ladder and branch evaluation
+- [LOGGING.MD](LOGGING.MD) — Logbook entries and the full trace
+- [TROUBLESHOOTING.MD](TROUBLESHOOTING.MD) — What to check when something goes wrong
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — The decision ladder and branch evaluation

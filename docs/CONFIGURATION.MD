@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -7,7 +7,7 @@
 This document covers how to change settings after initial setup, the options
 flow menu, entity reassignment, and the heat pump thermostat recommendation.
 For the initial setup wizard, see the [README](../README.md). For pre-filling
-the wizard with your own figures, see [defaults.md](defaults.md).
+the wizard with your own figures, see [DEFAULTS.MD](DEFAULTS.MD).
 
 ---
 
@@ -59,7 +59,7 @@ with your own numbers filled in.
 
 ## See Also
 
-- [sensors.md](sensors.md) — Mapping your sensors to the right fields
-- [architecture.md](architecture.md) — Entity fallback table and operating envelope
-- [filtration.md](filtration.md) — Turnover, quiet hours, and pump rundown settings
-- [heating.md](heating.md) — Heating appliance configuration
+- [SENSORS.MD](SENSORS.MD) — Mapping your sensors to the right fields
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Entity fallback table and operating envelope
+- [FILTRATION.MD](FILTRATION.MD) — Turnover, quiet hours, and pump rundown settings
+- [HEATING.MD](HEATING.MD) — Heating appliance configuration

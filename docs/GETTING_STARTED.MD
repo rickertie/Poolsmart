@@ -4,8 +4,6 @@
 
 # Getting Started
 
----
-
 Welcome to PoolSmart. This guide takes you from a fresh installation to a working,
 understood system in about 15 minutes.
 

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- PLACEHOLDER SVG — Replace with AI-generated image from VISUAL_ASSETS_RECOMMENDATIONS.md -->
+<svg
+   version="1.1"
+   id="svg-dashboard-mockup"
+   width="800"
+   height="600"
+   viewBox="0 0 800 600"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+
+  <title>PoolSmart Dashboard Mockup — Placeholder</title>
+  <desc>Placeholder diagram showing Home Assistant mobile interface mockup for PoolSmart. See VISUAL_ASSETS_RECOMMENDATIONS.md for AI generation prompt.</desc>
+
+  <defs>
+    <!-- Card shadow -->
+    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08"/>
+    </filter>
+    <!-- Phone shadow -->
+    <filter id="phone-shadow" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+    <!-- HA blue gradient -->
+    <linearGradient id="ha-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#03A9F4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ACC1;stop-opacity:1" />
+    </linearGradient>
+    <!-- Warm gradient for temperature -->
+    <linearGradient id="warm-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00ACC1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF9800;stop-opacity:1" />
+    </linearGradient>
+    <!-- Progress bar gradient -->
+    <linearGradient id="progress-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00ACC1;stop-opacity:1" />
+    </linearGradient>
+    <!-- Phone frame gradient -->
+    <linearGradient id="phone-frame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#37474F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#263238;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" rx="8" ry="8" fill="#FAFAFA"/>
+
+  <!-- Header bar -->
+  <rect x="0" y="0" width="800" height="72" rx="8" ry="8" fill="#03A9F4"/>
+  <rect x="0" y="48" width="800" height="24" fill="#03A9F4"/>
+
+  <!-- Title -->
+  <text x="40" y="46" font-family="Inter, Roboto, system-ui, sans-serif" font-size="22" font-weight="700" fill="#FFFFFF">PoolSmart Dashboard Mockup</text>
+
+  <!-- Subtitle -->
+  <text x="40" y="100" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" fill="#616161">Home Assistant mobile interface showing pool status</text>
+
+  <!-- === PHONE MOCKUP === -->
+  <g transform="translate(240, 120)" filter="url(#phone-shadow)">
+    <!-- Phone frame -->
+    <rect x="0" y="0" width="320" height="440" rx="28" ry="28" fill="url(#phone-frame)"/>
+    <!-- Phone screen -->
+    <rect x="10" y="10" width="300" height="420" rx="22" ry="22" fill="#FFFFFF"/>
+    <!-- Status bar -->
+    <rect x="10" y="10" width="300" height="28" rx="22" ry="22" fill="#03A9F4"/>
+    <rect x="10" y="28" width="300" height="10" fill="#03A9F4"/>
+    <!-- Status bar icons -->
+    <circle cx="35" cy="24" r="3" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="47" cy="24" r="3" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="59" cy="24" r="3" fill="#FFFFFF" opacity="0.9"/>
+    <text x="280" y="28" font-family="Inter, Roboto, system-ui, sans-serif" font-size="9" fill="#FFFFFF" text-anchor="end">12:42</text>
+
+    <!-- App header -->
+    <text x="30" y="62" font-family="Inter, Roboto, system-ui, sans-serif" font-size="16" font-weight="700" fill="#00ACC1">PoolSmart</text>
+    <text x="30" y="80" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">Backyard Pool • Active</text>
+
+    <!-- Temperature card -->
+    <g transform="translate(20, 95)" filter="url(#card-shadow)">
+      <rect x="0" y="0" width="260" height="80" rx="12" ry="12" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+      <!-- Temperature icon -->
+      <circle cx="46" cy="40" r="18" fill="#FFF3E0"/>
+      <text x="46" y="46" font-family="Inter, Roboto, system-ui, sans-serif" font-size="18" text-anchor="middle">🌡️</text>
+      <text x="76" y="36" font-family="Inter, Roboto, system-ui, sans-serif" font-size="28" font-weight="700" fill="#FF9800">24.5°C</text>
+      <text x="76" y="56" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" fill="#9E9E9E">Water Temperature</text>
+      <!-- Target indicator -->
+      <text x="240" y="36" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" fill="#4CAF50" text-anchor="end">↑ 0.3°/h</text>
+      <text x="240" y="56" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E" text-anchor="end">Target: 26°C</text>
+    </g>
+
+    <!-- Status cards row -->
+    <g transform="translate(20, 185)" filter="url(#card-shadow)">
+      <!-- pH Card -->
+      <rect x="0" y="0" width="125" height="70" rx="10" ry="10" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+      <circle cx="26" cy="26" r="14" fill="#E8F5E9"/>
+      <text x="26" y="31" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" text-anchor="middle">💧</text>
+      <text x="52" y="30" font-family="Inter, Roboto, system-ui, sans-serif" font-size="16" font-weight="700" fill="#4CAF50">7.4</text>
+      <text x="18" y="56" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">pH Level ✓</text>
+
+      <!-- Pump Card -->
+      <rect x="135" y="0" width="125" height="70" rx="10" ry="10" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+      <circle cx="161" cy="26" r="14" fill="#E3F2FD"/>
+      <text x="161" y="31" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" text-anchor="middle">⚡</text>
+      <text x="187" y="30" font-family="Inter, Roboto, system-ui, sans-serif" font-size="16" font-weight="700" fill="#03A9F4">ON</text>
+      <text x="153" y="56" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">Pump • 4h left</text>
+    </g>
+
+    <!-- Progress bar section -->
+    <g transform="translate(20, 265)" filter="url(#card-shadow)">
+      <rect x="0" y="0" width="260" height="60" rx="10" ry="10" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+      <text x="16" y="22" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" font-weight="600" fill="#37474F">Filtration Progress</text>
+      <!-- Progress track -->
+      <rect x="16" y="34" width="228" height="12" rx="6" ry="6" fill="#E0E0E0"/>
+      <!-- Progress fill -->
+      <rect x="16" y="34" width="160" height="12" rx="6" ry="6" fill="url(#progress-gradient)"/>
+      <text x="16" y="56" font-family="Inter, Roboto, system-ui, sans-serif" font-size="9" fill="#9E9E9E">10:24 / 14:00 elapsed (73%)</text>
+    </g>
+
+    <!-- Bottom navigation tabs -->
+    <g transform="translate(20, 340)">
+      <rect x="0" y="0" width="260" height="70" rx="10" ry="10" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1"/>
+      <!-- Tab 1: Overview (active) -->
+      <rect x="8" y="8" width="56" height="54" rx="8" ry="8" fill="#E3F2FD"/>
+      <text x="36" y="34" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" text-anchor="middle">🏠</text>
+      <text x="36" y="54" font-family="Inter, Roboto, system-ui, sans-serif" font-size="8" fill="#03A9F4" text-anchor="middle">Overview</text>
+      <!-- Tab 2: Chemistry -->
+      <text x="92" y="34" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" text-anchor="middle">🧪</text>
+      <text x="92" y="54" font-family="Inter, Roboto, system-ui, sans-serif" font-size="8" fill="#9E9E9E" text-anchor="middle">Chemistry</text>
+      <!-- Tab 3: Heating -->
+      <text x="148" y="34" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" text-anchor="middle">🔥</text>
+      <text x="148" y="54" font-family="Inter, Roboto, system-ui, sans-serif" font-size="8" fill="#9E9E9E" text-anchor="middle">Heating</text>
+      <!-- Tab 4: Settings -->
+      <text x="204" y="34" font-family="Inter, Roboto, system-ui, sans-serif" font-size="14" text-anchor="middle">⚙️</text>
+      <text x="204" y="54" font-family="Inter, Roboto, system-ui, sans-serif" font-size="8" fill="#9E9E9E" text-anchor="middle">Settings</text>
+    </g>
+
+    <!-- Home indicator -->
+    <rect x="120" y="425" width="80" height="4" rx="2" ry="2" fill="#9E9E9E" opacity="0.5"/>
+  </g>
+
+  <!-- === ANNOTATION CALLOUTS (right side) === -->
+  <g transform="translate(580, 140)">
+    <!-- Annotation box -->
+    <rect x="0" y="0" width="200" height="380" rx="8" ry="8" fill="#FFFFFF" fill-opacity="0.8" stroke="#E0E0E0" stroke-width="1"/>
+
+    <!-- Annotation 1 -->
+    <circle cx="16" cy="26" r="6" fill="#00ACC1"/>
+    <text x="30" y="30" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" font-weight="600" fill="#37474F">Real-time readings</text>
+    <text x="30" y="46" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">Live temperature &amp; pH</text>
+
+    <!-- Annotation 2 -->
+    <circle cx="16" cy="80" r="6" fill="#FF9800"/>
+    <text x="30" y="84" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" font-weight="600" fill="#37474F">Smart scheduling</text>
+    <text x="30" y="100" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">Auto-calculated run times</text>
+
+    <!-- Annotation 3 -->
+    <circle cx="16" cy="134" r="6" fill="#4CAF50"/>
+    <text x="30" y="138" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" font-weight="600" fill="#37474F">Progress tracking</text>
+    <text x="30" y="154" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">Filtration cycle status</text>
+
+    <!-- Annotation 4 -->
+    <circle cx="16" cy="188" r="6" fill="#03A9F4"/>
+    <text x="30" y="192" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" font-weight="600" fill="#37474F">Quick actions</text>
+    <text x="30" y="208" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#9E9E9E">One-tap pump &amp; heat</text>
+
+    <!-- Dashed connector lines -->
+    <line x1="16" y1="58" x2="-20" y2="58" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="16" y1="112" x2="-20" y2="112" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="16" y1="166" x2="-20" y2="166" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="16" y1="220" x2="-20" y2="220" stroke="#9E9E9E" stroke-width="1" stroke-dasharray="3,3"/>
+  </g>
+
+  <!-- Footer -->
+  <g transform="translate(40, 570)">
+    <rect x="0" y="0" width="720" height="20" rx="4" ry="4" fill="#FFF3E0"/>
+    <text x="360" y="14" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#E65100" text-anchor="middle">Placeholder — see VISUAL_ASSETS_RECOMMENDATIONS.md for AI generation prompt</text>
+  </g>
+
+</svg>

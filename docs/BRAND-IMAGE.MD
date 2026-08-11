@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -61,4 +61,4 @@ themes, so the design cannot drift between files.
 ## See Also
 
 - [README](../README.md) — Main project documentation.
-- [panel.md](panel.md) — The management panel (uses the integration icon).
+- [PANEL.MD](PANEL.MD) — The management panel (uses the integration icon).

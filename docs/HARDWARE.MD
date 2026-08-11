@@ -1,13 +1,13 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
 # Hardware & Wiring Guide
 
 This document covers the physical installation: component selection, pinouts,
-voltage step-down circuits, and pipe mounting. that i have done on my one system.
-For the ESPHome YAML configuration and sensor calibration, see [esphome.md](esphome.md). For mapping
-sensors to integration fields, see [sensors.md](sensors.md).
+voltage step-down circuits, and pipe mounting. For the ESPHome YAML
+configuration and sensor calibration, see [ESPHOME.MD](ESPHOME.MD). For mapping
+sensors to integration fields, see [SENSORS.MD](SENSORS.MD).
 
 ---
 
@@ -17,13 +17,23 @@ sensors to integration fields, see [sensors.md](sensors.md).
 | :--- | :--- | :--- |
 | **Seeed XIAO ESP32-C6** | Main microcontroller running ESPHome. | Compact, native Wi-Fi 6 / Bluetooth. |
 | **5× DS18B20 probes** | Temperature sensors for pool, pump, heat pump, and outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
+
+![DS18B20 waterproof temperature probe](images/DS18B20.svg)
 | **DN50 pulse flow sensor** | Measures volume flow rate through the heat pump loop. | Yanmis DN50 Hall-effect pulse sensor. |
+
+![DN50 Hall-effect pulse flow meter](images/Flow_meter.svg)
 | **4.7 kΩ resistor** | Pull-up resistor for the 1-Wire bus. | Connects between 3.3 V and GPIO22. |
 | **10 kΩ + 20 kΩ resistors** | Voltage divider for the flow meter signal. | Steps 5 V pulses down to 3.3 V for GPIO19. |
 | **Waterproof enclosure** | IP65+ junction box near the pool pump setup. | Protects ESP32 board and wiring. |
 | **Bestway Flowclear** | Circulation filter pump. | Measured at ~3.6 m³/h. |
 | **W'eau Mini Power (3 kW)** | Heat pump for water heating. | ~0.58 kW electric input. |
 | **Intex Metal Frame** | Pool structure (3,834 L at 66 cm water level). | 300 × 200 × 75 cm. |
+
+![Pool diagram showing the Intex Metal Frame pool structure](images/Pool.svg)
+![Bestway Flowclear circulation filter pump](images/Bestway_pump.svg)
+![W'eau Mini Power 3 kW heat pump](images/w_eau_mini_power_3kw_warmtepomp.svg)
+![Generic heat pump unit](images/HeatPump.svg)
+![Water circulation pump](images/waterPump.svg)
 
 ---
 
@@ -69,6 +79,9 @@ making it safe for the ESP32.
 | **Temperature sensors** | <img src="images/Pipe_clamp.svg" width="160"> | DS18B20 probes attached to the PVC pipe using thermal paste and pipe clamps for accurate surface readings. |
 | **Flow meter** | <img src="images/Flow_meter.svg" width="160"> | DN50 Hall-effect flow meter installed in the return line from the heat pump. |
 
+![Pipe clamp mounting for DS18B20 temperature probes](images/Pipe_clamp.svg)
+![Three-way valve for solar collector diversion](images/3wayValve.svg)
+
 ---
 
 ## Wiring Overview
@@ -81,9 +94,9 @@ making it safe for the ESP32.
 
 ## See Also
 
-- [esphome.md](esphome.md) — ESPHome YAML configuration that matches this wiring.
-- [sensors.md](sensors.md) — How to calibrate the probes and flow meter after
+- [ESPHOME.MD](ESPHOME.MD) — ESPHome YAML configuration that matches this wiring.
+- [SENSORS.MD](SENSORS.MD) — How to calibrate the probes and flow meter after
   installation.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration with pin assignments and calibration offsets.
-- [configuration.md](configuration.md) — How to change settings after initial setup.
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to change settings after initial setup.

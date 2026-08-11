@@ -1,4 +1,4 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
@@ -6,8 +6,8 @@
 
 This document covers how PoolSmart learns your pool's actual thermal behavior
 over time. For how these learned values feed into heating schedules, see
-[planning.md](planning.md). For the decision ladder that produces the sessions
-being learned from, see [architecture.md](architecture.md).
+[PLANNING.MD](PLANNING.MD). For the decision ladder that produces the sessions
+being learned from, see [ARCHITECTURE.MD](ARCHITECTURE.MD).
 
 ---
 
@@ -24,7 +24,11 @@ After each heating session, PoolSmart updates three core parameters:
    non-inverter heat pumps operate at fixed output, one COP value per temperature
    band is sufficient.
 
-![COP curve showing how efficiency varies with outdoor temperature](images/cop-curve.svg)
+<p align="center">
+  <img src="images/cop-curve.svg" width="550" alt="COP curve showing how efficiency varies with outdoor temperature">
+</p>
+
+![Self-learning feedback loop showing how sessions improve the model](images/learning-feedback-loop.svg)
 
 ---
 
@@ -64,10 +68,10 @@ step in troubleshooting.
 
 ## See Also
 
-- [planning.md](planning.md) — How the learned COP curve feeds directly into
+- [PLANNING.MD](PLANNING.MD) — How the learned COP curve feeds directly into
   price optimization and heat scheduling.
-- [architecture.md](architecture.md) — Entity fallback behavior when heat pump
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Entity fallback behavior when heat pump
   inlet/outlet sensors are missing.
-- [sensors.md](sensors.md) — How to calibrate the probes that feed the learning
+- [SENSORS.MD](SENSORS.MD) — How to calibrate the probes that feed the learning
   model.
-- [heating.md](heating.md) — Heating sources and how pool construction affects heat loss.
+- [HEATING.MD](HEATING.MD) — Heating sources and how pool construction affects heat loss.

@@ -1,12 +1,12 @@
-> [? Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
+> [← Back to README](../README.md) | [Getting Started](GETTING_STARTED.MD) | [Architecture](ARCHITECTURE.MD) | [Configuration](CONFIGURATION.MD) | [Troubleshooting](TROUBLESHOOTING.MD)
 
 ---
 
 # Entity IDs
 
 This document explains how PoolSmart names its entities and why. For mapping
-your source sensors to integration fields, see [sensors.md](sensors.md). For the
-entity fallback table, see [architecture.md](architecture.md).
+your source sensors to integration fields, see [SENSORS.MD](SENSORS.MD). For the
+entity fallback table, see [ARCHITECTURE.MD](ARCHITECTURE.MD).
 
 ---
 
@@ -36,12 +36,14 @@ The water and outdoor temperatures ride along as attributes on
 `sensor.<name>_status` so a card can show them next to the reason, but a graph
 should point at your own sensor.
 
-![Data flow and entity relationship map](images/data-flow.svg)
+<p align="center">
+  <img src="images/data-flow.svg" width="550" alt="Data flow and entity relationship map">
+</p>
 
 ---
 
 ## See Also
 
-- [sensors.md](sensors.md) — How to map your sensors to the right fields
-- [architecture.md](architecture.md) — Entity fallback table and operating envelope
-- [configuration.md](configuration.md) — How to change entity assignments after setup
+- [SENSORS.MD](SENSORS.MD) — How to map your sensors to the right fields
+- [ARCHITECTURE.MD](ARCHITECTURE.MD) — Entity fallback table and operating envelope
+- [CONFIGURATION.MD](CONFIGURATION.MD) — How to change entity assignments after setup
