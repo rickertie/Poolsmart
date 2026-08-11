@@ -498,6 +498,8 @@
           "solar_margin_w": "Margin above the equipment draw (W)",
           "solar_threshold_w": "Solar surplus for free heating (W)",
           "swim_time": "Wanted at temperature by (HH:MM)",
+          "swim_time_2": "Second time (optional)",
+          "swim_days": "Days",
           "target_temp": "Desired temperature (°C)"
         },
         "data_description": {
@@ -511,6 +513,8 @@
           "solar_margin_w": "Added to the equipment draw when the threshold is calculated. A margin stops a passing cloud from starting and stopping a session.",
           "solar_threshold_w": "Above this, heating is treated as free and the price limit is ignored. Leave empty and it is calculated from what the heat pump and pump draw together, plus the margin below. A figure lower than the equipment draw means exporting less than you use; much higher means missing sunny afternoons.",
           "swim_time": "The planner works backwards from this to decide when heating must start. Leave blank if you have no fixed time; heating then simply keeps the pool at target.",
+          "swim_time_2": "A second time on the same days, for the exceptions. Most people leave this empty.",
+          "swim_days": "Which weekdays the times above apply to.",
           "target_temp": "28 °C is comfortable for most people. 26 is brisk, 30 is bath-like and noticeably more expensive."
         }
       },

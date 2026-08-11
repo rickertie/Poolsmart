@@ -498,6 +498,8 @@
           "solar_margin_w": "Marge boven het verbruik van de apparatuur (W)",
           "solar_threshold_w": "Zonoverschot voor gratis verwarmen (W)",
           "swim_time": "Op temperatuur om (UU:MM)",
+          "swim_time_2": "Tweede tijdstip (optioneel)",
+          "swim_days": "Dagen",
           "target_temp": "Gewenste temperatuur (°C)"
         },
         "data_description": {
@@ -511,6 +513,8 @@
           "solar_margin_w": "Wordt bij het verbruik van de apparatuur opgeteld als de drempel berekend wordt. Een marge voorkomt dat een overtrekkende wolk een sessie start en stopt.",
           "solar_threshold_w": "Hierboven geldt verwarmen als gratis en wordt de prijslimiet genegeerd. Laat leeg, dan wordt hij berekend uit wat de warmtepomp en de pomp samen verbruiken, plus de marge hieronder. Lager dan dat verbruik betekent dat je meer gebruikt dan je opwekt; veel hoger betekent zonnige middagen missen.",
           "swim_time": "De planner rekent hiervandaan terug wanneer het verwarmen moet beginnen. Laat leeg als je geen vast tijdstip hebt; dan houdt hij het bad simpelweg op temperatuur.",
+          "swim_time_2": "Een tweede tijdstip op dezelfde dagen, voor de uitzonderingen. De meeste mensen laten dit leeg.",
+          "swim_days": "Op welke weekdagen bovenstaande tijden gelden.",
           "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder."
         }
       },

@@ -22,7 +22,7 @@ from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTemperature, Un
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, HP_STANDBY_WATTS, PROGRESS_EPSILON
 from homeassistant.util import dt as dt_util
 
 from .core import safety
@@ -610,7 +610,7 @@ def _session(coordinator: PoolSmartCoordinator) -> dict:
     # The comparison is the point. A rate on its own says nothing about whether
     # the session is going well.
     estimate = coordinator.estimate
-    if estimate and estimate.hours_needed and elapsed_h > 0.25 and gain is not None:
+    if estimate and estimate.hours_needed and elapsed_h > PROGRESS_EPSILON and gain is not None:
         expected_rate = (
             estimate.degrees_needed / estimate.hours_needed
             if estimate.hours_needed not in (0, float("inf"))
@@ -799,7 +799,7 @@ def _measured_cop(coordinator: PoolSmartCoordinator) -> float | None:
         return None
     electric = state.hp_power_w.value
     # A heat pump idling on standby draws a few watts; that is not a duty point.
-    if not electric or electric < 50:
+    if not electric or electric < HP_STANDBY_WATTS:
         return None
     cop = thermal / (electric / 1000.0)
     limits = coordinator.pool_config.heat_pump

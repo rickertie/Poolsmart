@@ -35,6 +35,29 @@ PLATFORMS: list[Platform] = [
 ]
 
 
+def _resolve_config_path(hass: HomeAssistant, path: str) -> Path:
+    """Resolve a user-supplied path, refusing anything outside the config dir.
+
+    The import and export services used to write wherever the caller pointed
+    them. A path like ``..\\..\\secrets.yaml`` walked straight out of the config
+    directory, and on a multi-user Home Assistant that is a way to read and
+    write arbitrary files. Resolving first and then checking the result is the
+    only safe order: a symlink that points outward is caught by the resolved
+    comparison, not by looking at the raw string.
+    """
+    base = Path(hass.config.path()).resolve()
+    candidate = Path(path).expanduser()
+    if not candidate.is_absolute():
+        candidate = base / candidate
+    candidate = candidate.resolve()
+    if not candidate.is_relative_to(base):
+        raise ValueError(
+            f"refusing to touch {candidate}: import/export paths must stay inside "
+            "the Home Assistant configuration directory"
+        )
+    return candidate
+
+
 async def _async_panel_version(hass: HomeAssistant) -> str:
     """The integration version, used to bust the browser cache on the panel.
 
@@ -163,9 +186,33 @@ def _async_register_services(hass: HomeAssistant) -> None:
         return
 
     async def _record(call) -> None:
+        from .core.chemistry import Product
+
+        product = call.data["product"]
+        try:
+            Product(product)
+        except ValueError:
+            _LOGGER.error(
+                "Refusing to record a dose for unknown product %r", product
+            )
+            return
+        try:
+            amount = float(call.data["amount"])
+        except (TypeError, ValueError):
+            _LOGGER.error("Dose amount %r is not a number", call.data["amount"])
+            return
+        if amount <= 0 or amount > 100000:
+            # A garbage amount would poison the correction factors the doses
+            # are used to learn from, so it is refused rather than stored.
+            _LOGGER.error("Refusing implausible dose amount %s", amount)
+            return
+        unit = str(call.data.get("unit") or "")
+        if unit not in ("g", "ml", "l", "L", "kg"):
+            _LOGGER.error("Refusing dose with unrecognised unit %r", unit)
+            return
+
         for coordinator in hass.data.get(DOMAIN, {}).values():
             chemistry = coordinator.water_chemistry
-            product = call.data["product"]
             before = (
                 chemistry["ph"]
                 if product in ("acid_15", "acid_37", "ph_plus")
@@ -173,8 +220,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             )
             await coordinator.async_record_dose(
                 product=product,
-                amount=float(call.data["amount"]),
-                unit=call.data["unit"],
+                amount=amount,
+                unit=unit,
                 measured_before=before if before is not None else 0.0,
             )
 
@@ -183,7 +230,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
     async def _reset(call) -> None:
         for coordinator in hass.data.get(DOMAIN, {}).values():
             if coordinator.store.reset_learned(call.data["value"]):
-                await coordinator.store.async_save()
+                await coordinator.store.async_save(force=True)
                 await coordinator.async_request_refresh()
                 _LOGGER.info("Reset learned value: %s", call.data["value"])
 
@@ -192,14 +239,19 @@ def _async_register_services(hass: HomeAssistant) -> None:
     async def _export(call) -> None:
         from .recovery import export_payload
 
-        path = call.data.get("path") or hass.config.path("poolsmart_learning.json")
+        try:
+            path = _resolve_config_path(
+                hass, call.data.get("path") or "poolsmart_learning.json"
+            )
+        except ValueError as err:
+            _LOGGER.error("%s", err)
+            return
+
         for coordinator in hass.data.get(DOMAIN, {}).values():
             payload = export_payload(coordinator.store)
 
             def _write() -> None:
-                Path(path).write_text(
-                    json.dumps(payload, indent=2), encoding="utf-8"
-                )
+                path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
             await hass.async_add_executor_job(_write)
             _LOGGER.info("Exported learned history to %s", path)
@@ -209,10 +261,14 @@ def _async_register_services(hass: HomeAssistant) -> None:
     async def _import(call) -> None:
         from .recovery import validate_import
 
-        path = call.data["path"]
+        try:
+            path = _resolve_config_path(hass, call.data["path"])
+        except (ValueError, KeyError) as err:
+            _LOGGER.error("Refusing to import: %s", err)
+            return
 
         def _read() -> dict:
-            return json.loads(Path(path).read_text(encoding="utf-8"))
+            return json.loads(path.read_text(encoding="utf-8"))
 
         try:
             payload = await hass.async_add_executor_job(_read)
@@ -229,7 +285,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
         for coordinator in hass.data.get(DOMAIN, {}).values():
             taken = coordinator.store.adopt(payload)
-            await coordinator.store.async_save()
+            await coordinator.store.async_save(force=True)
             await coordinator.async_request_refresh()
             _LOGGER.info("Imported learned history from %s: %s", path, taken)
 
@@ -249,10 +305,16 @@ async def _async_adopt_history(hass, entry, coordinator) -> None:
     if not source:
         return
 
+    try:
+        source = str(_resolve_config_path(hass, source))
+    except ValueError as err:
+        _LOGGER.warning("Not adopting history: %s", err)
+        return
+
     history = await hass.async_add_executor_job(read_history, source)
     if history:
         taken = coordinator.store.adopt(history)
-        await coordinator.store.async_save()
+        await coordinator.store.async_save(force=True)
         _LOGGER.info("Adopted learned history from a previous installation: %s", taken)
     else:
         _LOGGER.warning("Could not read the learned history at %s", source)
@@ -268,7 +330,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unloaded:
         coordinator: PoolSmartCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
         coordinator.actions.async_stop()
-        await coordinator.store.async_save()
+        await coordinator.store.async_save(force=True)
     return unloaded
 
 

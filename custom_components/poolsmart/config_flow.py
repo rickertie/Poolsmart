@@ -353,10 +353,36 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    _STEPS = [
+        ("user", "Basics"),
+        ("pool", "Pool"),
+        ("pump", "Pump"),
+        ("heating", "Heating"),
+        ("entities", "Devices"),
+        ("optional", "Sensors"),
+        ("adopt", "Finish"),
+    ]
+
     def __init__(self) -> None:
         self._data: dict[str, Any] = {}
         self._defaults: dict[str, Any] = {}
         self._orphans: list = []
+
+    def _progress(self, step_id: str) -> dict:
+        """Return progress placeholders for the current step."""
+        for i, (sid, label) enumerate(self._STEPS):
+            if sid == step_id:
+                return {
+                    "step_current": str(i + 1),
+                    "step_total": str(len([s for s in self._STEPS if s[0] != "adopt"])),
+                    "step_label": label,
+                }
+        return {"step_current": "1", "step_total": "6", "step_label": step_id}
+
+    def _progress_description(self, step_id: str) -> str:
+        """Build a progress line for the form description."""
+        p = self._progress(step_id)
+        return f"**Step {p['step_current']} of {p['step_total']} — {p['step_label']}**"
 
     async def async_step_user(self, user_input: dict | None = None) -> ConfigFlowResult:
         if not self._defaults:
@@ -365,7 +391,9 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update(user_input)
             return await self.async_step_pool()
         return self.async_show_form(
-            step_id="user", data_schema=_kind_schema(self._defaults)
+            step_id="user",
+            data_schema=_kind_schema(self._defaults),
+            description_placeholders=self._progress("user"),
         )
 
     async def async_step_pool(self, user_input: dict | None = None) -> ConfigFlowResult:
@@ -373,7 +401,9 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update(derive_pool_shape(dict(user_input)))
             return await self.async_step_pump()
         return self.async_show_form(
-            step_id="pool", data_schema=_pool_schema(self._defaults)
+            step_id="pool",
+            data_schema=_pool_schema(self._defaults),
+            description_placeholders=self._progress("pool"),
         )
 
     async def async_step_pump(self, user_input: dict | None = None) -> ConfigFlowResult:
@@ -385,6 +415,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="pump",
             data_schema=_pump_schema(self._defaults),
             description_placeholders={
+                **self._progress("pump"),
                 "derate": f"{int(100 * 0.7)}",
             },
         )
@@ -418,7 +449,10 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="heating",
             data_schema=_heating_schema(self._defaults, source),
-            description_placeholders={"recommended_setpoint": f"{recommended:.0f}"},
+            description_placeholders={
+                **self._progress("heating"),
+                "recommended_setpoint": f"{recommended:.0f}",
+            },
         )
 
 
@@ -435,7 +469,9 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update(user_input)
             return await self.async_step_optional()
         return self.async_show_form(
-            step_id="entities", data_schema=_required_entities(source)
+            step_id="entities",
+            data_schema=_required_entities(source),
+            description_placeholders=self._progress("entities"),
         )
 
     async def async_step_optional(self, user_input: dict | None = None) -> ConfigFlowResult:
@@ -530,9 +566,6 @@ WEEKDAYS = [
 class PoolSmartOptionsFlow(OptionsFlow):
     """Everything that is not needed to get started lives here."""
 
-    def __init__(self) -> None:
-        self._pending: dict[str, Any] = {}
-
     async def async_step_init(self, user_input: dict | None = None) -> ConfigFlowResult:
         """One menu item per topic, rather than one bin marked "general".
 
@@ -561,7 +594,6 @@ class PoolSmartOptionsFlow(OptionsFlow):
         Configure three times. Returning to the menu costs nothing and matches
         what anyone adjusting settings is actually doing.
         """
-        self._pending.update(updates)
         self.hass.config_entries.async_update_entry(
             self.config_entry,
             options={**self.config_entry.options, **updates},
@@ -878,37 +910,6 @@ class PoolSmartOptionsFlow(OptionsFlow):
             },
         )
 
-    async def async_step_swimming(self, user_input: dict | None = None) -> ConfigFlowResult:
-        """When the pool should be at temperature.
-
-        One window per weekday covers nearly every household. A second is offered
-        for the exceptions and costs almost nothing, because the planner works
-        from a list of deadlines either way.
-        """
-        if user_input is not None:
-            return self._save(user_input)
-
-        current = {**self.config_entry.data, **self.config_entry.options}
-        schema = vol.Schema(
-            {
-                vol.Optional(
-                    c.CONF_SWIM_TIME, default=current.get(c.CONF_SWIM_TIME, "17:00")
-                ): str,
-                vol.Optional(
-                    c.CONF_SWIM_TIME_2, default=current.get(c.CONF_SWIM_TIME_2, "")
-                ): str,
-                vol.Optional(
-                    c.CONF_SWIM_DAYS,
-                    default=current.get(c.CONF_SWIM_DAYS, ["0", "1", "2", "3", "4", "5", "6"]),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=WEEKDAYS, multiple=True, mode=selector.SelectSelectorMode.LIST
-                    )
-                ),
-            }
-        )
-        return self.async_show_form(step_id="swimming", data_schema=schema)
-
     async def async_step_notifications(
         self, user_input: dict | None = None
     ) -> ConfigFlowResult:
@@ -1038,6 +1039,23 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         c.CONF_SWIM_TIME,
                         default=current.get(c.CONF_SWIM_TIME, "16:00"),
                     ): str,
+                    vol.Optional(
+                        c.CONF_SWIM_TIME_2,
+                        default=current.get(c.CONF_SWIM_TIME_2, ""),
+                    ): str,
+                    vol.Optional(
+                        c.CONF_SWIM_DAYS,
+                        default=current.get(
+                            c.CONF_SWIM_DAYS,
+                            ["0", "1", "2", "3", "4", "5", "6"],
+                        ),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=WEEKDAYS,
+                            multiple=True,
+                            mode=selector.SelectSelectorMode.LIST,
+                        )
+                    ),
                 }
             ),
         )
@@ -1169,152 +1187,3 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 }
             ),
         )
-
-    async def async_step_general(self, user_input: dict | None = None) -> ConfigFlowResult:
-        if user_input is not None:
-            return self._save(user_input)
-
-        current = {**self.config_entry.data, **self.config_entry.options}
-
-        schema = vol.Schema(
-            {
-                vol.Optional(
-                    c.CONF_TURNOVER_FACTOR,
-                    default=current.get(c.CONF_TURNOVER_FACTOR, 3.0),
-                ): _positive(0.5, 6.0, 0.1),
-                vol.Optional(
-                    c.CONF_MIN_DAILY_HOURS,
-                    default=current.get(c.CONF_MIN_DAILY_HOURS, 4.0),
-                ): _positive(0.5, 24.0, 0.5),
-                vol.Optional(
-                    c.CONF_MIN_BLOCK_MINUTES,
-                    default=current.get(c.CONF_MIN_BLOCK_MINUTES, 20),
-                ): _positive(5, 240, 1),
-                vol.Optional(
-                    c.CONF_NIGHT_START, default=current.get(c.CONF_NIGHT_START, "22:00")
-                ): str,
-                vol.Optional(
-                    c.CONF_NIGHT_END, default=current.get(c.CONF_NIGHT_END, "07:00")
-                ): str,
-                vol.Optional(
-                    c.CONF_MIN_ON_MINUTES,
-                    default=current.get(c.CONF_MIN_ON_MINUTES, 15),
-                ): _positive(1, 120, 1),
-                vol.Optional(
-                    c.CONF_MIN_OFF_MINUTES,
-                    default=current.get(c.CONF_MIN_OFF_MINUTES, 10),
-                ): _positive(1, 120, 1),
-                vol.Optional(
-                    c.CONF_COMPRESSOR_MIN_OFF,
-                    default=current.get(c.CONF_COMPRESSOR_MIN_OFF, 10),
-                ): _positive(0, 60, 1),
-                vol.Optional(
-                    c.CONF_COMPRESSOR_MIN_ON,
-                    default=current.get(c.CONF_COMPRESSOR_MIN_ON, 10),
-                ): _positive(0, 60, 1),
-                vol.Optional(
-                    c.CONF_PUMP_RUNDOWN_MINUTES,
-                    default=current.get(c.CONF_PUMP_RUNDOWN_MINUTES, 5),
-                ): _positive(0, 60, 1),
-                vol.Optional(
-                    c.CONF_TEMP_HYSTERESIS,
-                    default=current.get(c.CONF_TEMP_HYSTERESIS, 0.3),
-                ): _positive(0.1, 3.0, 0.1),
-                vol.Optional(
-                    c.CONF_MIN_WATER_TEMP,
-                    default=current.get(c.CONF_MIN_WATER_TEMP, 10.0),
-                ): _positive(0, 25, 0.5),
-                vol.Optional(
-                    c.CONF_FROST_AIR_TEMP,
-                    default=current.get(c.CONF_FROST_AIR_TEMP, 3.0),
-                ): _positive(-10, 10, 0.5),
-                vol.Optional(
-                    c.CONF_MAX_PRICE,
-                    default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
-                ): _positive(0, 3, 0.01),
-                vol.Optional(
-                    c.CONF_NEGATIVE_PRICE_BASIS,
-                    default=current.get(c.CONF_NEGATIVE_PRICE_BASIS, "total"),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=["total", "market"],
-                        translation_key="negative_price_basis",
-                    )
-                ),
-                vol.Optional(
-                    c.CONF_SOLAR_THRESHOLD_W,
-                    description={
-                        "suggested_value": current.get(c.CONF_SOLAR_THRESHOLD_W)
-                    },
-                ): _positive(0, 20000, 50),
-                vol.Optional(
-                    c.CONF_SOLAR_MARGIN_W,
-                    default=current.get(c.CONF_SOLAR_MARGIN_W, 200),
-                ): _positive(0, 5000, 50),
-                vol.Optional(
-                    c.CONF_SOLAR_HYSTERESIS_W,
-                    default=current.get(c.CONF_SOLAR_HYSTERESIS_W, 300),
-                ): _positive(0, 5000, 50),
-                vol.Optional(
-                    c.CONF_ECO_PRICE_FACTOR,
-                    default=current.get(c.CONF_ECO_PRICE_FACTOR, 0.7),
-                ): _positive(0.1, 1.0, 0.05),
-                vol.Optional(
-                    c.CONF_ACID_PRODUCT,
-                    default=current.get(c.CONF_ACID_PRODUCT, "acid_15"),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[
-                            "acid_15", "acid_37", "ph_plus",
-                            "chlorine_granules_70", "chlorine_liquid_15",
-                            "shock", "shock_non_chlorine", "algaecide", "tablet",
-                        ],
-                        translation_key="chem_product",
-                    )
-                ),
-                vol.Optional(
-                    c.CONF_CHLORINE_PRODUCT,
-                    default=current.get(
-                        c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70"
-                    ),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[
-                            "acid_15", "acid_37", "ph_plus",
-                            "chlorine_granules_70", "chlorine_liquid_15",
-                            "shock", "shock_non_chlorine", "algaecide", "tablet",
-                        ],
-                        translation_key="chem_product",
-                    )
-                ),
-                vol.Optional(
-                    c.CONF_TABLET_GRAMS,
-                    default=current.get(c.CONF_TABLET_GRAMS, 20),
-                ): _positive(5, 1000, 5),
-                vol.Optional(
-                    c.CONF_CHEMISTRY_MINUTES,
-                    default=current.get(c.CONF_CHEMISTRY_MINUTES, 30),
-                ): _positive(5, 240, 5),
-                vol.Optional(
-                    c.CONF_PUMP_STARTUP_GRACE,
-                    default=current.get(c.CONF_PUMP_STARTUP_GRACE, 120),
-                ): _positive(0, 900, 10),
-                vol.Optional(
-                    c.CONF_CALIBRATION_TOLERANCE,
-                    default=current.get(c.CONF_CALIBRATION_TOLERANCE, 0.6),
-                ): _positive(0.1, 5.0, 0.1),
-                vol.Optional(
-                    c.CONF_STALE_WARNING_SECONDS,
-                    default=current.get(c.CONF_STALE_WARNING_SECONDS, 900),
-                ): _positive(60, 7200, 30),
-                vol.Optional(
-                    c.CONF_STALE_BLOCKING_SECONDS,
-                    default=current.get(c.CONF_STALE_BLOCKING_SECONDS, 3600),
-                ): _positive(300, 86400, 60),
-                vol.Optional(
-                    c.CONF_LEARNING_ENABLED,
-                    default=current.get(c.CONF_LEARNING_ENABLED, True),
-                ): bool,
-            }
-        )
-        return self.async_show_form(step_id="general", data_schema=schema)

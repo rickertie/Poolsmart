@@ -22,6 +22,15 @@ UPDATE_INTERVAL = timedelta(seconds=30)
 STORAGE_KEY = f"{DOMAIN}.state"
 STORAGE_VERSION = 1
 
+#: How much quieter the debounced store save is allowed to get.
+#:
+#: Quiet saves -- a dose logged, a learned value reset -- do not need their own
+#: write, because the next tick writes the same file anyway. The write only
+#: matters when it is the last chance to save data, and those callers pass
+#: ``force=True``. The tick itself runs far less often than this, so it is never
+#: skipped.
+STORAGE_SAVE_DEBOUNCE_SECONDS = 10
+
 #: Number of decisions kept in the log.
 DECISION_LOG_SIZE = 100
 
@@ -280,3 +289,20 @@ NOTIFY_EVENTS = (
     "ai_recommendation",
     "filter_service",
 )
+
+# -- Measurement thresholds -------------------------------------------------
+
+#: Below this flow (m³/h) a reading is treated as "no flow", not as a working
+#: pump with a slow stream. Any meter idle or priming reads this low or lower.
+MIN_FLOW_M3H = 0.05
+
+#: How quickly the learned flow follows the sensor. Slow enough that a fouling
+#: filter registers as a decline rather than being absorbed into the average.
+FLOW_LEARN_ALPHA = 0.002
+
+#: A heat pump drawing fewer watts than this is idling on standby, not working;
+#: a COP measured in that state means nothing.
+HP_STANDBY_WATTS = 50
+
+#: Below this fraction of the day a progress figure is too early to judge.
+PROGRESS_EPSILON = 0.25

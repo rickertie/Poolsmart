@@ -9,7 +9,9 @@ the last timestamp that was written.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 
@@ -21,6 +23,7 @@ from .const import (
     DOSE_LOG_SIZE,
     SESSION_LOG_SIZE,
     STORAGE_KEY,
+    STORAGE_SAVE_DEBOUNCE_SECONDS,
     STORAGE_VERSION,
 )
 
@@ -113,8 +116,15 @@ class PoolStore:
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         self._store: Store = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry_id}")
+        #: Serialises saves so an unload can never overtake a save in flight.
+        self._save_lock = asyncio.Lock()
+        #: Monotonic time of the last write, for the debounce in :meth:`async_save`.
+        self._last_saved_at: float = 0.0
         self.quota_date: date | None = None
         self.intervals: list[RuntimeInterval] = []
+        #: The open interval, so :meth:`record_pump` does not have to rescan the
+        #: whole list on every tick.
+        self._open_interval: RuntimeInterval | None = None
         self.learned = LearnedValues()
         self.active_block: dict | None = None
         self.heat_pump_stopped_at: datetime | None = None
@@ -162,6 +172,7 @@ class PoolStore:
             _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
 
         self._close_open_interval()
+        self._open_interval = None
         if self.backfill_cop_counts():
             _LOGGER.info(
                 "Recovered COP session counts for learned values that predate the "
@@ -181,39 +192,59 @@ class PoolStore:
                 interval.end = interval.start
                 _LOGGER.debug("Closed a filtration interval left open by a restart")
 
-    async def async_save(self) -> None:
-        await self._store.async_save(
-            {
-                "quota_date": self.quota_date.isoformat() if self.quota_date else None,
-                "intervals": [i.as_dict() for i in self.intervals],
-                "learned": self.learned.as_dict(),
-                "active_block": self.active_block,
-                "heat_pump_stopped_at": (
-                    self.heat_pump_stopped_at.isoformat()
-                    if self.heat_pump_stopped_at
-                    else None
-                ),
-                "heat_pump_started_at": (
-                    self.heat_pump_started_at.isoformat()
-                    if self.heat_pump_started_at
-                    else None
-                ),
-                "chemistry_until": (
-                    self.chemistry_until.isoformat() if self.chemistry_until else None
-                ),
-                "mode": self.mode,
-                "target_temp": self.target_temp,
-                "decision_log": self.decision_log[-DECISION_LOG_SIZE:],
-                "session_log": self.session_log[-SESSION_LOG_SIZE:],
-                "dose_log": self.dose_log[-DOSE_LOG_SIZE:],
-                "last_water_test": (
-                    self.last_water_test.isoformat() if self.last_water_test else None
-                ),
-                "energy_today_kwh": self.energy_today_kwh,
-                "cost_today": self.cost_today,
-                "cost_baseline_today": self.cost_baseline_today,
-            }
-        )
+    async def async_save(self, *, force: bool = False) -> None:
+        """Persist the state, debounced and serialised.
+
+        The tick saves every thirty seconds, so a save can never be more than
+        one interval old. The quiet calls in between -- a dose logged, a learned
+        value reset -- do not each need their own write: the next tick would
+        write exactly the same file a moment later. Skipping them leaves the disk
+        with the same content either way and spares the executor the serialisation.
+
+        ``force`` bypasses the debounce. It is used where waiting for the next
+        tick would mean losing data for good: unloading, and substantial import
+        or reset operations whose effect lives in this file.
+        """
+        now = time.monotonic()
+        if now - self._last_saved_at < STORAGE_SAVE_DEBOUNCE_SECONDS and not force:
+            return
+
+        data = {
+            "quota_date": self.quota_date.isoformat() if self.quota_date else None,
+            "intervals": [i.as_dict() for i in self.intervals],
+            "learned": self.learned.as_dict(),
+            "active_block": self.active_block,
+            "heat_pump_stopped_at": (
+                self.heat_pump_stopped_at.isoformat()
+                if self.heat_pump_stopped_at
+                else None
+            ),
+            "heat_pump_started_at": (
+                self.heat_pump_started_at.isoformat()
+                if self.heat_pump_started_at
+                else None
+            ),
+            "chemistry_until": (
+                self.chemistry_until.isoformat()
+                if self.chemistry_until
+                else None
+            ),
+            "mode": self.mode,
+            "target_temp": self.target_temp,
+            "decision_log": self.decision_log[-DECISION_LOG_SIZE:],
+            "session_log": self.session_log[-SESSION_LOG_SIZE:],
+            "dose_log": self.dose_log[-DOSE_LOG_SIZE:],
+            "last_water_test": (
+                self.last_water_test.isoformat() if self.last_water_test else None
+            ),
+            "energy_today_kwh": self.energy_today_kwh,
+            "cost_today": self.cost_today,
+            "cost_baseline_today": self.cost_baseline_today,
+        }
+
+        async with self._save_lock:
+            self._last_saved_at = time.monotonic()
+            await self._store.async_save(data)
 
     # -- Filtration quota --------------------------------------------------
 
@@ -223,6 +254,7 @@ class PoolStore:
             return False
         self.quota_date = now.date()
         self.intervals = []
+        self._open_interval = None
         self.active_block = None
         self.energy_today_kwh = 0.0
         self.cost_today = 0.0
@@ -230,16 +262,26 @@ class PoolStore:
         return True
 
     def record_pump(self, now: datetime, running: bool) -> None:
-        """Update the interval list from the pump's actual state."""
-        open_interval = next((i for i in self.intervals if i.end is None), None)
-        if running and open_interval is None:
-            self.intervals.append(RuntimeInterval(start=now))
-        elif running and open_interval is not None:
+        """Update the interval list from the pump's actual state.
+
+        The open interval is held separately rather than hunted for each call,
+        so a tick costs O(1) no matter how the interval list has grown.
+        """
+        if running and self._open_interval is None:
+            self._open_interval = RuntimeInterval(start=now)
+            self.intervals.append(self._open_interval)
+        elif running and self._open_interval is not None:
             # Keep the open interval open, but remember how far it has come so a
             # crash loses only the last tick.
-            open_interval.end = None
-        elif not running and open_interval is not None:
-            open_interval.end = now
+            self._open_interval.end = None
+        elif not running and self._open_interval is not None:
+            self._open_interval.end = now
+            self._open_interval = None
+
+    def clear_runtime(self) -> None:
+        """Forget today's credited runtime so a full cycle can run again."""
+        self.intervals = []
+        self._open_interval = None
 
     def runtime_hours(self, now: datetime) -> float:
         """Filtration runtime credited today, including any open interval.

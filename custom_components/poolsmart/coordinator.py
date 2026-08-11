@@ -143,6 +143,11 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._last_good: dict[str, tuple[float, datetime]] = {}
         #: Roles currently running on a carried-forward reading.
         self.bridged_roles: set[str] = set()
+        #: Built once and reused, because the wizard's answers (and nothing
+        #: else on a live copy) feed every part of every tick. Invalidated when
+        #: the target temperature moves, since that is the one field the
+        #: entities change at runtime.
+        self._config_cache: PoolConfig | None = None
 
     # -- Configuration -----------------------------------------------------
 
@@ -184,6 +189,20 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     @property
     def pool_config(self) -> PoolConfig:
+        """The pure-Python config, built once from the config entry.
+
+        Building it parses the block windows, resolves every optional sensor
+        alias into a frozenset of roles and constructs a dozen nested dataclasses.
+        On a thirty-second tick none of that changes, so it is computed once and
+        reused until something changes it. The one runtime value it carries is the
+        target temperature, which is why :meth:`async_set_target` throws the cache
+        away.
+        """
+        if self._config_cache is None:
+            self._config_cache = self._build_pool_config()
+        return self._config_cache
+
+    def _build_pool_config(self) -> PoolConfig:
         """Build the pure-Python config from the config entry."""
         windows_raw = self._conf(
             c.CONF_BLOCK_WINDOWS, [["07:00", "11:00"], ["12:00", "17:00"], ["17:00", "21:00"]]
@@ -615,6 +634,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         return data
 
     async def _async_tick(self, now: datetime) -> dict:
+        # Yesterday's optional-subsystem errors describe the state they were in
+        # then. If a subsystem has been quiet since, its failure has recovered
+        # and should not stay on the diagnostics forever.
+        self.subsystem_errors = {}
         config = self.pool_config
 
         if self.store.roll_day(now):
@@ -808,7 +831,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if not state.pump_on or not state.flow_m3h.available:
             return
         reading = state.flow_m3h.value
-        if reading <= 0.05:
+        if reading <= c.MIN_FLOW_M3H:
             return
 
         current = self.store.learned.measured_flow_m3h
@@ -818,7 +841,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         # Slow enough that a fouling filter registers as a decline rather than
         # being quietly absorbed into the average.
-        alpha = 0.002
+        alpha = c.FLOW_LEARN_ALPHA
         self.store.learned.measured_flow_m3h = round(
             current * (1 - alpha) + reading * alpha, 3
         )
@@ -1187,6 +1210,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     async def async_set_target(self, value: float) -> None:
         self._target_temp = value
+        self._config_cache = None
         self.store.target_temp = value
         await self.async_request_refresh()
 
@@ -1384,7 +1408,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     async def async_force_filtration(self) -> None:
         """Clear today's credited runtime so a full cycle runs again."""
-        self.store.intervals = []
+        self.store.clear_runtime()
         self.store.active_block = None
         await self.async_request_refresh()
 
