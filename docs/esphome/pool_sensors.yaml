@@ -1,0 +1,469 @@
+# ===========================================================================
+# PoolSmart — example ESPHome configuration
+#
+# ESPHome measures. Home Assistant decides.
+#
+# That split has a practical consequence worth stating plainly: **nothing here
+# calculates delta-T, COP or thermal power.** Earlier versions of this file did,
+# which meant those figures only existed for people who happened to run ESPHome.
+# The integration computes them from whatever temperature and flow sensors it is
+# given, so a Shelly, a Zigbee probe or a plain template sensor produces exactly
+# the same result.
+#
+# What belongs here: reading hardware, calibrating it, publishing honest numbers
+# with correct units.
+#
+# What belongs in the integration: everything derived from those numbers, and
+# every decision about what to do.
+#
+# ---------------------------------------------------------------------------
+# WIRING
+#
+# The DS18B20 probes share one data pin with a 4.7 kΩ pull-up to 3.3 V.
+#
+# The flow meter is the part that catches people out. A Hall effect meter like
+# the Yanmis DN50 outputs 5 V pulses, and an ESP32 pin is not 5 V tolerant:
+#
+#     meter signal ──[ 10 kΩ ]──┬── GPIO
+#                               │
+#                            [ 20 kΩ ]
+#                               │
+#                              GND
+#
+# That lands at 3.3 V. Wiring 5 V straight to the pin works for a while and then
+# destroys it.
+# ===========================================================================
+
+substitutions:
+  device_name: pool-sensors
+  friendly_name: Pool sensors
+
+  # ── Pins ────────────────────────────────────────────────────────────────
+  # Avoid strapping pins. These three are safe on the XIAO ESP32C6.
+  onewire_pin: "GPIO22"
+  flow_pin: "GPIO19"
+  status_led_pin: "GPIO23"
+
+  # ── One-wire addresses ──────────────────────────────────────────────────
+  # Flash once with these left as zeros, then read the real addresses from the
+  # boot log and paste them in. The log prints one line per probe found.
+  addr_pool: "0x0000000000000000"      # Pool water
+  addr_pump_in: "0x0000000000000000"   # Pump inlet, water leaving the pool
+  addr_pump_out: "0x0000000000000000"  # Pump outlet, water entering the heat pump
+  addr_hp_out: "0x0000000000000000"    # Heat pump outlet, water back to the pool
+  addr_outdoor: "0x0000000000000000"   # Outdoor air, in shade
+
+  # ── Flow calibration ────────────────────────────────────────────────────
+  #
+  # ONE number does this job. An earlier version of this file had two, applied
+  # in two places, disagreeing by a factor of two and a half — a reliable way to
+  # be confidently wrong about your flow, and everything derived from it.
+  #
+  # The datasheet is a starting point, not an answer. Yanmis DN50 quotes
+  # Hz = 0.5 × Q(L/min), which works out as:
+  #
+  #     pulses/min = 60 × Hz = 60 × 0.5 × Q = 30 × Q
+  #     Q (L/min)  = pulses/min ÷ 30
+  #
+  # Hence 30.0. Installed meters rarely match their datasheet though: pipe
+  # diameter, nearby fittings and mounting orientation all shift it.
+  #
+  # BUCKET CALIBRATION — five minutes, once:
+  #   1. Note "Flow pulses total" in Home Assistant.
+  #   2. Run the pump and catch exactly 10 litres from the return.
+  #   3. Note the total again; the difference is pulses per 10 litres.
+  #   4. divisor = difference ÷ 10
+  #   5. Put that number here and reflash.
+  #
+  # SANITY CHECK: at a divisor of 30, a reading of 17 L/min means the raw pulse
+  # count is 510 per minute. If yours is nowhere near that, the divisor is wrong,
+  # and filtration times — which are calculated from flow — are wrong with it.
+  flow_divisor: "30.0"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: seeed_xiao_esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  ap:
+    ssid: "${friendly_name} Fallback"
+    password: !secret wifi_password
+
+captive_portal:
+
+web_server:
+  port: 80
+  version: "3"
+
+one_wire:
+  - platform: gpio
+    pin: ${onewire_pin}
+
+# ---------------------------------------------------------------------------
+# WHY EVERY SENSOR HAS A HEARTBEAT FILTER
+#
+# ESPHome only publishes a value when it changes. Pool water changes slowly, so a
+# probe can legitimately sit silent for half an hour — and anything downstream
+# watching for staleness reads that as a dead sensor. Home Assistant's
+# last_reported does not move either, because nothing was reported.
+#
+# A heartbeat republishes at a fixed interval whether or not the value moved. It
+# costs a handful of bytes a minute and it makes silence mean something: if a
+# reading stops arriving, the probe really has stopped.
+#
+# ---------------------------------------------------------------------------
+# CALIBRATION OFFSETS
+#
+# DS18B20 probes are accurate to roughly ±0.5 °C. That is fine for a room and
+# not fine for a delta-T of 2 °C across a heat pump: two probes off by 0.4 °C in
+# opposite directions turn a real 2.0 °C rise into a measured 1.2 °C, and the COP
+# calculated from it is wrong by a third.
+#
+# HOW TO CALIBRATE
+#   1. Put every probe in the same glass of water. Stir. Wait five minutes.
+#   2. Read all five. They should agree. They will not.
+#   3. Pick one as the reference — the pool probe is the sensible choice.
+#   4. Set each offset so the others match it. A probe reading low needs a
+#      positive offset.
+#
+# These are number entities rather than substitutions, so changing one does not
+# mean reflashing, and the values survive a restart.
+# ---------------------------------------------------------------------------
+number:
+  - platform: template
+    name: "Offset pool"
+    id: offset_pool
+    unit_of_measurement: "°C"
+    optimistic: true
+    restore_value: true
+    initial_value: 0.0
+    min_value: -5.0
+    max_value: 5.0
+    step: 0.05
+    mode: box
+    entity_category: config
+
+  - platform: template
+    name: "Offset pump inlet"
+    id: offset_pump_in
+    unit_of_measurement: "°C"
+    optimistic: true
+    restore_value: true
+    initial_value: 0.0
+    min_value: -5.0
+    max_value: 5.0
+    step: 0.05
+    mode: box
+    entity_category: config
+
+  - platform: template
+    name: "Offset pump outlet"
+    id: offset_pump_out
+    unit_of_measurement: "°C"
+    optimistic: true
+    restore_value: true
+    initial_value: 0.0
+    min_value: -5.0
+    max_value: 5.0
+    step: 0.05
+    mode: box
+    entity_category: config
+
+  - platform: template
+    name: "Offset heat pump outlet"
+    id: offset_hp_out
+    unit_of_measurement: "°C"
+    optimistic: true
+    restore_value: true
+    initial_value: 0.0
+    min_value: -5.0
+    max_value: 5.0
+    step: 0.05
+    mode: box
+    entity_category: config
+
+  - platform: template
+    name: "Offset outdoor"
+    id: offset_outdoor
+    unit_of_measurement: "°C"
+    optimistic: true
+    restore_value: true
+    initial_value: 0.0
+    min_value: -5.0
+    max_value: 5.0
+    step: 0.05
+    mode: box
+    entity_category: config
+
+sensor:
+  # ── Temperatures ────────────────────────────────────────────────────────
+  #
+  # Each probe is read internally and a template applies its offset. Keeping the
+  # raw value out of Home Assistant means one temperature per probe rather than
+  # two that disagree — the same reasoning the integration uses for not mirroring
+  # sensors it did not measure.
+  #
+  # The median filter earns its place: a DS18B20 occasionally returns 85 °C, its
+  # power-on default, when a read is disturbed. A median of five discards that
+  # without smoothing away real changes.
+
+  - platform: dallas_temp
+    address: ${addr_pool}
+    id: pool_water_raw
+    update_interval: 30s
+    internal: true
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Pool water temperature"
+    id: pool_water
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (!id(pool_water_raw).has_state() || isnan(id(pool_water_raw).state)) return {};
+      return id(pool_water_raw).state + id(offset_pool).state;
+    filters:
+      - heartbeat: 60s
+
+  - platform: dallas_temp
+    address: ${addr_pump_in}
+    id: pump_in_raw
+    update_interval: 30s
+    internal: true
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Pump inlet temperature"
+    id: pump_in
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (!id(pump_in_raw).has_state() || isnan(id(pump_in_raw).state)) return {};
+      return id(pump_in_raw).state + id(offset_pump_in).state;
+    filters:
+      - heartbeat: 60s
+
+  # If the plumbing runs pool → pump → heat pump → pool, this probe is
+  # physically the heat pump inlet. Point the integration's "heat pump inlet" at
+  # it and delta-T works without fitting a separate probe.
+  - platform: dallas_temp
+    address: ${addr_pump_out}
+    id: pump_out_raw
+    update_interval: 30s
+    internal: true
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Pump outlet temperature"
+    id: pump_out
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (!id(pump_out_raw).has_state() || isnan(id(pump_out_raw).state)) return {};
+      return id(pump_out_raw).state + id(offset_pump_out).state;
+    filters:
+      - heartbeat: 60s
+
+  - platform: dallas_temp
+    address: ${addr_hp_out}
+    id: hp_out_raw
+    update_interval: 30s
+    internal: true
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Heat pump outlet temperature"
+    id: hp_out
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: |-
+      if (!id(hp_out_raw).has_state() || isnan(id(hp_out_raw).state)) return {};
+      return id(hp_out_raw).state + id(offset_hp_out).state;
+    filters:
+      - heartbeat: 60s
+
+  - platform: dallas_temp
+    address: ${addr_outdoor}
+    id: outdoor_raw
+    update_interval: 60s
+    internal: true
+    filters:
+      - filter_out: nan
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Outdoor temperature"
+    id: outdoor
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 60s
+    lambda: |-
+      if (!id(outdoor_raw).has_state() || isnan(id(outdoor_raw).state)) return {};
+      return id(outdoor_raw).state + id(offset_outdoor).state;
+    filters:
+      - heartbeat: 60s
+
+  # ── Flow ────────────────────────────────────────────────────────────────
+  #
+  # One counter, one divisor, two views of the same measurement. Publishing both
+  # L/min and m³/h is a convenience rather than a duplication: they are the same
+  # number, and the integration reads whichever you select, converting from the
+  # unit the sensor declares.
+
+  - platform: pulse_counter
+    pin:
+      number: ${flow_pin}
+      mode:
+        input: true
+        pullup: false   # the meter drives the line through the divider
+    id: flow_pulses
+    name: "Flow pulses"
+    unit_of_measurement: "pulses/min"
+    accuracy_decimals: 0
+    update_interval: 10s
+    internal: true
+    total:
+      name: "Flow pulses total"
+      id: flow_pulses_total
+      accuracy_decimals: 0
+      # Deliberately not internal: this is the number bucket calibration needs.
+
+  - platform: template
+    name: "Flow"
+    id: flow_lmin
+    unit_of_measurement: "L/min"
+    device_class: volume_flow_rate
+    state_class: measurement
+    accuracy_decimals: 2
+    update_interval: 10s
+    lambda: |-
+      if (!id(flow_pulses).has_state()) return {};
+      float lmin = id(flow_pulses).state / ${flow_divisor}f;
+      return lmin < 0.0f ? 0.0f : lmin;
+    filters:
+      # Six samples at ten seconds is a minute of averaging: long enough to ride
+      # out an impeller's pulsing, short enough to see a filter blocking.
+      - sliding_window_moving_average:
+          window_size: 6
+          send_every: 1
+      - heartbeat: 60s
+
+  - platform: template
+    name: "Flow m3h"
+    id: flow_m3h
+    unit_of_measurement: "m³/h"
+    device_class: volume_flow_rate
+    state_class: measurement
+    accuracy_decimals: 3
+    update_interval: 10s
+    lambda: |-
+      if (!id(flow_lmin).has_state()) return {};
+      return id(flow_lmin).state * 0.06f;
+    filters:
+      - heartbeat: 60s
+
+binary_sensor:
+  # A probe going silent is worth knowing about here, separately from whatever
+  # the integration concludes from the silence.
+  - platform: template
+    name: "Sensor fault"
+    id: sensor_fault
+    device_class: problem
+    lambda: |-
+      return !id(pool_water).has_state() || isnan(id(pool_water).state)
+          || !id(outdoor).has_state()    || isnan(id(outdoor).state);
+    filters:
+      - delayed_on: 60s
+      - delayed_off: 60s
+
+light:
+  - platform: status_led
+    name: "Status LED"
+    pin:
+      number: ${status_led_pin}
+      inverted: true
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP address"
+    ssid:
+      name: "WiFi SSID"
+    mac_address:
+      name: "MAC address"
+  - platform: version
+    name: "ESPHome version"
+
+button:
+  - platform: restart
+    name: "Restart"
+    id: restart_button
+
+# ---------------------------------------------------------------------------
+# DELIBERATELY ABSENT
+#
+# **Delta-T, thermal power and COP.** The integration calculates all three from
+# the sensors it is given. Computing them here as well would mean two numbers for
+# one measurement, drifting apart the moment a calibration offset changes on one
+# side and not the other — and it would leave anyone without ESPHome unable to
+# see them at all.
+#
+# **Flow thresholds and "flow OK" sensors.** Whether a flow figure is acceptable
+# depends on the heat pump, which the integration knows about and this board does
+# not. A hardcoded 17–20 L/min window would be wrong for the next person, and
+# wrong for you after you clean a filter.
+#
+# **Anything that switches.** The pump and heat pump hang off smart plugs and the
+# integration drives them. A board that both measures and switches invites a
+# second opinion about what should be running.
+# ---------------------------------------------------------------------------
