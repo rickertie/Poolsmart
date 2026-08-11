@@ -5,13 +5,13 @@
 # Hardware & Wiring Guide
 
 This document covers the physical installation: component selection, pinouts,
-voltage step-down circuits, and pipe mounting. For the ESPHome YAML
-configuration and sensor calibration, see [esphome.md](esphome.md). For mapping
+voltage step-down circuits, and pipe mounting. that i have done on my one system.
+For the ESPHome YAML configuration and sensor calibration, see [esphome.md](esphome.md). For mapping
 sensors to integration fields, see [sensors.md](sensors.md).
 
 ---
 
-## Bill of Materials
+## Bill of what i used
 
 | Component | Function / Application | Notes |
 | :--- | :--- | :--- |
