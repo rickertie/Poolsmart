@@ -1,3 +1,7 @@
+[← Back to README](../README.md) • **Community Post**
+
+---
+
 # PoolSmart — a pool controller that tells you why
 
 *Post this in **Share your Projects!** on community.home-assistant.io. Add a
@@ -107,3 +111,12 @@ sidebar.
 Feedback and issues very welcome — especially from anyone whose pool is nothing
 like mine, since that is exactly where the assumptions I have not noticed will
 show up.
+
+---
+
+## See Also
+
+- [README](../README.md) — Main project documentation.
+- [docs/architecture.md](architecture.md) — Architecture & decision core.
+- [docs/SENSORS.md](SENSORS.md) — Sensor mapping & calibration.
+- [CHANGELOG.md](../CHANGELOG.md) — Full changelog.

@@ -1,9 +1,20 @@
+[← Back to README](../../README.md) • **Dashboard**
+
+---
+
 # Dashboard
+
+This document covers installing and customizing the PoolSmart Lovelace
+dashboards. For the main project documentation, see the
+[README](../../README.md). For the management panel (a separate interface in the
+sidebar), see the [README section on the management panel](../../README.md#the-management-panel).
+
+---
 
 `dashboard.yaml` is a complete dashboard: three tabs, in Dutch, in a style close
 to what most Home Assistant pool dashboards end up looking like.
 
-## Installing it
+## Installing It
 
 Open the dashboard, click the pencil at the top right, then the three dots, then
 **Raw configuration editor**. Select everything that is there and paste the file
@@ -13,7 +24,7 @@ The file starts at `views:`. That matters: a fragment starting at `title:` is a
 single view, and pasting one of those into the raw editor is a parse error, not a
 mistake on your part.
 
-## Entity names
+## Entity Names
 
 Everything assumes the integration is called **Pool**, the default, giving ids
 like `sensor.pool_status`. Named it something else? Find and replace `pool_` with
@@ -26,7 +37,7 @@ deliberate: names are for reading, ids are for referring to, and anything that
 gets shared — a dashboard, an automation, a forum post — needs the id to be the
 same everywhere.
 
-### Upgrading from before 0.7.0
+### Upgrading from Before 0.7.0
 
 Versions before 0.7.0 let Home Assistant build the id from the translated name,
 so a Dutch install ended up with `sensor.pool_klaar_om`. The registry keeps
@@ -36,12 +47,12 @@ Nothing is needed from you, but do check anything that referred to the old names
 The Home Assistant log lists every rename, so search it for "PoolSmart renamed".
 An id already taken by something else is left alone and logged as a warning.
 
-## Custom cards
+## Custom Cards
 
 From HACS: `mushroom`, `button-card`, `card-mod`, `apexcharts-card`,
 `mini-graph-card`. Remove the cards you do not have; nothing depends on them.
 
-## Two entities you must replace
+## Two Entities You Must Replace
 
 The temperature graph on the Energie tab points at example source sensors:
 
@@ -58,7 +69,7 @@ The Water tab uses `input_number` helpers for pH and chlorine. Water chemistry i
 still manual; the integration does not measure or dose anything. Create those
 helpers yourself or delete the tab.
 
-## What is deliberately missing
+## What Is Deliberately Missing
 
 Sensor readings, delta-T, COP, learned values, session history, the planning
 timeline and the decision log all live in the **PoolSmart panel** in the sidebar.
@@ -66,3 +77,14 @@ Putting them here as well would mean maintaining the same thing in two places,
 which is how the previous setup grew to five tabs and became a chore.
 
 This dashboard is for using the pool. The panel is for understanding it.
+
+---
+
+## See Also
+
+- [README](../../README.md) — Main project documentation.
+- [dashboard.yaml](dashboard.yaml) — Complete three-tab dashboard configuration.
+- [simple.yaml](simple.yaml) — Simplified single-view dashboard for household
+  members.
+- [simple_page.yaml](simple_page.yaml) — Single-page variant.
+- [docs/SENSORS.md](../SENSORS.md) — Sensor mapping & calibration.

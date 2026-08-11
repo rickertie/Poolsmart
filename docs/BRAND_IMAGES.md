@@ -1,4 +1,14 @@
-# Brand images
+[← Back to README](../README.md) • **Brand Images**
+
+---
+
+# Brand Images
+
+This document covers the integration's icon and logo, where they appear, and the
+known HACS display issue. For the main project documentation, see the
+[README](../README.md).
+
+---
 
 Since Home Assistant 2026.3 a custom integration carries its own brand images.
 They live in `custom_components/poolsmart/brand/` and Home Assistant serves them
@@ -7,7 +17,7 @@ the CDN, and no submission anywhere is required — the `home-assistant/brands`
 repository now auto-closes pull requests for custom integrations and points
 contributors at this mechanism instead.
 
-## What ships
+## What Ships
 
 | File | Size | Used for |
 |---|---|---|
@@ -19,7 +29,7 @@ contributors at this mechanism instead.
 
 All have transparent backgrounds and no padding.
 
-## Where you will and will not see them
+## Where You Will and Will Not See Them
 
 **Settings → Devices & services**: the icon appears. This is the endpoint Home
 Assistant itself uses.
@@ -45,3 +55,9 @@ python3 tools/make_brand_images.py
 Requires Pillow. The colours and shapes are defined at the top of that script;
 editing them and re-running produces a matching set at every size and in both
 themes, so the design cannot drift between files.
+
+---
+
+## See Also
+
+- [README](../README.md) — Main project documentation.

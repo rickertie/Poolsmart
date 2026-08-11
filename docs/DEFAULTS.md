@@ -1,4 +1,15 @@
-# Pre-filling your own values
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • **Defaults**
+
+---
+
+# Pre-Filling the Setup Wizard
+
+This document explains how to start the PoolSmart setup wizard with your own
+figures instead of the built-in defaults. For the full installation walkthrough,
+see the [README](../README.md). For the example defaults file, see
+[poolsmart_defaults.example.json](poolsmart_defaults.example.json).
+
+---
 
 Every field in the setup wizard arrives with a value already in it, so nothing is
 ever a blank box. The built-in numbers describe a generic mid-sized pool with a
@@ -10,7 +21,7 @@ being usable by other people was the point of building it this way.
 
 If you reinstall often, or you simply do not want to retype your own figures,
 drop a file called `poolsmart_defaults.json` in your Home Assistant configuration
-directory -- the same folder as `configuration.yaml`. Any keys it contains
+directory — the same folder as `configuration.yaml`. Any keys it contains
 override the built-in defaults when the wizard opens.
 
 ## Example
@@ -35,9 +46,10 @@ override the built-in defaults when the wizard opens.
 }
 ```
 
-A ready-made copy of this is in `docs/poolsmart_defaults.example.json`.
+A ready-made copy of this is in
+[poolsmart_defaults.example.json](poolsmart_defaults.example.json).
 
-## Every key you can set
+## Every Key You Can Set
 
 | Key | Meaning | Built-in default |
 |---|---|---|
@@ -61,7 +73,7 @@ with a warning and the built-in defaults are used, so a typo here can never stop
 the integration from being set up.
 
 Note that this only affects what the wizard *starts with*. Changing the file
-afterwards does not alter an existing installation -- for that, use
+afterwards does not alter an existing installation — for that, use
 Settings → Devices & services → PoolSmart → Configure → Pool and equipment.
 
 ## Notes
@@ -69,3 +81,12 @@ Settings → Devices & services → PoolSmart → Configure → Pool and equipme
 - Water surface may be left out entirely; it is calculated from volume and depth.
 - Entity choices are not covered here. They differ per system and are picked from
   a dropdown anyway, and they can be corrected afterwards under Configure.
+
+---
+
+## See Also
+
+- [README](../README.md) — Full installation walkthrough and configuration guide.
+- [poolsmart_defaults.example.json](poolsmart_defaults.example.json) — Ready-made
+  example file you can copy and edit.
+- [SENSORS.md](SENSORS.md) — How to map your sensors after setup.

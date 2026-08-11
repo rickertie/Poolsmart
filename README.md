@@ -8,6 +8,27 @@ setup, and filtration duration, heating time and the energy budget are derived
 from them. A 1000 litre inflatable and a 30000 litre in-ground pool both work
 without touching code.
 
+---
+
+## Documentation
+
+| Topic | Document | What you will find |
+|---|---|---|
+| Architecture & decision core | [docs/architecture.md](docs/architecture.md) | The priority ladder, filtration math, entity fallbacks, AI layer |
+| Heating planning & price optimization | [docs/planning.md](docs/planning.md) | Maintenance vs. seasonal mode, price integrations, COP-weighted cost |
+| Self-learning heating model | [docs/learning.md](docs/learning.md) | What is learned, the three validation rules, session logging |
+| Hardware & wiring | [docs/hardware.md](docs/hardware.md) | Bill of materials, pinouts, voltage divider, physical mounting |
+| ESPHome setup & calibration | [docs/esphome.md](docs/esphome.md) | Board configuration, probe calibration, flow meter bucket test |
+| Sensor mapping & calibration | [docs/SENSORS.md](docs/SENSORS.md) | Which sensor goes where, probe and flow meter calibration |
+| Pre-filling the setup wizard | [docs/DEFAULTS.md](docs/DEFAULTS.md) | How to start the wizard with your own figures |
+| Dashboard installation | [docs/lovelace/README.md](docs/lovelace/README.md) | Installing and customizing the Lovelace dashboards |
+| Brand images | [docs/BRAND_IMAGES.md](docs/BRAND_IMAGES.md) | Integration icon and logo, HACS workaround |
+| Full example config | [docs/esphome/pool_sensors.yaml](docs/esphome/pool_sensors.yaml) | Complete ESPHome YAML for the sensor board |
+| Example defaults file | [docs/poolsmart_defaults.example.json](docs/poolsmart_defaults.example.json) | Ready-made `poolsmart_defaults.json` |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) | Every release from v0.8.0 to present |
+
+---
+
 ## Why it is built this way
 
 The design solves four problems that YAML automations cannot:
@@ -50,6 +71,9 @@ In front of branches 5 and 6 sits a gate: the heat pump's operating envelope.
 Below its minimum air temperature nothing can heat the pool, not even a negative
 price and not even the minimum-temperature protection. That protection can only
 circulate, which is enough, because moving water does not freeze.
+
+> **See also:** [docs/architecture.md](docs/architecture.md) covers the ladder,
+> filtration math, and entity fallbacks in full detail.
 
 ## Installation
 
@@ -111,6 +135,10 @@ plus about two degrees. If your maximum is 32 °C, set it to 34 °C. Below that 
 keep full software control over any target, and above it the hardware intervenes
 if the software ever fails to switch off. The setup wizard shows this suggestion
 with your own numbers filled in.
+
+> **See also:** [docs/SENSORS.md](docs/SENSORS.md) for mapping your sensors to
+> the right fields; [docs/architecture.md](docs/architecture.md) for the entity
+> fallback table.
 
 ## Filtration
 
@@ -221,6 +249,10 @@ raises a service notification.
 Heating sessions run the pump too, so that runtime counts towards the quota.
 Without that credit the system would filter far more than needed on heating days.
 
+> **See also:** [docs/SENSORS.md](docs/SENSORS.md) for flow meter calibration
+> (the bucket test); [docs/architecture.md](docs/architecture.md) for the
+> filtration calculation formula.
+
 ## Development
 
 The decision core in `custom_components/poolsmart/core/` has no Home Assistant
@@ -271,6 +303,10 @@ Point the integration at it and it outranks the fixed ceiling, because a ceiling
 cannot tell a cheap hour from an expensive day: with a limit of 0.20 and a day
 whose cheapest hour is 0.22, nothing would ever heat.
 
+> **See also:** [docs/planning.md](docs/planning.md) for the full planning
+> documentation; [docs/learning.md](docs/learning.md) for how the learned COP
+> curve feeds into price optimization.
+
 ## What heats your pool
 
 Setup asks three things before anything else: how the pool is built, what heats
@@ -313,6 +349,9 @@ way outside should not present them with decisions.
 It also says whether electricity is cheap right now, judged against today's own
 range rather than a fixed number: 0.24 is a bargain in January and daylight
 robbery in a sunny week, and the figure alone does not say which.
+
+> **See also:** [docs/lovelace/README.md](docs/lovelace/README.md) for
+> installation and customization of both dashboards.
 
 ## Settings
 
@@ -378,6 +417,11 @@ disagreeing with no way to tell which was right. They now live in one place.
 a bucket, and which sensor to map to which field. The flow calibration is the one
 worth being fussy about: filtration duration is calculated directly from flow, so
 an error there becomes an error in how long the pump runs every day.
+
+> **See also:** [docs/SENSORS.md](docs/SENSORS.md) for full calibration
+> procedures; [docs/esphome.md](docs/esphome.md) for the ESPHome configuration
+> and calibration workflow; [docs/esphome/pool_sensors.yaml](docs/esphome/pool_sensors.yaml)
+> for the complete example YAML.
 
 ## Water chemistry
 
@@ -460,6 +504,10 @@ Three rules keep the model honest:
 
 Rejected sessions stay in the log with the reason. When the model stops
 improving, that is the first place to look.
+
+> **See also:** [docs/learning.md](docs/learning.md) for the full learning
+> documentation; [docs/planning.md](docs/planning.md) for how learned values
+> feed into heating planning.
 
 ## Entity ids
 
@@ -569,6 +617,9 @@ ranges; anything outside it is discarded. A safety limit cannot be suggested awa
 If the AI is unavailable the pool behaves exactly as it otherwise would, because
 this layer sits outside the control tick entirely.
 
+> **See also:** [docs/architecture.md](docs/architecture.md) for how the AI
+> layer fits into the architecture.
+
 ## Brand images
 
 The integration ships its own icon and logo in `custom_components/poolsmart/brand/`,
@@ -581,13 +632,8 @@ CDN instead of Home Assistant; that is
 [a known HACS bug](https://github.com/hacs/integration/issues/5223) and resolves
 itself when HACS ships a rebuilt frontend. See `docs/BRAND_IMAGES.md`.
 
-## Elsewhere
-
-- [`docs/SENSORS.md`](docs/SENSORS.md) — probe and flow meter calibration
-- [`docs/DEFAULTS.md`](docs/DEFAULTS.md) — pre-filling the setup wizard
-- [`docs/BRAND_IMAGES.md`](docs/BRAND_IMAGES.md) — the icon placeholder
-- [`docs/lovelace/`](docs/lovelace/) — a complete dashboard
-- [`docs/esphome/`](docs/esphome/) — example board configuration
+> **See also:** [docs/BRAND_IMAGES.md](docs/BRAND_IMAGES.md) for the full brand
+> image documentation.
 
 ## Licence
 

@@ -1,11 +1,18 @@
-# Sensors and ESPHome
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • **Sensors** • [Defaults](DEFAULTS.md)
 
-PoolSmart does not require ESPHome. It reads whatever temperature, flow and
-power sensors you point it at — Shelly, Zigbee, Tasmota, a template sensor
-fed from somewhere else. `pool_sensors.yaml` is a worked example for people
-building their own board, not a dependency.
+---
 
-## What goes where
+# Sensor Mapping & Calibration
+
+This document covers which sensor maps to which field, how to calibrate the
+temperature probes, and how to calibrate the flow meter with a bucket. For the
+ESPHome configuration that produces these sensor readings, see
+[esphome.md](esphome.md). For the physical wiring, see
+[hardware.md](hardware.md).
+
+---
+
+## What Goes Where
 
 | | Board | Integration |
 |---|---|---|
@@ -26,7 +33,9 @@ Everything derived now lives in one place. Fit two probes, tell the integration
 which is the heat pump inlet and which is the outlet, and delta-T, thermal power
 and COP appear regardless of what hardware produced the readings.
 
-## Calibrating the temperature probes
+---
+
+## Calibrating the Temperature Probes
 
 DS18B20s are accurate to roughly ±0.5 °C. Fine for a room. Not fine here.
 
@@ -44,7 +53,9 @@ and stays wrong.
 The offsets are number entities, so no reflashing, and they survive restarts.
 Worth redoing once a season.
 
-## Calibrating the flow meter
+---
+
+## Calibrating the Flow Meter
 
 This is the measurement everything else leans on. Filtration duration is
 calculated directly from flow, so an error here becomes an error in how long the
@@ -72,11 +83,13 @@ This is worth being fussy about. A divisor of 12 against a true 30 reports
 that follows from it would be more than twice too short, while looking entirely
 plausible on the dashboard.
 
-## Wiring the flow meter
+---
 
-Hall effect meters output 5 V pulses. ESP32 pins are not 5 V tolerant.
+## Wiring the Flow Meter
 
-```
+Hall-effect meters output 5 V pulses. ESP32 pins are not 5 V tolerant.
+
+```text
 meter signal ──[ 10 kΩ ]──┬── GPIO
                           │
                        [ 20 kΩ ]
@@ -87,7 +100,9 @@ meter signal ──[ 10 kΩ ]──┬── GPIO
 That lands at 3.3 V. Connecting 5 V directly works for a while, then destroys
 the pin.
 
-## Pointing the integration at the sensors
+---
+
+## Pointing the Integration at the Sensors
 
 Settings → Devices & services → PoolSmart → Configure → Entities.
 
@@ -130,9 +145,8 @@ same water as the pool probe, a metre apart, so the two should agree. When they
 do not, one of three things is true: a probe needs calibrating, the pool is
 stratified from too little circulation, or a probe is not actually in the water.
 It is the only check in the system able to notice that a temperature reading is
-simply wrong
-rather than merely surprising — and a miscalibrated probe quietly corrupts
-delta-T and every COP figure that follows from it.
+simply wrong rather than merely surprising — and a miscalibrated probe quietly
+corrupts delta-T and every COP figure that follows from it.
 
 Leave it blank and nothing breaks; you just lose that check.
 
@@ -142,8 +156,23 @@ gets refused: the integration will not report a permanent zero difference as a
 real measurement, but it also cannot give you delta-T or COP until they are two
 separate probes either side of the appliance.
 
+---
+
 ## Without ESPHome
 
 Point the integration at whatever you have. Only three entities are required —
 the two switches and a water temperature. Everything else is optional and
 switches off cleanly when left blank, with the reason visible in the panel.
+
+---
+
+## See Also
+
+- [esphome.md](esphome.md) — ESPHome configuration and calibration workflow.
+- [hardware.md](hardware.md) — Physical wiring, pinouts, and component selection.
+- [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
+  ESPHome configuration.
+- [architecture.md](architecture.md) — Entity fallback table showing what
+  happens when optional sensors are left blank.
+- [learning.md](learning.md) — How calibrated sensor readings feed the
+  self-learning model.
