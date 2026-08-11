@@ -27,9 +27,7 @@ opens a menu of subjects:
 | Notifications | Which message goes to which device |
 | Advanced | Timings and tolerances for when a measurement misbehaves |
 
-Picking the wrong temperature sensor during setup is easy to do, so the entity
-choices live in options where they can be corrected rather than in the entry data
-where they could not.
+Picking the wrong temperature sensor during setup is easy to do, so the entity could be easly replaced in the menu.
 
 ---
 
@@ -46,17 +44,6 @@ and listed in diagnostics rather than failing.
 | Power sensors | Energy, cost and measured COP |
 | Price sensor | Price optimisation, including the free-electricity branch |
 | Solar sensors | Solar optimisation |
-
----
-
-## Settings Design
-
-Eight topics rather than four sections and a bin marked "general". Saving
-returns to the menu instead of closing, so changing three things is one visit.
-
-**Advanced** is deliberately separate. Of the settings here, perhaps a third are
-ones anybody adjusts on purpose; the rest exist for when a measurement
-misbehaves. Mixing them made the first third harder to find.
 
 ---
 
