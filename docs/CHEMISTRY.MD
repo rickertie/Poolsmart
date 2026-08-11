@@ -49,7 +49,7 @@ Chemistry sits above the filtration branches in the ladder, so a day whose
 filtration quota is already met cannot suppress it. Dosing in the evening still
 gets its circulation.
 
-### A Dose Log That Learns
+### A Dose Log That Learns (NOT implemented, yet :-))
 
 Record what you added; the next test records what it achieved. After a few doses
 the recommendation is corrected for how your pool actually responds — alkalinity,
@@ -66,7 +66,7 @@ correction. What is here is the part that needs the pool's own numbers — a dos
 worked out from your volume, a test interval that follows water temperature, and
 the pump running afterwards for as long as that particular product needs.
 
-Every reading an AquaChek strip produces can be recorded and judged against its
+Every reading an Check strip produces can be recorded and judged against its
 ideal range, including the ones nothing is calculated from: alkalinity, cyanuric
 acid, hardness, and salt for electrolysis systems. Keeping the record and saying
 plainly when a figure has drifted is worth doing even where a dose is not.
