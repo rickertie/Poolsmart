@@ -8,7 +8,7 @@ This document covers PoolSmart's water chemistry features: dosing calculations,
 test scheduling, circulation timing, and the dose log. For the decision ladder
 that executes chemistry cycles, see [architecture.md](architecture.md). For
 advanced water chemistry (saturation index, alkalinity, calcium hardness), use
-[ha-poolchem](https://github.com/joyfulhouse/ha-poolchem) alongside PoolSmart.
+a diffrent intergation for that alongside PoolSmart.
 
 ---
 
