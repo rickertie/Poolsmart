@@ -30,8 +30,7 @@ Version 1.3.2. Running daily on the installation it was built for, with 85
 automated tests covering the decision core.
 
 Still to come: pool cover support needs a sensor to learn from, and the chemistry
-module covers pH and chlorine but not alkalinity or hardness —
-[ha-poolchem](https://github.com/joyfulhouse/ha-poolchem) is the answer for those.
+module covers pH and chlorine but not alkalinity or hardness
 
 ---
 
@@ -39,7 +38,7 @@ module covers pH and chlorine but not alkalinity or hardness —
 
 Feedback and issues welcome — especially from anyone whose pool is nothing like
 the one this was built for, since that is exactly where untested assumptions show
-up. See [COMMUNITY_POST.MD](COMMUNITY_POST.MD) for the project introduction.
+up.
 
 ---
 
