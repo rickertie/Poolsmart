@@ -8,7 +8,7 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
-## [Unreleased]
+## [1.3.3] — Pump Fiction
 
 ### Fixed
 - **A heat pump existed at "No heating".** The heating source decided what was
