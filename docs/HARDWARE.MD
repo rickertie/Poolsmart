@@ -11,7 +11,7 @@ sensors to integration fields, see [SENSORS.MD](SENSORS.MD).
 
 ---
 
-## Bill of what i used
+## Bill of Materials
 
 | Component | Function / Application | Notes |
 | :--- | :--- | :--- |
