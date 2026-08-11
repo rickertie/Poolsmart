@@ -88,3 +88,4 @@ This dashboard is for using the pool. The panel is for understanding it.
   members.
 - [simple_page.yaml](simple_page.yaml) — Single-page variant.
 - [docs/SENSORS.md](../SENSORS.md) — Sensor mapping & calibration.
+- [docs/panel.md](../panel.md) — The management panel (a separate interface).

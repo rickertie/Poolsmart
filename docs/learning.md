@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • **Learning** • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Defaults](DEFAULTS.md)
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • **Learning** • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
 
 ---
 
@@ -68,3 +68,4 @@ step in troubleshooting.
   inlet/outlet sensors are missing.
 - [SENSORS.md](SENSORS.md) — How to calibrate the probes that feed the learning
   model.
+- [heating.md](heating.md) — Heating sources and how pool construction affects heat loss.

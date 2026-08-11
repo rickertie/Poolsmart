@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • **Hardware** • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Defaults](DEFAULTS.md)
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • **Hardware** • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
 
 ---
 
@@ -86,3 +86,4 @@ making it safe for the ESP32.
   installation.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration with pin assignments and calibration offsets.
+- [configuration.md](configuration.md) — How to change settings after initial setup.

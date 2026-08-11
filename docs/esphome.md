@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • **ESPHome** • [Sensors](SENSORS.md) • [Defaults](DEFAULTS.md)
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • **ESPHome** • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
 
 ---
 
@@ -80,3 +80,4 @@ mounting angles affect real flow.
   wiring.
 - [esphome/pool_sensors.yaml](../esphome/pool_sensors.yaml) — Complete example
   ESPHome configuration with calibration offsets and heartbeat filters.
+- [filtration.md](filtration.md) — How flow calibration affects filtration duration.

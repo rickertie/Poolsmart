@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • **Defaults**
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • **Defaults**
 
 ---
 
@@ -90,3 +90,5 @@ Settings → Devices & services → PoolSmart → Configure → Pool and equipme
 - [poolsmart_defaults.example.json](poolsmart_defaults.example.json) — Ready-made
   example file you can copy and edit.
 - [SENSORS.md](SENSORS.md) — How to map your sensors after setup.
+- [configuration.md](configuration.md) — How to change settings after initial setup.
+- [heating.md](heating.md) — Heating sources and their configuration options.

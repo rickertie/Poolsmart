@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • **Sensors** • [Defaults](DEFAULTS.md)
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • **Sensors** • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
 
 ---
 
@@ -176,3 +176,5 @@ switches off cleanly when left blank, with the reason visible in the panel.
   happens when optional sensors are left blank.
 - [learning.md](learning.md) — How calibrated sensor readings feed the
   self-learning model.
+- [filtration.md](filtration.md) — How flow measurements affect filtration duration.
+- [entities.md](entities.md) — Entity ID naming conventions.

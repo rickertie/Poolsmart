@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • **Brand Images**
+[← Back to README](../README.md) • [Architecture](architecture.md) • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md) • **Brand Images**
 
 ---
 
@@ -61,3 +61,4 @@ themes, so the design cannot drift between files.
 ## See Also
 
 - [README](../README.md) — Main project documentation.
+- [panel.md](panel.md) — The management panel (uses the integration icon).

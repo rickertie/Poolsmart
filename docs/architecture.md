@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • **Architecture** • [Planning](planning.md) • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Defaults](DEFAULTS.md)
+[← Back to README](../README.md) • **Architecture** • [Planning](planning.md) • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
 
 ---
 
@@ -98,6 +98,22 @@ The optional AI layer acts strictly as a **non-blocking advisor**:
 3. **Applies nothing automatically.** Suggestions must be manually approved by the user.
 4. Out-of-bounds parameters suggested by AI are discarded by a strict validation filter.
 
+If the AI is unavailable the pool behaves exactly as it otherwise would, because
+this layer sits outside the control tick entirely.
+
+---
+
+## Compressor Protection
+
+Minimum off and run times for the heat pump are enforced separately from the
+ordinary decision hold, and no branch can override them. A hold protects a
+decision and may be broken when waiting would be worse; a compressor needs its
+refrigerant pressures to equalise before restarting, and that is not negotiable
+by any rule about filtration deadlines.
+
+Reaching the target temperature is the one thing that still stops heating
+immediately — a minimum run time must never keep heating a pool that is done.
+
 ---
 
 ## Developer & Standalone Testing
@@ -122,3 +138,5 @@ cd tests && python run_tests.py
 - [esphome.md](esphome.md) — ESPHome configuration and calibration procedures.
 - [SENSORS.md](SENSORS.md) — How to map and calibrate your temperature probes
   and flow meter.
+- [heating.md](heating.md) — Heating sources, solar collectors, and pool construction.
+- [configuration.md](configuration.md) — How to adjust settings after setup.

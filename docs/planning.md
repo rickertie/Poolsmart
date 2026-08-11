@@ -1,4 +1,4 @@
-[← Back to README](../README.md) • [Architecture](architecture.md) • **Planning** • [Learning](learning.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Defaults](DEFAULTS.md)
+[← Back to README](../README.md) • [Architecture](architecture.md) • **Planning** • [Learning](learning.md) • [Heating](heating.md) • [Filtration](filtration.md) • [Chemistry](chemistry.md) • [Hardware](hardware.md) • [ESPHome](esphome.md) • [Sensors](SENSORS.md) • [Logging](logging.md) • [Entities](entities.md) • [Panel](panel.md) • [Configuration](configuration.md) • [Troubleshooting](troubleshooting.md) • [Defaults](DEFAULTS.md)
 
 ---
 
@@ -19,8 +19,8 @@ temperature, the optimizer operates in one of two distinct modes:
 
 | Mode | Trigger / Condition | How It Works | Expected Result |
 | :--- | :--- | :--- | :--- |
-| **Maintenance** | Compensating daily heat loss (ΔT ≤ ~2 °C). | Selects the single cheapest interval or solar window before your next planned swim time. | Reports a **target time** (e.g., *"Ready today at 14:30"*). |
-| **Seasonal** | Warming up a cold pool after winter/fill-up (ΔT > 2 °C). | Requires long continuous runs (10–15+ hours). Projects budget across multiple days. | Reports a **target date** (e.g., *"Ready on Saturday 16:00"*). |
+| **Maintenance** | Compensating a day's heat loss (ΔT ≤ ~2 °C). | The optimizer picks the cheapest intervals before the next swimming time. | Reports a **target time** (e.g., *"Ready today at 14:30"*). |
+| **Seasonal** | Bringing a cold pool up to temperature (ΔT > 2 °C). | Requires long continuous runs (10–15+ hours). Projects budget across multiple days. | Reports a **target date** (e.g., *"Ready on Saturday 16:00"*). |
 
 > **Thermal equilibrium warning:** If heat loss equals or exceeds the maximum
 > thermal output of your heat pump (e.g., during cold nights without a cover),
@@ -49,6 +49,25 @@ or custom template sensors).
 
 ---
 
+## Solar Surplus
+
+Above a threshold of surplus solar power, heating is treated as free and the
+price limit is ignored. The threshold is not a fixed number, because the right
+value is a property of the installation: it has to be at least what the heat pump
+and circulation pump draw together. For a 3 kW heat pump taking 580 W with a
+100 W pump that is 680 W, plus a margin so a passing cloud does not start and
+stop a session.
+
+Leave the setting empty and it is calculated. Set it too low and you consume more
+than you generate; set it too high and you decline free heat on moderately sunny
+afternoons.
+
+`sensor.<name>_solar_surplus` shows the current figure with the threshold, the
+shortfall and the equipment draw as attributes, so "is this enough" has a visible
+answer.
+
+---
+
 ## See Also
 
 - [architecture.md](architecture.md) — How the heat pump's operating envelope
@@ -56,3 +75,4 @@ or custom template sensors).
 - [learning.md](learning.md) — How the COP curve per temperature band and
   thermal loss rates are learned over time and fed into the planner.
 - [SENSORS.md](SENSORS.md) — How to map your price sensor and solar sensors.
+- [heating.md](heating.md) — Heating sources and how solar collectors are handled.
