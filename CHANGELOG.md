@@ -12,6 +12,32 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.5.1] — Setup Wizard Clarity
+
+User-reported UI improvements to the installation wizard (Dutch and English).
+
+### Changed
+
+- **Shorter step descriptions.** Pool type, pump, heating, and optional entities
+  descriptions trimmed to the essential — no more paragraphs where a sentence
+  does the job
+- **Pool type options show their meaning.** Each construction type (inflatable,
+  frame, above ground, in ground) now carries a one-line description in the
+  dropdown itself, instead of one unreadable block at the bottom
+- **Optional entities menu labels.** The four sub-steps (Core sensors, Water
+  chemistry, Solar and price, Done) now show what each contains, instead of
+  bare technical names
+- **Optional sub-step field labels and help.** Core sensors, Water chemistry, and
+  Solar and price steps now have proper human-readable labels and per-field
+  descriptions — no more raw `_` field names with no explanation
+- **"Brochureminimum geverifieerd" label clarified.** Renamed to "Minimaal debiet
+  geverifieerd op deze installatie" / "Minimum flow verified for this
+  installation"; description shortened to the practical meaning
+- **Summary step clarified.** Now tells the user to click 'Save' to activate and
+  that changes can be made later via Configure
+- **Optional finish step clarified.** Now explains that everything is set up and
+  leads to the review step
+
 ## [1.5.0] — Resilience, Performance & User Control
 
 Based on comprehensive code review. See
