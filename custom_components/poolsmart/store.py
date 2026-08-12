@@ -197,7 +197,13 @@ class PoolStore:
     # -- Loading and saving ------------------------------------------------
 
     async def async_load(self) -> None:
-        raw = await self._store.async_load() or {}
+        try:
+            raw = await self._store.async_load() or {}
+        except KeyError:
+            _LOGGER.warning(
+                "Stored PoolSmart state was missing its version key and has been reset"
+            )
+            return
         raw = self._migrate_data(raw.get("data_version", 0), raw)
         try:
             if raw.get("quota_date"):
