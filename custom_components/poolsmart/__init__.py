@@ -206,6 +206,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+def _target_coordinator(hass: HomeAssistant, action: str) -> PoolSmartCoordinator | None:
+    """The one coordinator a per-pool service call should act on.
+
+    None of the services below take a target: they were written when a single
+    pool was the only case anyone tested. With two or more config entries,
+    looping over every coordinator means a dose recorded for one pool gets
+    logged against all of them, and an export silently overwrites itself once
+    per pool, leaving only the last one's history on disk. Refusing is safer
+    than guessing which pool was meant.
+    """
+    coordinators = list(hass.data.get(DOMAIN, {}).values())
+    if len(coordinators) == 1:
+        return coordinators[0]
+    if not coordinators:
+        _LOGGER.error("Cannot %s: no PoolSmart pool is set up", action)
+    else:
+        _LOGGER.error(
+            "Cannot %s: %d PoolSmart pools are set up and this service cannot "
+            "yet target one of them specifically",
+            action,
+            len(coordinators),
+        )
+    return None
+
+
 @callback
 def _async_register_services(hass: HomeAssistant) -> None:
     """Register the dose-recording service once."""
@@ -238,28 +263,32 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Refusing dose with unrecognised unit %r", unit)
             return
 
-        for coordinator in hass.data.get(DOMAIN, {}).values():
-            chemistry = coordinator.water_chemistry
-            before = (
-                chemistry["ph"]
-                if product in ("acid_15", "acid_37", "ph_plus")
-                else chemistry["chlorine"]
-            )
-            await coordinator.async_record_dose(
-                product=product,
-                amount=amount,
-                unit=unit,
-                measured_before=before if before is not None else 0.0,
-            )
+        coordinator = _target_coordinator(hass, "record a dose")
+        if coordinator is None:
+            return
+        chemistry = coordinator.water_chemistry
+        before = (
+            chemistry["ph"]
+            if product in ("acid_15", "acid_37", "ph_plus")
+            else chemistry["chlorine"]
+        )
+        await coordinator.async_record_dose(
+            product=product,
+            amount=amount,
+            unit=unit,
+            measured_before=before if before is not None else 0.0,
+        )
 
     hass.services.async_register(DOMAIN, "record_dose", _record)
 
     async def _reset(call) -> None:
-        for coordinator in hass.data.get(DOMAIN, {}).values():
-            if coordinator.store.reset_learned(call.data["value"]):
-                await coordinator.store.async_save(force=True)
-                await coordinator.async_request_refresh()
-                _LOGGER.info("Reset learned value: %s", call.data["value"])
+        coordinator = _target_coordinator(hass, "reset a learned value")
+        if coordinator is None:
+            return
+        if coordinator.store.reset_learned(call.data["value"]):
+            await coordinator.store.async_save(force=True)
+            await coordinator.async_request_refresh()
+            _LOGGER.info("Reset learned value: %s", call.data["value"])
 
     hass.services.async_register(DOMAIN, "reset_learned", _reset)
 
@@ -274,14 +303,16 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("%s", err)
             return
 
-        for coordinator in hass.data.get(DOMAIN, {}).values():
-            payload = export_payload(coordinator.store)
+        coordinator = _target_coordinator(hass, "export learned history")
+        if coordinator is None:
+            return
+        payload = export_payload(coordinator.store)
 
-            def _write() -> None:
-                path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        def _write() -> None:
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-            await hass.async_add_executor_job(_write)
-            _LOGGER.info("Exported learned history to %s", path)
+        await hass.async_add_executor_job(_write)
+        _LOGGER.info("Exported learned history to %s", path)
 
     hass.services.async_register(DOMAIN, "export_learning", _export)
 
@@ -310,11 +341,13 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Refusing to import %s: %s", path, why)
             return
 
-        for coordinator in hass.data.get(DOMAIN, {}).values():
-            taken = coordinator.store.adopt(payload)
-            await coordinator.store.async_save(force=True)
-            await coordinator.async_request_refresh()
-            _LOGGER.info("Imported learned history from %s: %s", path, taken)
+        coordinator = _target_coordinator(hass, "import learned history")
+        if coordinator is None:
+            return
+        taken = coordinator.store.adopt(payload)
+        await coordinator.store.async_save(force=True)
+        await coordinator.async_request_refresh()
+        _LOGGER.info("Imported learned history from %s: %s", path, taken)
 
     hass.services.async_register(DOMAIN, "import_learning", _import)
 

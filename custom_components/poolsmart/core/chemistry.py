@@ -15,7 +15,7 @@ water temperature, and a record of what was added and what it did.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 

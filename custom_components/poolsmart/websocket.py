@@ -107,8 +107,6 @@ def _branch_time_today(coordinator) -> list[dict]:
     Reconstructed from the decision log rather than tracked separately, so it
     cannot drift away from what was actually recorded.
     """
-    from datetime import datetime
-
     entries = coordinator.store.decision_log
     totals: dict[str, float] = {}
     for item in entries:
