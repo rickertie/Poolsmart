@@ -1,0 +1,133 @@
+# ===========================================================================
+# PoolSmart simple dashboard — read-only overview
+#
+# PASTE THIS WHOLE FILE into the raw configuration editor:
+#   open the dashboard -> pencil (top right) -> three dots -> Raw configuration
+#   editor -> select everything -> paste -> save.
+#
+# It starts at "views:" on purpose. A fragment starting at "title:" is a single
+# view, and pasting that into the raw editor is what produces a parse error.
+#
+# ENTITY NAMES
+#   Everything below assumes the integration was named "Pool", giving ids
+#   like sensor.pool_status. If you named it something else, find and replace
+#   "pool_" with your own slug.
+#
+#   These ids are fixed and do not follow the Home Assistant language setting,
+#   so this file works the same on a Dutch and an English install.
+#
+# READ-ONLY
+#   This page answers three questions and asks nothing: is the water warm
+#   enough, is the water quality good, and is now a cheap time to heat. There
+#   are no inputs, buttons, or service calls -- everything here is a
+#   sensor you can look at.
+#
+# CUSTOM CARDS USED (all from HACS)
+#   mushroom, card-mod
+# ===========================================================================
+
+views:
+
+  # =========================================================================
+  # Overview - the three questions, at a glance
+  # =========================================================================
+  - title: Pool
+    path: pool
+    icon: mdi:pool
+    badges:
+      - type: custom:mushroom-chips-card
+        alignment: center
+        chips:
+          - type: template
+            icon: mdi:thermometer
+            content: >-
+              {% set t = state_attr('sensor.pool_status','water_temperature') %}
+              {{ '%.1f'|format(t) if t is not none else '--' }}°C
+            icon_color: blue
+            tap_action:
+              action: more-info
+              entity: sensor.pool_status
+          - type: template
+            icon: mdi:filter
+            content: >-
+              {%- set done = states('sensor.pool_filtration_completed_today') | float(0) -%}
+              {%- set need = states('sensor.pool_filtration_required_today') | float(0) -%}
+              {{ (done / need * 100) | round(0) if need > 0 else 0 }}%
+            icon_color: >-
+              {% set done = states('sensor.pool_filtration_completed_today') | float(0) %}
+              {% set need = states('sensor.pool_filtration_required_today') | float(1) %}
+              {% if done >= need %}green{% elif done > need * 0.5 %}orange{% else %}grey{% endif %}
+            tap_action:
+              action: more-info
+              entity: sensor.pool_filtration_completed_today
+          - type: template
+            icon: mdi:cash
+            content: "€{{ states('sensor.pool_cost_today') | float(0) | round(2) }}"
+            icon_color: grey
+            tap_action:
+              action: more-info
+              entity: sensor.pool_cost_today
+
+    cards:
+
+      # ---- Status: warm enough? -------------------------------------------
+      - type: custom:mushroom-template-card
+        primary: >-
+          {% set t = state_attr('sensor.pool_status','water_temperature') %}
+          {{ '%.1f'|format(t) if t is not none else '--' }}°C
+        secondary: "{{ state_attr('sensor.pool_status', 'reason') }}"
+        multiline_secondary: true
+        icon: >-
+          {% if is_state('binary_sensor.pool_fault', 'on') %}mdi:alert-circle
+          {% elif is_state('binary_sensor.pool_heating', 'on') %}mdi:fire
+          {% elif is_state('binary_sensor.pool_circulating', 'on') %}mdi:autorenew
+          {% else %}mdi:pool{% endif %}
+        icon_color: >-
+          {% if is_state('binary_sensor.pool_fault', 'on') %}red
+          {% elif is_state('binary_sensor.pool_heating', 'on') %}orange
+          {% elif is_state('binary_sensor.pool_circulating', 'on') %}blue
+          {% else %}grey{% endif %}
+        tap_action:
+          action: more-info
+          entity: sensor.pool_status
+        card_mod:
+          style: |
+            ha-card {
+              --card-primary-font-size: 34px;
+              --card-primary-font-weight: 300;
+              padding: 18px 16px;
+            }
+
+      # ---- Water quality --------------------------------------------------
+      - type: custom:mushroom-entity-card
+        entity: sensor.pool_ph
+        name: pH
+        icon: mdi:ph
+        tap_action:
+          action: more-info
+      - type: custom:mushroom-entity-card
+        entity: sensor.pool_chlorine
+        name: Chlorine
+        icon: mdi:chemical-weapon
+        tap_action:
+          action: more-info
+
+      # ---- Price verdict: cheap now? --------------------------------------
+      - type: custom:mushroom-entity-card
+        entity: sensor.pool_price_verdict
+        name: Price today
+        icon: mdi:cash-clock
+        icon_color: >-
+          {% if is_state('sensor.pool_price_verdict','cheap') %}green
+          {% elif is_state('sensor.pool_price_verdict','expensive') %}red
+          {% else %}grey{% endif %}
+        tap_action:
+          action: more-info
+
+      # ---- Filtration progress --------------------------------------------
+      - type: custom:mushroom-entity-card
+        entity: sensor.pool_filtration_completed_today
+        name: Filtered today
+        icon: mdi:progress-clock
+        tap_action:
+          action: more-info

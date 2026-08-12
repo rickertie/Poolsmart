@@ -385,9 +385,9 @@ def heat_loss_from_idle(
 
 
 #: Sessions needed in a bucket before its measured COP is trusted for planning.
-#: COP varies with flow rate, solar gain, humidity, and more; five sessions is
+#: COP varies with flow rate, solar gain, humidity, and more; three sessions is
 #: the minimum before a measured figure is trusted over the datasheet.
-COP_CONFIDENCE_SESSIONS = 5
+COP_CONFIDENCE_SESSIONS = 3
 
 
 def cop_for(

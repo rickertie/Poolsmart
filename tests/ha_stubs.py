@@ -20,6 +20,8 @@ replace a module that already exists.
 
 from __future__ import annotations
 
+import asyncio
+
 import importlib.util
 import sys
 import types

@@ -3,19 +3,6 @@
 
  Copyright (C) 2023-2026 Shaun J.V. Nieuwenhuizen (Pho3niX90)
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Affero General Public License for more details.
-
- You should have received a copy of the GNU Affero General Public License
- along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
                             Preamble
 
   The GNU Affero General Public License is a free, copyleft license for
@@ -71,8 +58,7 @@ modification follow.
 
   0. Definitions.
 
-  "This License" refers to version 3 of the GNU Affero General Public
-License.
+  "This License" refers to version 3 of the GNU Affero General Public License.
 
   "Copyright" also means copyright-like laws that apply to other kinds of
 works, such as semiconductor masks.
@@ -498,8 +484,8 @@ patent against the party.
 
   If you convey a covered work, knowingly relying on a patent license,
 and the Corresponding Source of the work is not available for anyone
-to copy, free of charge and under the terms of this License, through
-a publicly available network server or other readily accessible means,
+to copy, free of charge and under the terms of this License, through a
+publicly available network server or other readily accessible means,
 then you must either (1) cause the Corresponding Source to be so
 available, or (2) arrange to deprive yourself of the benefit of the
 patent license for this particular work, or (3) arrange, in a manner
@@ -593,7 +579,7 @@ to choose that version for the Program.
 
   Later license versions may give you additional or different
 permissions.  However, no additional obligations are imposed on any
-individual or copyright holder as a result of your choosing to follow a
+author or copyright holder as a result of your choosing to follow a
 later version.
 
   15. Disclaimer of Warranty.

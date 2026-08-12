@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Wat voor bad is dit?",
-        "description": "Deze antwoorden bepalen waar de rest van de installatie naar vraagt. Een elektrisch element heeft geen rendementscurve en geen minimale buitentemperatuur, dus die vragen worden overgeslagen in plaats van gesteld en gegokt.",
+        "description": "Deze antwoorden bepalen welke vragen de rest van de installatie stelt.",
         "data": {
           "name": "Naam",
           "unit_system": "Eenheden",
@@ -15,15 +15,15 @@
         "data_description": {
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
-          "pool_kind": "Framebad — een stalen frame met een liner erin, zoals een Intex Metal Frame. Opbouw — vaste wanden van staal of hout die het hele jaar blijven staan. Opblaasbaar — een opgeblazen ring die de wanden omhoog houdt. Ingebouwd — in de grond gebouwd. Dit bepaalt een realistische startwaarde voor het warmteverlies; de echte wordt binnen dagen gemeten.",
-          "heating_source": "Bepaalt welke vragen volgen. Een zonnecollector zit meestal op een handbediende driewegklep, dus de integratie adviseert wanneer je hem opent in plaats van iets te schakelen.",
-          "has_solar_collector": "Aanvinken als je een collector naast een andere verwarming hebt. Gratis warmte gaat altijd vóór betaalde warmte.",
+          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies.",
+          "heating_source": "Bepaalt welke vragen volgen.",
+          "has_solar_collector": "Aanvinken als je een zonnecollector naast een andere verwarming hebt.",
           "name": "Hoe dit bad in Home Assistant heet."
         }
       },
       "pump": {
         "title": "Circulatiepomp",
-        "description": "Fabrikanten geven de pompflow zonder filter. Met een filter erin blijft daar ruwweg {derate}% van over, en dat zakt verder als het filter vervuilt. Heb je de werkelijke flow gemeten, vink dan het vakje aan; dan wordt de waarde ongewijzigd gebruikt.",
+        "description": "Met een filter erin blijft ruwweg {derate}% van de opgegeven flow over. Heb je de werkelijke flow gemeten? Vink het vakje aan.",
         "data": {
           "pump_flow_m3h": "Flow (m³/u)",
           "pump_flow_measured": "Dit is een gemeten waarde, niet uit de brochure",
@@ -53,7 +53,13 @@
       },
       "optional": {
         "title": "Optionele entiteiten",
-        "description": "Elk veld mag leeg blijven; de bijbehorende functie wordt dan uitgeschakeld en gemeld in plaats van dat er iets faalt. Met de tot nu toe ingevulde waarden is er ongeveer {daily_hours} uur filtratie per dag nodig, zo'n {block_minutes} minuten per blok.",
+        "description": "Kies welke sensoren je wilt toevoegen. Elk veld mag leeg blijven.",
+        "menu_options": {
+          "optional_sensors": "Kernsensoren — buitentemperatuur, debiet, weer",
+          "optional_chemistry": "Waterchemie — pH, chloor, broom",
+          "optional_solar": "Zon en prijs — zonneproductie, goedkope prijs",
+          "optional_finish": "Klaar — doorgaan naar review"
+        },
         "data": {
           "air_temp_sensor": "Buitentemperatuur",
           "hp_inlet_sensor": "Inlaattemperatuur warmtepomp",
@@ -109,23 +115,83 @@
       },
       "optional_sensors": {
         "title": "Kernsensoren",
-        "description": "Buitentemperatuur, doorstroming, pompgegevens, en de weer- en afdekentiteiten. Dit zijn de sensoren die de meeste zwembaden hebben."
+        "description": "Buitentemperatuur, doorstroming, pompgegevens, en de weer- en afdekentiteiten. Deze sensoren heeft bijna elk zwembad.",
+        "data": {
+          "air_temp_sensor": "Buitentemperatuur",
+          "pump_inlet_sensor": "Temperatuur pompaanvoer",
+          "pump_outlet_sensor": "Uitlaattemperatuur pomp",
+          "flow_sensor": "Debietmeter",
+          "flow_unit": "Eenheid debietmeter",
+          "pump_power_sensor": "Vermogen pomp",
+          "price_sensor": "Stroomprijs",
+          "weather_entity": "Weerentiteit",
+          "cover_entity": "Afdekhoes",
+          "hp_inlet_sensor": "Inlaattemperatuur warmtepomp",
+          "hp_outlet_sensor": "Uitlaattemperatuur warmtepomp",
+          "hp_power_sensor": "Vermogen warmtepomp"
+        },
+        "data_description": {
+          "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze valt vorstbeveiliging terug op de weer-entiteit.",
+          "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Zou gelijk moeten lopen met de zwembadvoeler.",
+          "pump_outlet_sensor": "Water dat de pomp verlaat. Verschil met inlaat = temperatuurstijging door het systeem.",
+          "flow_sensor": "Debietmeter voor flowbeveiliging en automatische correctie bij vervuild filter.",
+          "flow_unit": "Alleen nodig als de sensor zelf geen eenheid geeft.",
+          "pump_power_sensor": "Opgenomen vermogen van de pomp (als je stekker dat meet).",
+          "price_sensor": "Sensor met de prijs per kWh. Nodig voor prijsoptimalisatie.",
+          "weather_entity": "Terugval bij geen buitensensor.",
+          "cover_entity": "Hoes, schakelaar of input_boolean. Warmteverlies wordt apart geleerd met/zonder hoes.",
+          "hp_inlet_sensor": "Water dat de warmtepomp in gaat.",
+          "hp_outlet_sensor": "Water dat de warmtepomp uit komt. Samen met inlaat = COP.",
+          "hp_power_sensor": "Opgenomen vermogen van de warmtepomp. Nodig voor kosten en COP."
+        }
       },
       "optional_chemistry": {
         "title": "Waterchemie",
-        "description": "pH, chloor, broom, alkaliniteit, cyanuurzuur, hardheid en zout. Dit kunnen sensoren of input_number helpers zijn die je bijwerkt na een test."
+        "description": "pH, chloor, broom, alkaliniteit, cyanuurzuur, hardheid en zout. Dit kunnen sensoren of input_number helpers zijn die je bijwerkt na een test.",
+        "data": {
+          "ph_sensor": "pH-meting",
+          "chlorine_sensor": "Vrij chloor (mg/L)",
+          "total_chlorine_sensor": "Totaal chloor (mg/L)",
+          "bromine_sensor": "Broom (mg/L)",
+          "alkalinity_sensor": "Totale alkaliniteit (ppm)",
+          "cyanuric_sensor": "Cyanuurzuur / stabilisator (ppm)",
+          "hardness_sensor": "Totale hardheid (ppm)",
+          "salt_sensor": "Zout (ppm)"
+        },
+        "data_description": {
+          "ph_sensor": "Een sensor of input_number met je laatste pH-meting.",
+          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor.",
+          "total_chlorine_sensor": "Totaal chloor minus vrij chloor = gebonden chloor. Boven 0,5 mg/L helpt shocken.",
+          "bromine_sensor": "Alleen als je met broom ontsmet in plaats van chloor.",
+          "alkalinity_sensor": "Buffer die pH stabiel houdt.",
+          "cyanuric_sensor": "Stabilisator die chloor tegen zonlicht beschermt.",
+          "hardness_sensor": "Te zacht trekt kalk uit voegen; te hard zet af op de warmtewisselaar.",
+          "salt_sensor": "Alleen bij zoutelektrolyse."
+        }
       },
       "optional_solar": {
         "title": "Zon en prijs",
-        "description": "Zonoproductie, zonverwachting, collectortemperatuur en een goedkope-prijs signaal. Alleen relevant met zonnepanelen of een dynamisch tarief."
+        "description": "Zonoproductie, zonverwachting, collectortemperatuur en een goedkope-prijs signaal. Alleen relevant met zonnepanelen of een dynamisch tarief.",
+        "data": {
+          "solar_power_sensor": "Actuele zonneopbrengst (W)",
+          "solar_forecast_sensor": "Zonneverwachting",
+          "collector_sensor": "Collectortemperatuur",
+          "cheap_price_sensor": "Goedkope prijs signaal"
+        },
+        "data_description": {
+          "solar_power_sensor": "Huidige opbrengst van zonnepanelen in watt.",
+          "solar_forecast_sensor": "Verwachte zonne-energie voor komende uren/dagen.",
+          "collector_sensor": "Temperatuur bij de uitlaat van de zonnecollector.",
+          "cheap_price_sensor": "Signaal dat aangeeft of dit een goedkoop moment is (van dynamische tarief integratie)."
+        }
       },
       "optional_finish": {
         "title": "Klaar",
-        "description": "Doorgaan naar de reviewstap. Alle velden die je leeg laat worden opgeslagen als 'niet geconfigureerd' en de bijbehorende functies worden uitgeschakeld."
+        "description": "Alles is ingesteld. Kies 'Doorgaan' om je configuratie te bekijken en op te slaan. Je kunt later altijd nog wijzigen onder Configureren."
       },
       "summary": {
         "title": "Controleer je installatie",
-        "description": "Controleer je selecties hieronder. Druk op opslaan om de PoolSmart entry te maken, of ga terug in je browser om iets te wijzigen."
+        "description": "Controleer je selecties hieronder. Klik op 'Opslaan' om PoolSmart te activeren. Je kunt later altijd nog wijzigen via Configureren."
       },
       "adopt": {
         "title": "Geleerde geschiedenis gevonden",
@@ -133,7 +199,7 @@
       },
       "heating": {
         "title": "Verwarmingstoestel",
-        "description": "Alleen de vragen die deze verwarmingsbron kan beantwoorden. Heeft je warmtepomp een eigen thermostaat, zet die dan op {recommended_setpoint} °C — je hoogste doel plus twee graden — zodat de software volledige controle houdt en de hardware nog kan ingrijpen als de software uitvalt.",
+        "description": "Vragen voor jouw verwarmingsbron. Heb je een warmtepomp met eigen thermostaat? Zet die dan op {recommended_setpoint} °C.",
         "data": {
           "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
           "hp_thermal_kw": "Thermisch vermogen (kW)",
@@ -144,7 +210,7 @@
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
           "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
-          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "hp_flow_min_site_verified": "Minimaal debiet geverifieerd op deze installatie",
           "collector_margin": "Collector moet warmer zijn dan bad met (°C)"
         },
         "data_description": {
@@ -157,7 +223,7 @@
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
           "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
           "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
-          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
+          "hp_flow_min_site_verified": "Vink aan als je hebt gecontroleerd dat je installatie onder het minimaal debiet draait zonder problemen — een normale temperatuurstijging over de warmtepomp is het bewijs.",
           "collector_margin": "Onder dit verschil levert water door de collector te weinig op om ervoor te circuleren — en onder nul verliest het juist warmte."
         }
       },
@@ -394,7 +460,7 @@
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
           "filter_media": "Filtermedium",
           "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
-          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "hp_flow_min_site_verified": "Minimaal debiet geverifieerd op deze installatie",
           "unit_system": "Eenheden",
           "sanitiser": "Hoe het water ontsmet wordt"
         },
@@ -417,7 +483,7 @@
           "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
           "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
           "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
-          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
+          "hp_flow_min_site_verified": "Vink aan als je hebt gecontroleerd dat je installatie onder het minimaal debiet draait zonder problemen — een normale temperatuurstijging over de warmtepomp is het bewijs.",
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld."
         }
@@ -434,7 +500,7 @@
           "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
           "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
-          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "hp_flow_min_site_verified": "Minimaal debiet geverifieerd op deze installatie",
           "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
           "hp_thermal_kw": "Thermisch vermogen (kW)",
           "max_temp": "Maximale temperatuur (°C)",
@@ -457,7 +523,7 @@
           "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
           "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
           "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
-          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
+          "hp_flow_min_site_verified": "Vink aan als je hebt gecontroleerd dat je installatie onder het minimaal debiet draait zonder problemen — een normale temperatuurstijging over de warmtepomp is het bewijs.",
           "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
           "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
           "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
@@ -488,7 +554,7 @@
           "hp_cop_ref_temp": "Luchttemperatuur bij dat vermogen (°C)",
           "hp_flow_min_blocking": "Verwarmen pauzeren onder de minimale doorstroom",
           "hp_flow_min_m3h": "Minimaal vereiste doorstroom (m³/u)",
-          "hp_flow_min_site_verified": "Brochureminimum geverifieerd voor deze installatie",
+          "hp_flow_min_site_verified": "Minimaal debiet geverifieerd op deze installatie",
           "hp_input_kw": "Elektrisch ingangsvermogen (kW)",
           "hp_thermal_kw": "Thermisch vermogen (kW)",
           "hp_cop_ref": "Rendement (COP) bij de referentietemperatuur"
@@ -506,7 +572,7 @@
           "hp_cop_ref_temp": "De luchttemperatuur waarbij dat warmtevermogen is gemeten. Brochures noemen meestal 26 °C of 24 °C. Weet je het niet, laat dan 26 staan.",
           "hp_flow_min_blocking": "Standaard uit. Brochureminima zijn conservatief en de warmtepomp heeft een eigen flowbeveiliging als hardwarevangnet, dus eronder zakken wordt gemeld als waarschuwing in plaats van de sessie te stoppen. Zet dit aan als je liever hebt dat hij wel stopt.",
           "hp_flow_min_m3h": "De waarde uit de brochure, in m³/u. 2 m³/u is 33 L/min. Veel installaties draaien probleemloos onder het opgegeven minimum, dus dit geeft alleen een waarschuwing tenzij je de optie hieronder aanzet. Zet hem op wat jouw systeem werkelijk haalt om de waarschuwingen te stoppen.",
-          "hp_flow_min_site_verified": "Vink dit aan zodra je hebt vastgesteld dat het systeem de warmte goed afvoert onder de opgegeven minimumwaarde — een normale temperatuurstijging over de warmtepomp is het bewijs. Brochurewaarden gelden voor een algemene installatie en houden geen rekening met leidinglengte, bochten of een driewegklep. Dit dempt een waarschuwing die anders een getal blijft herhalen dat je leidingwerk niet kan halen.",
+          "hp_flow_min_site_verified": "Vink aan als je hebt gecontroleerd dat je installatie onder het minimaal debiet draait zonder problemen — een normale temperatuurstijging over de warmtepomp is het bewijs.",
           "hp_input_kw": "Wat hij aan stroom verbruikt, op het typeplaatje als 'input power' of 'opgenomen vermogen'. Voorbeeld: 0,58 kW. Verwar dit niet met het warmtevermogen.",
           "hp_thermal_kw": "Wat hij aan warmte levert, meestal het getal op de doos zoals '3 kW'. Normaal 4 à 5 keer het opgenomen vermogen.",
           "hp_cop_ref": "Hoeveel kilowatt warmte je krijgt per kilowatt stroom, bij de buitentemperatuur hieronder. Van het typeplaatje — maar de integratie meet binnen een paar sessies je eigen waarde en gebruikt die liever, want een meting op jouw installatie zegt meer dan een meting op een testbank."
@@ -679,10 +745,10 @@
     },
     "pool_kind": {
       "options": {
-        "inflatable": "Opblaasbaar",
-        "frame": "Framebad",
-        "above_ground": "Opbouwbad",
-        "in_ground": "Ingebouwd bad"
+        "inflatable": "Opblaasbaar — opgeblazen ring, houdt wanden rechtop",
+        "frame": "Framebad — stalen frame met liner, zoals Intex Metal Frame",
+        "above_ground": "Opbouwbad — vaste staal/hout wanden, heel jaar overeind",
+        "in_ground": "Ingebouwd bad — in de grond gebouwd"
       }
     }
   },

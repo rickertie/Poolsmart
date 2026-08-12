@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "What kind of pool is this?",
-        "description": "These answers decide what the rest of the setup asks about. An immersion element has no efficiency curve and no minimum outdoor temperature, so those questions are skipped rather than asked and guessed at.",
+        "description": "These answers decide which questions the rest of the setup asks.",
         "data": {
           "name": "Name",
           "unit_system": "Units",
@@ -15,15 +15,15 @@
         "data_description": {
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
           "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing.",
-          "pool_kind": "Frame pool — a steel frame with a liner inside, like an Intex Metal Frame. Above ground — solid steel or timber walls that stay up all year. Inflatable — an inflated ring holding the walls. In ground — built into the ground. This sets a realistic starting figure for heat loss; the real one is measured within days.",
-          "heating_source": "Changes which questions follow. A solar collector is usually on a manual three-way valve, so the integration advises when to open it rather than switching anything.",
-          "has_solar_collector": "Tick if you have a collector alongside another heater. Free heat is always preferred over paid heat.",
+          "pool_kind": "Sets a realistic starting value for heat loss.",
+          "heating_source": "Changes which questions follow.",
+          "has_solar_collector": "Tick if you have a solar collector alongside another heater.",
           "name": "How this pool appears in Home Assistant."
         }
       },
       "pump": {
         "title": "Circulation pump",
-        "description": "Manufacturers specify pump flow without a filter installed. With a filter in line roughly {derate}% remains, and it drops further as the filter fouls. If you have measured the real flow, tick the box and the figure is used as it is.",
+        "description": "With a filter in line roughly {derate}% of the rated flow remains. Have you measured the real flow? Tick the box.",
         "data": {
           "pump_flow_m3h": "Flow (m³/h)",
           "pump_flow_measured": "This is a measured value, not from the datasheet",
@@ -53,7 +53,13 @@
       },
       "optional": {
         "title": "Optional entities",
-        "description": "Every field may be left blank; the matching feature is switched off and reported rather than failing. With the figures entered so far, filtration needs about {daily_hours} hours a day, roughly {block_minutes} minutes per block.",
+        "description": "Choose which sensors to add. Every field may be left blank.",
+        "menu_options": {
+          "optional_sensors": "Core sensors — outdoor temp, flow, weather",
+          "optional_chemistry": "Water chemistry — pH, chlorine, bromine",
+          "optional_solar": "Solar and price — solar production, cheap price signal",
+          "optional_finish": "Done — continue to review"
+        },
         "data": {
           "air_temp_sensor": "Outdoor temperature",
           "hp_inlet_sensor": "Heat pump inlet temperature",
@@ -109,23 +115,83 @@
       },
       "optional_sensors": {
         "title": "Core sensors",
-        "description": "Outdoor temperature, flow, pump data, and the weather and cover entities. These are the sensors most pools have."
+        "description": "Outdoor temperature, flow, pump data, and the weather and cover entities. Most pools have these sensors.",
+        "data": {
+          "air_temp_sensor": "Outdoor temperature",
+          "pump_inlet_sensor": "Pump inlet temperature",
+          "pump_outlet_sensor": "Pump outlet temperature",
+          "flow_sensor": "Flow meter",
+          "flow_unit": "Flow meter unit",
+          "pump_power_sensor": "Pump power",
+          "price_sensor": "Electricity price",
+          "weather_entity": "Weather entity",
+          "cover_entity": "Pool cover",
+          "hp_inlet_sensor": "Heat pump inlet temperature",
+          "hp_outlet_sensor": "Heat pump outlet temperature",
+          "hp_power_sensor": "Heat pump power"
+        },
+        "data_description": {
+          "air_temp_sensor": "Outdoor air at the installation. Frost protection falls back on the weather entity without it.",
+          "pump_inlet_sensor": "Water leaving the pool, before the pump. Should match the pool probe.",
+          "pump_outlet_sensor": "Water leaving the pump. Difference with inlet = temperature rise.",
+          "flow_sensor": "For flow protection and automatic correction as the filter fouls.",
+          "flow_unit": "Only needed if the sensor does not state its own unit.",
+          "pump_power_sensor": "Power draw of the pump (if your plug measures it).",
+          "price_sensor": "Sensor with the price per kWh. Needed for price optimisation.",
+          "weather_entity": "Fallback when no outdoor sensor is configured.",
+          "cover_entity": "Cover, switch or input_boolean. Heat loss is learned separately covered/uncovered.",
+          "hp_inlet_sensor": "Water going into the heat pump.",
+          "hp_outlet_sensor": "Water coming out of the heat pump. Together with inlet = COP.",
+          "hp_power_sensor": "Power draw of the heat pump. Needed for cost and COP."
+        }
       },
       "optional_chemistry": {
         "title": "Water chemistry",
-        "description": "pH, chlorine, bromine, alkalinity, cyanuric acid, hardness, and salt. These can be sensors or input_number helpers you update after a test."
+        "description": "pH, chlorine, bromine, alkalinity, cyanuric acid, hardness, and salt. These can be sensors or input_number helpers you update after a test.",
+        "data": {
+          "ph_sensor": "pH reading",
+          "chlorine_sensor": "Free chlorine (mg/L)",
+          "total_chlorine_sensor": "Total chlorine (mg/L)",
+          "bromine_sensor": "Bromine (mg/L)",
+          "alkalinity_sensor": "Total alkalinity (ppm)",
+          "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
+          "hardness_sensor": "Total hardness (ppm)",
+          "salt_sensor": "Salt (ppm)"
+        },
+        "data_description": {
+          "ph_sensor": "A sensor or input_number with your last pH reading.",
+          "chlorine_sensor": "A sensor or input_number with your last free chlorine reading.",
+          "total_chlorine_sensor": "Total minus free chlorine = combined chlorine. Above 0.5 mg/L, shocking helps more.",
+          "bromine_sensor": "Only if you sanitise with bromine instead of chlorine.",
+          "alkalinity_sensor": "Buffer that holds pH steady.",
+          "cyanuric_sensor": "Stabiliser that shields chlorine from sunlight.",
+          "hardness_sensor": "Too soft pulls calcium from grout; too hard scales the heat exchanger.",
+          "salt_sensor": "Only for salt chlorinators."
+        }
       },
       "optional_solar": {
         "title": "Solar and price",
-        "description": "Solar production, solar forecast, collector temperature, and a cheap-price signal. Only relevant with solar panels or a dynamic tariff."
+        "description": "Solar production, solar forecast, collector temperature, and a cheap-price signal. Only relevant with solar panels or a dynamic tariff.",
+        "data": {
+          "solar_power_sensor": "Current solar production (W)",
+          "solar_forecast_sensor": "Solar forecast",
+          "collector_sensor": "Collector temperature",
+          "cheap_price_sensor": "Cheap price signal"
+        },
+        "data_description": {
+          "solar_power_sensor": "Current solar production in watts.",
+          "solar_forecast_sensor": "Expected solar energy for the coming hours/days.",
+          "collector_sensor": "Temperature at the solar collector outlet.",
+          "cheap_price_sensor": "Signal indicating whether now is a cheap moment (from a dynamic tariff integration)."
+        }
       },
       "optional_finish": {
         "title": "Done",
-        "description": "Continue to the review step. All fields you left blank are saved as 'not configured' and their features are switched off."
+        "description": "Everything is set up. Choose 'Continue' to review your configuration and save. You can always change settings later via Configure."
       },
       "summary": {
         "title": "Review your setup",
-        "description": "Check your selections below. Press submit to create the PoolSmart entry, or go back in your browser to change something."
+        "description": "Check your selections below. Click 'Save' to activate PoolSmart. You can always change settings later via Configure."
       },
       "adopt": {
         "title": "Learned history found",
@@ -133,7 +199,7 @@
       },
       "heating": {
         "title": "Heating appliance",
-        "description": "Only the questions this heating source can answer. If your heat pump has a thermostat of its own, set it to {recommended_setpoint} °C — your highest target plus two degrees — so the software keeps full control and the hardware can still step in if the software fails.",
+        "description": "Questions for your heating source. Got a heat pump with its own thermostat? Set it to {recommended_setpoint} °C.",
         "data": {
           "hp_input_kw": "Electrical input power (kW)",
           "hp_thermal_kw": "Thermal output (kW)",
@@ -144,7 +210,7 @@
           "hp_air_temp_max": "Maximum air temperature (°C)",
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
           "hp_flow_min_blocking": "Pause heating below the minimum flow",
-          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation",
+          "hp_flow_min_site_verified": "Minimum flow verified for this installation",
           "collector_margin": "Collector must be warmer by (°C)"
         },
         "data_description": {
@@ -157,7 +223,7 @@
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
-          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach.",
+          "hp_flow_min_site_verified": "Tick if you confirmed your system runs fine below the minimum flow — a normal temperature rise across the heat pump is the evidence.",
           "collector_margin": "Below this difference, water sent through the collector gains too little to be worth circulating — and below zero it actively loses heat."
         }
       },
@@ -394,7 +460,7 @@
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
           "filter_media": "Filter medium",
           "hp_flow_min_blocking": "Pause heating below the minimum flow",
-          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation",
+          "hp_flow_min_site_verified": "Minimum flow verified for this installation",
           "unit_system": "Units",
           "sanitiser": "How the water is sanitised"
         },
@@ -417,7 +483,7 @@
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
           "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
-          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach.",
+          "hp_flow_min_site_verified": "Tick if you confirmed your system runs fine below the minimum flow — a normal temperature rise across the heat pump is the evidence.",
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
           "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing."
         }
@@ -434,7 +500,7 @@
           "hp_cop_ref_temp": "Air temperature for that output (°C)",
           "hp_flow_min_blocking": "Pause heating below the minimum flow",
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
-          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation",
+          "hp_flow_min_site_verified": "Minimum flow verified for this installation",
           "hp_input_kw": "Electrical input power (kW)",
           "hp_thermal_kw": "Thermal output (kW)",
           "max_temp": "Maximum temperature (°C)",
@@ -457,7 +523,7 @@
           "hp_cop_ref_temp": "The air temperature the heat output was measured at. Datasheets usually say 26 °C or 24 °C. If unsure, leave at 26.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
-          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach.",
+          "hp_flow_min_site_verified": "Tick if you confirmed your system runs fine below the minimum flow — a normal temperature rise across the heat pump is the evidence.",
           "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
           "hp_thermal_kw": "The heat it delivers, usually the headline figure such as '3 kW'. Normally 4 to 5 times the input power.",
           "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat.",
@@ -488,7 +554,7 @@
           "hp_cop_ref_temp": "Air temperature for that output (°C)",
           "hp_flow_min_blocking": "Pause heating below the minimum flow",
           "hp_flow_min_m3h": "Minimum flow required (m³/h)",
-          "hp_flow_min_site_verified": "Datasheet minimum verified for this installation",
+          "hp_flow_min_site_verified": "Minimum flow verified for this installation",
           "hp_input_kw": "Electrical input power (kW)",
           "hp_thermal_kw": "Thermal output (kW)",
           "hp_cop_ref": "Efficiency (COP) at the reference temperature"
@@ -506,7 +572,7 @@
           "hp_cop_ref_temp": "The air temperature the heat output was measured at. Datasheets usually say 26 °C or 24 °C. If unsure, leave at 26.",
           "hp_flow_min_blocking": "Off by default. Datasheet minima are conservative and the heat pump has its own flow switch as a hardware backstop, so falling below the figure is reported as a warning rather than stopping the session. Turn this on if you would rather it stopped.",
           "hp_flow_min_m3h": "The datasheet figure, in m³/h. 2 m³/h is 33 L/min. Many installations run below the quoted minimum without trouble, so this only warns unless you switch on the option below. Set it to what your system actually achieves to stop the warnings.",
-          "hp_flow_min_site_verified": "Tick this once you have confirmed the system moves heat properly below the quoted minimum — a normal temperature rise across the heat pump is the evidence. Datasheet figures are written for a generic installation and take no account of pipe length, elbows or a diverter valve. This silences a warning that otherwise repeats a number the plumbing cannot reach.",
+          "hp_flow_min_site_verified": "Tick if you confirmed your system runs fine below the minimum flow — a normal temperature rise across the heat pump is the evidence.",
           "hp_input_kw": "The electricity it draws, on the type plate as 'input power' or 'rated input'. Example: 0.58 kW. Do not confuse this with heat output.",
           "hp_thermal_kw": "The heat it delivers, usually the headline figure such as '3 kW'. Normally 4 to 5 times the input power.",
           "hp_cop_ref": "How many kilowatts of heat you get per kilowatt of electricity, at the outdoor temperature below. From the datasheet — but the integration measures your own within a few sessions and prefers that, because a figure measured on your installation beats one measured on a test bench."
@@ -679,10 +745,10 @@
     },
     "pool_kind": {
       "options": {
-        "inflatable": "Inflatable",
-        "frame": "Frame pool",
-        "above_ground": "Above ground",
-        "in_ground": "In ground"
+        "inflatable": "Inflatable — inflated ring holding the walls up",
+        "frame": "Frame pool — steel frame with liner, like Intex Metal Frame",
+        "above_ground": "Above ground — solid steel or timber walls, stays up all year",
+        "in_ground": "In ground — built into the ground"
       }
     }
   },

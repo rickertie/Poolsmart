@@ -47,6 +47,13 @@ SWITCH = selector.EntitySelector(
 )
 WEATHER = selector.EntitySelector(selector.EntitySelectorConfig(domain="weather"))
 
+OPTIONAL_MENU_ITEMS = [
+    "optional_sensors",
+    "optional_chemistry",
+    "optional_solar",
+    "optional_finish",
+]
+
 
 def _positive(minimum: float, maximum: float, step: float = 0.01):
     return selector.NumberSelector(
@@ -526,12 +533,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_menu(
             step_id="optional",
-            menu_options=[
-                "optional_sensors",
-                "optional_chemistry",
-                "optional_solar",
-                "optional_finish",
-            ],
+            menu_options=OPTIONAL_MENU_ITEMS,
             description_placeholders={
                 **self._progress("optional"),
                 "daily_hours": f"{daily_h:.1f}",
@@ -547,12 +549,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update({k: v for k, v in user_input.items() if v})
             return self.async_show_menu(
                 step_id="optional",
-                menu_options=[
-                    "optional_sensors",
-                    "optional_chemistry",
-                    "optional_solar",
-                    "optional_finish",
-                ],
+                menu_options=OPTIONAL_MENU_ITEMS,
             )
         source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
         from .core.config import SOURCE_TRAITS, HeatingSource
@@ -577,12 +574,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update({k: v for k, v in user_input.items() if v})
             return self.async_show_menu(
                 step_id="optional",
-                menu_options=[
-                    "optional_sensors",
-                    "optional_chemistry",
-                    "optional_solar",
-                    "optional_finish",
-                ],
+                menu_options=OPTIONAL_MENU_ITEMS,
             )
         fields: dict = {}
         fields.update(_chemistry_fields())
@@ -600,12 +592,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
             self._data.update({k: v for k, v in user_input.items() if v})
             return self.async_show_menu(
                 step_id="optional",
-                menu_options=[
-                    "optional_sensors",
-                    "optional_chemistry",
-                    "optional_solar",
-                    "optional_finish",
-                ],
+                menu_options=OPTIONAL_MENU_ITEMS,
             )
         source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
         has_solar = bool(self._data.get(c.CONF_HAS_SOLAR_COLLECTOR, False))
