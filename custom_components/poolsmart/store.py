@@ -16,7 +16,7 @@ import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
 from homeassistant.core import HomeAssistant
@@ -492,17 +492,17 @@ class PoolStore:
         incoming = LearnedValues.from_dict(learned)
         taken: list[str] = []
 
-        for field in (
+        for attr in (
             "heating_rate_c_per_h",
             "heat_loss_c_per_h",
             "heat_loss_covered_c_per_h",
             "measured_flow_m3h",
         ):
-            if getattr(self.learned, field) is None:
-                value = getattr(incoming, field)
+            if getattr(self.learned, attr) is None:
+                value = getattr(incoming, attr)
                 if value is not None:
-                    setattr(self.learned, field, value)
-                    taken.append(field)
+                    setattr(self.learned, attr, value)
+                    taken.append(attr)
 
         if not self.learned.cop_by_air_bucket and incoming.cop_by_air_bucket:
             self.learned.cop_by_air_bucket = dict(incoming.cop_by_air_bucket)
@@ -511,14 +511,14 @@ class PoolStore:
             )
             taken.append("cop_by_air_bucket")
 
-        for field in (
+        for attr in (
             "session_count",
             "heating_rate_sessions",
             "heat_loss_samples",
             "heat_loss_covered_samples",
         ):
-            if not getattr(self.learned, field):
-                setattr(self.learned, field, getattr(incoming, field))
+            if not getattr(self.learned, attr):
+                setattr(self.learned, attr, getattr(incoming, attr))
 
         # The logs are the evidence the figures were derived from; adopting a
         # summary without them leaves numbers nothing can check or improve.

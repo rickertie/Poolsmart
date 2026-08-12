@@ -21,7 +21,7 @@ from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, STORAGE_KEY
+from .const import STORAGE_KEY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,7 +74,9 @@ class Orphan:
         if self.doses:
             parts.append(f"{self.doses} recorded doses")
         summary = ", ".join(parts) if parts else "no learned values"
-        return f"{summary} — last written {self.modified:%-d %B %Y}"
+        # %-d (no leading zero) is a glibc extension: it raises on Windows
+        # Python builds, so the day is formatted separately instead.
+        return f"{summary} — last written {self.modified.day} {self.modified:%B %Y}"
 
     def as_dict(self) -> dict:
         return {

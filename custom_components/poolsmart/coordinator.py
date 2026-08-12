@@ -8,7 +8,6 @@ it must never contain a rule about when something should run.
 from __future__ import annotations
 
 import logging
-from dataclasses import asdict
 from datetime import datetime, time, timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -987,7 +986,6 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         return flow * delta * 1.163
 
     def _finish_session(self, record: learning.SessionRecord, config: PoolConfig) -> None:
-        verdict = learning.assess(record, config)
         measurements = learning.assess_measurements(record, config)
 
         payload = record.as_dict()
