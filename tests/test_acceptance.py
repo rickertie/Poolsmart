@@ -626,7 +626,7 @@ def test_t34_flow_unit_conversion():
         / "coordinator.py",
     )
     source = spec.origin
-    text = Path(source).read_text()
+    text = Path(source).read_text(encoding="utf-8")
 
     # The table has to exist and cover the units pool hardware actually uses.
     assert "FLOW_UNIT_FACTORS" in text

@@ -219,7 +219,7 @@ def test_t91b_saving_returns_to_the_menu():
 def test_t91c_every_menu_item_is_translated():
     for language in ("en", "nl"):
         translations = json.loads(
-            (ROOT / "translations" / f"{language}.json").read_text()
+            (ROOT / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         menu = translations["options"]["step"]["init"]["menu_options"]
         for item in (
@@ -468,7 +468,6 @@ def test_t97_every_flow_step_is_translated():
     dropdown *options* were translated and never that the steps holding them
     were.
     """
-    sys.path.insert(0, str(ROOT))
     source = (ROOT / "config_flow.py").read_text()
 
     config_flow = source[
@@ -480,7 +479,7 @@ def test_t97_every_flow_step_is_translated():
 
     for language in ("en", "nl"):
         translations = json.loads(
-            (ROOT / "translations" / f"{language}.json").read_text()
+            (ROOT / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         for section, blob in (
             ("config", config_flow),
@@ -494,7 +493,6 @@ def test_t97_every_flow_step_is_translated():
 
 def test_t97b_every_field_on_screen_has_a_label():
     """A field with no label shows its raw key, or nothing at all."""
-    sys.path.insert(0, str(ROOT))
     source = (ROOT / "config_flow.py").read_text()
     options_flow = source[source.index("class PoolSmartOptionsFlow") :]
 
@@ -503,7 +501,7 @@ def test_t97b_every_field_on_screen_has_a_label():
 
     for language in ("en", "nl"):
         translations = json.loads(
-            (ROOT / "translations" / f"{language}.json").read_text()
+            (ROOT / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         for step in re.findall(r"async def async_step_(\w+)\(", options_flow):
             if step == "init":
@@ -529,7 +527,7 @@ def test_t97c_no_orphan_translations():
 
     for language in ("en", "nl"):
         translations = json.loads(
-            (ROOT / "translations" / f"{language}.json").read_text()
+            (ROOT / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         orphans = set(translations["config"]["step"]) - steps
         assert not orphans, f"{language}: translations with no step: {sorted(orphans)}"
@@ -537,7 +535,6 @@ def test_t97c_no_orphan_translations():
 
 def test_t97d_the_user_step_describes_what_it_asks():
     """Fields moved to the pool step; their descriptions did not move with them."""
-    sys.path.insert(0, str(ROOT))
     source = (ROOT / "config_flow.py").read_text()
 
     kind = re.search(r"def _kind_schema\(.*?(?=\ndef )", source, re.S).group(0)
@@ -550,7 +547,7 @@ def test_t97d_the_user_step_describes_what_it_asks():
 
     for language in ("en", "nl"):
         translations = json.loads(
-            (ROOT / "translations" / f"{language}.json").read_text()
+            (ROOT / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         described = set(translations["config"]["step"]["user"]["data"])
         assert described == asked, (
@@ -571,7 +568,7 @@ def test_t98_pool_kind_is_explained_by_example():
     """
     for language in ("en", "nl"):
         translations = json.loads(
-            (ROOT / "translations" / f"{language}.json").read_text()
+            (ROOT / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         help_text = translations["config"]["step"]["user"]["data_description"][
             "pool_kind"

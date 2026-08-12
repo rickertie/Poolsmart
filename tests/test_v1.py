@@ -334,8 +334,8 @@ def test_t63_flow_unit_slugs_resolve():
     import re
 
     root = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
-    coordinator = (root / "coordinator.py").read_text()
-    config_flow = (root / "config_flow.py").read_text()
+    coordinator = (root / "coordinator.py").read_text(encoding="utf-8")
+    config_flow = (root / "config_flow.py").read_text(encoding="utf-8")
 
     factors = re.search(
         r"FLOW_UNIT_FACTORS = \{(.*?)\n\}", coordinator, re.S
@@ -372,7 +372,7 @@ def test_t63b_selector_options_have_translations():
         options = set(re.findall(r'"([^"]+)"', raw))
         for language in ("en", "nl"):
             translations = json.loads(
-                (root / "translations" / f"{language}.json").read_text()
+                (root / "translations" / f"{language}.json").read_text(encoding="utf-8")
             )
             available = set(
                 translations.get("selector", {}).get(key, {}).get("options", {})
@@ -460,7 +460,7 @@ def test_t65_manifest_keys_sorted_hassfest_style():
         / "poolsmart"
         / "manifest.json"
     )
-    manifest = json.loads(path.read_text())
+    manifest = json.loads(path.read_text(encoding="utf-8"))
     keys = list(manifest.keys())
 
     assert keys[0] == "domain"
@@ -483,7 +483,7 @@ def test_t65b_translation_selector_keys_match_hassfest_regex():
 
     for language in ("en", "nl"):
         translations = json.loads(
-            (root / "translations" / f"{language}.json").read_text()
+            (root / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         for selector_key, selector in translations.get("selector", {}).items():
             for option in selector.get("options", {}):
@@ -557,7 +557,7 @@ def test_t67_pump_outlet_is_its_own_field():
 
     for language in ("en", "nl"):
         translations = json.loads(
-            (root / "translations" / f"{language}.json").read_text()
+            (root / "translations" / f"{language}.json").read_text(encoding="utf-8")
         )
         for section in (
             translations["config"]["step"]["optional"],

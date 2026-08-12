@@ -20,8 +20,6 @@ replace a module that already exists.
 
 from __future__ import annotations
 
-import asyncio
-
 import importlib.util
 import sys
 import types
@@ -65,7 +63,18 @@ def install() -> None:
     # Imported here rather than at module level: on a runner with the real
     # package installed this module is imported but stubs nothing, and there is
     # no reason to drag mock in for that.
-    from unittest.mock import MagicMock
+    #
+    # The poolsmart directory on sys.path shadows stdlib modules like ``select``.
+    # unittest.mock pulls in asyncio, which imports select through socket and
+    # selectors. Without this, the local select.py is loaded and fails trying
+    # to import homeassistant. Pull the directory off sys.path for this import.
+    _root = str(ROOT)
+    _count = sys.path.count(_root)
+    sys.path[:] = [p for p in sys.path if p != _root]
+    try:
+        from unittest.mock import MagicMock
+    finally:
+        sys.path[:0] = [_root] * _count
 
     for name in (
         "homeassistant",

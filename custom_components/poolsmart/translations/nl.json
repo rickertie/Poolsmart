@@ -15,7 +15,7 @@
         "data_description": {
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
-          "pool_kind": "Bepaalt een realistische startwaarde voor het warmteverlies.",
+          "pool_kind": "Een ongeïsoleerd opblaasbaar bad verliest warmte een veelvoud sneller dan een ingebouwd bad. Een framebad zoals Intex Metal Frame zit ertussenin. Kies die die bij uw bad past — het is alleen een startpunt, en de echte waarde wordt binnen dagen gemeten.",
           "heating_source": "Bepaalt welke vragen volgen.",
           "has_solar_collector": "Aanvinken als je een zonnecollector naast een andere verwarming hebt.",
           "name": "Hoe dit bad in Home Assistant heet."

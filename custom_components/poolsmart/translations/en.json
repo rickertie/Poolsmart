@@ -15,7 +15,7 @@
         "data_description": {
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
           "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing.",
-          "pool_kind": "Sets a realistic starting value for heat loss.",
+          "pool_kind": "An uninsulated inflatable loses heat several times faster than a built-in pool. A frame pool like Intex Metal Frame sits in between. Pick the one that matches your pool — it is only a starting point, and the real figure is measured within days.",
           "heating_source": "Changes which questions follow.",
           "has_solar_collector": "Tick if you have a solar collector alongside another heater.",
           "name": "How this pool appears in Home Assistant."
