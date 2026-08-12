@@ -256,11 +256,13 @@ def test_t74_cop_counts_are_backfilled():
         {"usable": True, "measured_cop": 3.3, "air_avg": 26.0},
         {"usable": True, "measured_cop": 3.4, "air_avg": 27.0},
         {"usable": True, "measured_cop": 3.5, "air_avg": 28.0},
+        {"usable": True, "measured_cop": 3.6, "air_avg": 26.5},
+        {"usable": True, "measured_cop": 3.7, "air_avg": 27.5},
         {"usable": False, "measured_cop": None, "air_avg": 26.0},
     ]
 
     counts = learning.recover_cop_counts(curve, sessions)
-    assert counts["25-30"] == 3
+    assert counts["25-30"] == 5
     # A bucket with no surviving sessions gets one: enough to show the value
     # exists, not enough to trust it for planning.
     assert counts["30-35"] == 1

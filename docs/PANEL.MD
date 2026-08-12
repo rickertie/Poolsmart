@@ -13,7 +13,7 @@ Lovelace dashboards (a separate interface for household members), see
 ## What It Is
 
 A sidebar panel at `/poolsmart` with six tabs: overview, planning, sessions,
-learning, settings and diagnostics. It is written as a plain custom element with
+learning, settings, and diagnostics. It is written as a plain custom element with
 no build step and no external imports, so it keeps working without internet.
 
 The panel is for whoever maintains the system. The Lovelace page in
@@ -22,7 +22,7 @@ thing.
 
 ---
 
-## Tabs
+## Tabs Overview
 
 | Tab | What you will find |
 |---|---|
@@ -32,6 +32,62 @@ thing.
 | Learning | Learned heat loss, heating rate, and COP curve with confidence bars |
 | Settings | Quick access to common settings without opening the full options flow |
 | Diagnostics | Full ladder trace, decision log, faults, and export button |
+
+---
+
+## Tab Details & Screenshots
+
+### 1. Overview Tab
+Provides a real-time summary of the pool state, active operating mode, live temperatures, and the primary reason behind the decision engine's last action.
+
+<p align="center">
+  <img src="images/panel-overview.svg" width="750" alt="PoolSmart Overview Tab">
+</p>
+
+---
+
+### 2. Planning Tab
+Displays the automated heating schedule, real-time dynamic energy price forecasts, and target temperatures for scheduled swim sessions.
+
+<p align="center">
+  <img src="images/panel-planning.svg" width="750" alt="PoolSmart Planning Tab">
+</p>
+
+---
+
+### 3. Sessions Tab
+Logs past heating and filtration cycles, displaying evaluated metrics, learned parameter updates, and reasons for any rejected runs.
+
+<p align="center">
+  <img src="images/panel-sessions.svg" width="750" alt="PoolSmart Sessions Tab">
+</p>
+
+---
+
+### 4. Learning Tab
+Visualizes the self-learning engine's performance models, including heat loss calculations, heating rate estimations, and the active COP curve with confidence margins.
+
+<p align="center">
+  <img src="images/panel-learning.svg" width="750" alt="PoolSmart Learning Tab">
+</p>
+
+---
+
+### 5. Settings Tab
+Offers quick access to frequently adjusted operational targets and overrides without needing to open the main Home Assistant integration configuration wizard.
+
+<p align="center">
+  <img src="images/panel-settings.svg" width="750" alt="PoolSmart Settings Tab">
+</p>
+
+---
+
+### 6. Diagnostics Tab
+Exposes full decision ladder traces, detailed event logs, system fault notifications, and an export button for diagnostic data.
+
+<p align="center">
+  <img src="images/panel-diagnostics.svg" width="750" alt="PoolSmart Diagnostics Tab">
+</p>
 
 ---
 

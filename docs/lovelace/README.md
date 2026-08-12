@@ -28,7 +28,7 @@ mistake on your part.
 
 Everything assumes the integration is called **Pool**, the default, giving ids
 like `sensor.pool_status`. Named it something else? Find and replace `pool_` with
-your own slug.
+your own.
 
 The part after the prefix is always English and never follows the Home Assistant
 language setting. The names shown in the interface are still translated, so you
@@ -37,15 +37,6 @@ deliberate: names are for reading, ids are for referring to, and anything that
 gets shared — a dashboard, an automation, a forum post — needs the id to be the
 same everywhere.
 
-### Upgrading from Before 0.7.0
-
-Versions before 0.7.0 let Home Assistant build the id from the translated name,
-so a Dutch install ended up with `sensor.pool_klaar_om`. The registry keeps
-whatever id it assigned first, so 0.7.0 renames them once on startup.
-
-Nothing is needed from you, but do check anything that referred to the old names.
-The Home Assistant log lists every rename, so search it for "PoolSmart renamed".
-An id already taken by something else is left alone and logged as a warning.
 
 ## Custom Cards
 
@@ -84,8 +75,5 @@ This dashboard is for using the pool. The panel is for understanding it.
 
 - [README](../../README.md) — Main project documentation.
 - [dashboard.yaml](dashboard.yaml) — Complete three-tab dashboard configuration.
-- [simple.yaml](simple.yaml) — Simplified single-view dashboard for household
-  members.
-- [simple_page.yaml](simple_page.yaml) — Single-page variant.
 - [docs/SENSORS.MD](../SENSORS.MD) — Sensor mapping & calibration.
 - [docs/PANEL.MD](../PANEL.MD) — The management panel (a separate interface).

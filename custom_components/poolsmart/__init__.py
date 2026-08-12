@@ -152,6 +152,33 @@ async def _async_migrate_entity_ids(hass: HomeAssistant, entry: ConfigEntry) -> 
     )
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate a config entry to the latest version.
+
+    Home Assistant calls this during setup if ``entry.version`` is lower than
+    the ``VERSION`` declared in the ``ConfigFlow``. Each migration step bumps
+    the version by one, so a v1 entry passes through every intermediate step on
+    its way to the current version instead of being migrated in one opaque leap.
+
+    Returns ``True`` so setup continues regardless: a migration that partially
+    fails still leaves a usable entry, and the version is only advanced once the
+    data is actually in the expected shape.
+    """
+    if entry.version == 1:
+        # Version 2 placeholder: no structural changes yet. Add migration logic
+        # here when the ConfigFlow VERSION is bumped to 2, for example:
+        #
+        #   data = {**entry.data}
+        #   data["some_new_key"] = default_value
+        #   hass.config_entries.async_update_entry(entry, data=data, version=2)
+        #
+        # Returning True without bumping is safe: HA re-runs this on the next
+        # startup until the version matches the flow.
+        pass
+
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up PoolSmart from a config entry."""
     await _async_migrate_entity_ids(hass, entry)

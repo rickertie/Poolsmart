@@ -22,6 +22,11 @@ UPDATE_INTERVAL = timedelta(seconds=30)
 STORAGE_KEY = f"{DOMAIN}.state"
 STORAGE_VERSION = 1
 
+#: Internal data schema version, independent of HA's STORAGE_VERSION.
+#: Bumped when the serialized dict structure changes and old data needs
+#: migration to be parseable by the current code.
+DATA_VERSION = 1
+
 #: How much quieter the debounced store save is allowed to get.
 #:
 #: Quiet saves -- a dose logged, a learned value reset -- do not need their own
@@ -36,6 +41,9 @@ DECISION_LOG_SIZE = 100
 
 #: Number of finished heating sessions kept in the log.
 SESSION_LOG_SIZE = 60
+
+#: Number of days of runtime summaries kept before the oldest is dropped.
+DAILY_SUMMARY_MAX_DAYS = 90
 
 # -- Events, which is how decisions reach the Home Assistant logbook -------
 EVENT_DECISION = f"{DOMAIN}_decision"
@@ -219,6 +227,7 @@ CONF_SWIM_TIME = "swim_time"
 CONF_SWIM_TIME_2 = "swim_time_2"
 CONF_SWIM_DAYS = "swim_days"
 CONF_NOTIFY_TARGETS = "notify_targets"
+CONF_PRIVACY_LEVEL = "privacy_level"
 CONF_CHEMISTRY_MINUTES = "chemistry_cycle_minutes"
 CONF_ACID_PRODUCT = "acid_product"
 CONF_CHLORINE_PRODUCT = "chlorine_product"

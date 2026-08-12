@@ -130,12 +130,36 @@ class Advisor:
                     out.append(item)
             return out
 
+        def strip_timestamps(entries: list[dict]) -> list[dict]:
+            cleaned = []
+            for item in entries:
+                cleaned.append(
+                    {k: v for k, v in item.items() if k not in ("start", "end", "at")}
+                )
+            return cleaned
+
+        def summarize_sessions(entries: list[dict]) -> dict:
+            if not entries:
+                return {"count": 0}
+            cops = [e.get("measured_cop") for e in entries if e.get("measured_cop") is not None]
+            rates = [e.get("heating_rate") for e in entries if e.get("heating_rate") is not None]
+            summary = {
+                "count": len(entries),
+                "average_cop": round(sum(cops) / len(cops), 3) if cops else None,
+                "average_heating_rate_c_per_h": (
+                    round(sum(rates) / len(rates), 4) if rates else None
+                ),
+            }
+            return summary
+
         state = self.coordinator.data.get("state") if self.coordinator.data else None
         verdict, explanation, numbers = (
             safety.flow_adequacy(state, config) if state else ("unknown", "", {})
         )
 
-        return {
+        privacy_level = getattr(config, "privacy_level", "standard")
+
+        payload: dict = {
             "flow_adequacy": {
                 "verdict": verdict,
                 "explanation": explanation,
@@ -149,15 +173,32 @@ class Advisor:
                 ),
             },
             "pool_volume_l": config.pool.volume_l,
-            "daily_filtration_hours": round(config.daily_filtration_hours(None, store.learned.measured_flow_m3h), 2),
+            "daily_filtration_hours": round(
+                config.daily_filtration_hours(None, store.learned.measured_flow_m3h), 2
+            ),
             "turnover_factor": config.filtration.turnover_factor,
             "target_temp": self.coordinator.target_temp,
-            "learned": store.learned.as_dict(),
-            "sessions": recent(store.session_log)[-20:],
-            "decisions": recent(store.decision_log)[-40:],
-            "energy_today_kwh": round(store.energy_today_kwh, 2),
-            "cost_today": round(store.cost_today, 2),
         }
+
+        sessions = recent(store.session_log)[-20:]
+        decisions = recent(store.decision_log)[-40:]
+
+        if privacy_level == "minimal":
+            payload["sessions"] = summarize_sessions(sessions)
+            payload["learned"] = store.learned.as_dict()
+        elif privacy_level == "standard":
+            payload["learned"] = store.learned.as_dict()
+            payload["sessions"] = strip_timestamps(sessions)
+            payload["decisions"] = strip_timestamps(decisions)
+            payload["energy_today_kwh"] = round(store.energy_today_kwh, 2)
+        else:
+            payload["learned"] = store.learned.as_dict()
+            payload["sessions"] = sessions
+            payload["decisions"] = decisions
+            payload["energy_today_kwh"] = round(store.energy_today_kwh, 2)
+            payload["cost_today"] = round(store.cost_today, 2)
+
+        return payload
 
     # -- Running -----------------------------------------------------------
 

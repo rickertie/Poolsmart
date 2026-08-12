@@ -1,4 +1,4 @@
-name: Tests
+name: CI & Validation
 
 on:
   push:
@@ -7,7 +7,30 @@ on:
     branches: [main]
 
 jobs:
+  hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: HACS Action
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    name: Hassfest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Hassfest Action
+        uses: home-assistant/actions/hassfest@master
+
   test:
+    name: Python Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

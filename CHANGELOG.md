@@ -16,6 +16,82 @@ For release notes on major milestones, see
 [docs/RELEASE_NOTES_1.0.0.md](docs/RELEASE_NOTES_1.0.0.md) and
 [docs/RELEASE_NOTES_0.8.0.md](docs/RELEASE_NOTES_0.8.0.md).
 
+## [Unreleased] — Resilience, Performance & User Control
+
+Based on comprehensive code review. See
+[docs/.AI_RECOMMENDATIONS/CODE_REVIEW_RECOMMENDATIONS.md](.AI_RECOMMENDATIONS/CODE_REVIEW_RECOMMENDATIONS.md)
+for the full analysis.
+
+### Added
+
+- **Config entry migration framework.** Added `async_migrate_entry` to
+  `__init__.py` with stepwise version handling, so future ConfigFlow version
+  upgrades no longer break existing installations
+- **Atomic state writes.** `store.py` now uses a temp-file-then-rename pattern
+  via `_async_save_atomic`, preventing JSON corruption on crash mid-write
+- **Switch state verification.** The coordinator now tracks desired switch states
+  and verifies actual states on subsequent ticks. After 3 consecutive
+  mismatches (90s), raises `pump_switch_unresponsive` or
+  `heat_pump_switch_unresponsive` fault
+- **Sensor value range validation.** Implausible readings (e.g., water temp
+  outside -5°C to 55°C) are now rejected at ingestion in `_read()` and trigger
+  bridging from the last good value
+- **Import value range validation.** `validate_import` in `recovery.py` now
+  rejects exports with physically impossible learned values (heat loss >2 °C/h,
+  COP outside 1–10, etc.)
+- **NearMissLog persistence.** Near-miss tallies are now persisted in the store
+  and survive restarts
+- **Daily runtime summaries.** Day roll now captures a compact summary
+  (runtime, energy, cost) before clearing intervals. Capped at 90 days,
+  accessible via `store.daily_summary()`
+- **Internal data schema versioning.** Store now includes `data_version` field
+  with `_migrate_data()` method for future schema migrations
+- **AI privacy tiers.** Added configurable `privacy_level` (minimal/standard/full)
+  to control what operational data is shared with the external LLM advisor
+- **WebSocket management API.** Added `poolsmart/set_mode`,
+  `poolsmart/set_target`, and `poolsmart/reset_learning` commands for direct
+  panel control without service calls
+- **DAILY_SUMMARY_MAX_DAYS constant.** Controls how many daily summaries are
+  retained (default: 90)
+
+### Changed
+
+- **Chemistry caching.** `water_chemistry` property in coordinator now caches
+  its result per-tick, invalidated at tick start and on dose/water-test events.
+  Eliminates redundant rebuilds when accessed by multiple sensors
+- **Runtime tracking O(1).** `runtime_hours()` now uses `_closed_hours` running
+  total instead of iterating all intervals, reducing from O(n) to O(1)
+- **Learning value decay.** `capped_update` in `core/learning.py` now applies
+  age-based decay (half-life: 90 days), allowing faster adaptation when learned
+  values are outdated
+- **COP confidence threshold.** Increased from 3 to 5 sessions per bucket before
+  trusting a measured COP value for planning
+- **Deque-based log rotation.** Decision, session, and dose logs now use
+  `collections.deque` with `maxlen` for O(1) appends and automatic bounds
+  management
+- **Config flow deduplication.** Extracted `_core_environmental_fields()` and
+  `_chemistry_fields()` helpers to eliminate schema duplication between setup
+  wizard and options flow
+
+### Fixed
+
+- **Block window unpacking crash.** Added length validation before unpacking
+  time pairs in `_build_state()`, preventing `ValueError` on malformed config
+- **Service unit selector mismatch.** `services.yaml` now offers all units
+  accepted by the handler (ml, g, l, kg)
+- **Duplicate panel JS removed.** Removed root-level `poolsmart-panel.js`
+  (outdated 16 KB version); active file remains `www/poolsmart-panel.js` (47 KB)
+- **Panel render error boundary.** `_renderTab` now catches render errors and
+  displays a localized error banner instead of breaking the entire panel
+
+### Security
+
+- **WebSocket admin protection.** Existing `ws_clear_log` already required admin;
+  new management commands (`set_mode`, `set_target`, `reset_learning`) follow
+  the same pattern
+
+---
+
 ## [1.4.0] — No More "Submit And Pray"
 
 ### Added

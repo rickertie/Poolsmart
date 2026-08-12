@@ -402,21 +402,30 @@ class PoolSmartPanel extends HTMLElement {
   }
 
   _renderTab(s) {
-    switch (this._tab) {
-      case "planning":
-        return this._planning(s);
-      case "water":
-        return this._water(s);
-      case "sessions":
-        return this._sessions(s);
-      case "learning":
-        return this._learning(s);
-      case "settings":
-        return this._settings(s);
-      case "diagnostics":
-        return this._diagnostics(s);
-      default:
-        return this._overview(s);
+    try {
+      switch (this._tab) {
+        case "planning":
+          return this._planning(s);
+        case "water":
+          return this._water(s);
+        case "sessions":
+          return this._sessions(s);
+        case "learning":
+          return this._learning(s);
+        case "settings":
+          return this._settings(s);
+        case "diagnostics":
+          return this._diagnostics(s);
+        default:
+          return this._overview(s);
+      }
+    } catch (err) {
+      const tabLabel = this.t(this._tab) || this._tab;
+      const message = err && err.message ? err.message : String(err);
+      return `<div class="error-banner" role="alert" aria-live="assertive">
+        <div class="error-title">Failed to render ${esc(tabLabel)}</div>
+        <div class="error-detail">${esc(message)}</div>
+      </div>`;
     }
   }
 

@@ -50,6 +50,23 @@ _LOGGER = logging.getLogger(__name__)
 
 UNAVAILABLE = ("unknown", "unavailable", "none", "")
 
+#: Physically plausible ranges per sensor role, as (min, max). Readings outside
+#: these are rejected at ingestion rather than stored in ``_last_good``, so an
+#: impossible value can never be used as the fallback when bridging or leak into
+#: a calculation before fault detection catches it on the next tick.
+_PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
+    "water": (-5.0, 55.0),
+    "air": (-5.0, 55.0),
+    "pump_inlet": (-5.0, 55.0),
+    "pump_outlet": (-5.0, 55.0),
+    "hp_inlet": (-5.0, 55.0),
+    "hp_outlet": (-5.0, 55.0),
+    "collector": (-5.0, 55.0),
+    "pump_power": (0.0, 10000.0),
+    "hp_power": (0.0, 10000.0),
+    "solar": (0.0, 1500.0),
+}
+
 #: Conversion to cubic metres per hour.
 #:
 #: Two kinds of key live here on purpose. The unit a sensor publishes in its
@@ -141,6 +158,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._active_faults: dict[str, datetime] = {}
         self._device_id_cache: str | None = None
         self._last_good: dict[str, tuple[float, datetime]] = {}
+        #: Desired switch states, set when a command is sent and verified against
+        #: the actual state on subsequent ticks.
+        self._desired_pump_state: bool | None = None
+        self._desired_heat_pump_state: bool | None = None
+        self._desired_pump_since: datetime | None = None
+        self._desired_heat_pump_since: datetime | None = None
+        self._pump_mismatch_ticks: int = 0
+        self._heat_pump_mismatch_ticks: int = 0
         #: Roles currently running on a carried-forward reading.
         self.bridged_roles: set[str] = set()
         #: Built once and reused, because the wizard's answers (and nothing
@@ -148,6 +173,11 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         #: the target temperature moves, since that is the one field the
         #: entities change at runtime.
         self._config_cache: PoolConfig | None = None
+        #: Cached chemistry picture, rebuilt once per tick. Invalidated at the
+        #: start of each tick and when a dose or water test is recorded, since
+        #: both change the corrections and dose log the picture is built from.
+        self._chemistry_cache: dict | None = None
+        self._chemistry_cache_tick: datetime | None = None
 
     # -- Configuration -----------------------------------------------------
 
@@ -207,10 +237,16 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         windows_raw = self._conf(
             c.CONF_BLOCK_WINDOWS, [["07:00", "11:00"], ["12:00", "17:00"], ["17:00", "21:00"]]
         )
-        windows = tuple(
-            (_parse_time(start, time(7, 0)), _parse_time(end, time(11, 0)))
-            for start, end in windows_raw
-        )
+        windows = []
+        for pair in windows_raw:
+            if len(pair) < 2:
+                _LOGGER.warning(
+                    "Block window %r is missing an end time and will be ignored", pair
+                )
+                continue
+            start, end = pair[0], pair[1]
+            windows.append((_parse_time(start, time(7, 0)), _parse_time(end, time(11, 0))))
+        windows = tuple(windows)
 
         # Two logical roles pointing at one physical sensor would otherwise be
         # compared against each other, yielding a permanent zero difference and a
@@ -356,6 +392,20 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             value = float(state.state)
         except (TypeError, ValueError):
             return SensorReading(None, None, role)
+
+        plausible = _PLAUSIBLE_RANGES.get(role)
+        if plausible is not None:
+            lo, hi = plausible
+            if not (lo <= value <= hi):
+                _LOGGER.warning(
+                    "Implausible %s reading %.1f outside [%.1f, %.1f] on %s",
+                    role,
+                    value,
+                    lo,
+                    hi,
+                    entity_id,
+                )
+                return self._bridge(role)
 
         # last_updated only moves when the value or an attribute changes, so a
         # steady temperature looks frozen even though the sensor is reporting
@@ -638,6 +688,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         # then. If a subsystem has been quiet since, its failure has recovered
         # and should not stay on the diagnostics forever.
         self.subsystem_errors = {}
+        self._invalidate_chemistry_cache()
         config = self.pool_config
 
         if self.store.roll_day(now):
@@ -651,6 +702,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         state = state.replace(filtration_done_h=self.store.runtime_hours(now))
 
         self.faults = safety.evaluate(state, config)
+        self.faults += self._verify_switch_states(state)
         self.heat_pump_available, self.heat_pump_gate_reason = safety.heat_pump_available(
             state, config, self.faults
         )
@@ -958,17 +1010,28 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if measurements.heating_rate and record.heating_rate is not None:
             self.store.learned.heating_rate_c_per_h = round(
                 learning.capped_update(
-                    self.store.learned.heating_rate_c_per_h, record.heating_rate, ratio
+                    self.store.learned.heating_rate_c_per_h,
+                    record.heating_rate,
+                    ratio,
+                    self.store.learned.heating_rate_updated_at,
+                    record.end,
                 ),
                 4,
             )
+            self.store.learned.heating_rate_updated_at = record.end
             self.store.learned.heating_rate_sessions += 1
 
         if measurements.cop:
             before = dict(self.store.learned.cop_by_air_bucket)
-            self.store.learned.cop_by_air_bucket = learning.update_cop_curve(
-                before, record, config
+            curve, cop_timestamps = learning.update_cop_curve(
+                before,
+                record,
+                config,
+                self.store.learned.cop_updated_at,
+                record.end,
             )
+            self.store.learned.cop_by_air_bucket = curve
+            self.store.learned.cop_updated_at = cop_timestamps
             if record.air_avg is not None and record.measured_cop is not None:
                 key = learning.bucket_key(record.air_avg)
                 counts = dict(self.store.learned.cop_sessions_by_bucket)
@@ -1020,18 +1083,28 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if covered:
             learned.heat_loss_covered_c_per_h = round(
                 learning.capped_update(
-                    learned.heat_loss_covered_c_per_h, rate, config.learning.max_step_ratio
+                    learned.heat_loss_covered_c_per_h,
+                    rate,
+                    config.learning.max_step_ratio,
+                    learned.heat_loss_covered_updated_at,
+                    now,
                 ),
                 4,
             )
+            learned.heat_loss_covered_updated_at = now
             learned.heat_loss_covered_samples += 1
         else:
             learned.heat_loss_c_per_h = round(
                 learning.capped_update(
-                    learned.heat_loss_c_per_h, rate, config.learning.max_step_ratio
+                    learned.heat_loss_c_per_h,
+                    rate,
+                    config.learning.max_step_ratio,
+                    learned.heat_loss_updated_at,
+                    now,
                 ),
                 4,
             )
+            learned.heat_loss_updated_at = now
             learned.heat_loss_samples += 1
 
     # -- Execution ---------------------------------------------------------
@@ -1055,6 +1128,72 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             "switch", service, {"entity_id": entity_id}, blocking=False
         )
         _LOGGER.debug("Requested switch.%s for %s", service, entity_id)
+        if key == c.CONF_PUMP_SWITCH:
+            self._desired_pump_state = wanted
+            self._desired_pump_since = dt_util.now()
+        elif key == c.CONF_HP_SWITCH:
+            self._desired_heat_pump_state = wanted
+            self._desired_heat_pump_since = dt_util.now()
+
+    def _verify_switch_states(self, state: PoolState) -> list[Fault]:
+        """Detect switches that do not respond to commands.
+
+        A command is sent with ``blocking=False``, so the actual state is only
+        known on the next tick. A mismatch between commanded and actual state is
+        expected for one tick while the switch acts; if it persists the switch is
+        not responding and the system is running on a lie.
+        """
+        faults: list[Fault] = []
+
+        if self._desired_pump_state is not None:
+            if state.pump_on == self._desired_pump_state:
+                self._pump_mismatch_ticks = 0
+            else:
+                self._pump_mismatch_ticks += 1
+                if self._pump_mismatch_ticks >= 3:
+                    faults.append(
+                        Fault(
+                            "pump_switch_unresponsive",
+                            Severity.WARNING,
+                            "The circulation pump switch is not responding to "
+                            "commands. The pump may be stuck.",
+                            {
+                                "desired": self._desired_pump_state,
+                                "actual": state.pump_on,
+                                "since": (
+                                    self._desired_pump_since.isoformat()
+                                    if self._desired_pump_since
+                                    else None
+                                ),
+                            },
+                        )
+                    )
+
+        if self._desired_heat_pump_state is not None:
+            if state.heat_pump_on == self._desired_heat_pump_state:
+                self._heat_pump_mismatch_ticks = 0
+            else:
+                self._heat_pump_mismatch_ticks += 1
+                if self._heat_pump_mismatch_ticks >= 3:
+                    faults.append(
+                        Fault(
+                            "heat_pump_switch_unresponsive",
+                            Severity.WARNING,
+                            "The heat pump switch is not responding to commands. "
+                            "The heat pump may be stuck.",
+                            {
+                                "desired": self._desired_heat_pump_state,
+                                "actual": state.heat_pump_on,
+                                "since": (
+                                    self._desired_heat_pump_since.isoformat()
+                                    if self._desired_heat_pump_since
+                                    else None
+                                ),
+                            },
+                        )
+                    )
+
+        return faults
 
     def _persist_block(self, decision: Decision) -> None:
         if decision.branch is Branch.FILTRATION_BLOCK and self.filtration.active_block:
@@ -1232,9 +1371,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         except (TypeError, ValueError):
             return None
 
+    def _invalidate_chemistry_cache(self) -> None:
+        self._chemistry_cache = None
+        self._chemistry_cache_tick = None
+
     @property
     def water_chemistry(self) -> dict:
         """Every reading, judged, with the doses and advice that follow from it."""
+        if (
+            self._chemistry_cache is not None
+            and self._chemistry_cache_tick == self._last_tick
+        ):
+            return self._chemistry_cache
+
         config = self.pool_config
         sanitiser = chem.Sanitiser(self._conf(c.CONF_SANITISER, "chlorine"))
         relevant = chem.RELEVANT_READINGS[sanitiser]
@@ -1303,7 +1452,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         )
         interval, _ = chem.test_interval_days(water_temp)
 
-        return {
+        result = {
             "sanitiser": sanitiser.value,
             "unit_system": units,
             "readings": readings,
@@ -1331,6 +1480,10 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             },
         }
 
+        self._chemistry_cache = result
+        self._chemistry_cache_tick = self._last_tick
+        return result
+
     async def async_record_dose(
         self, product: str, amount: float, unit: str, measured_before: float
     ) -> None:
@@ -1349,6 +1502,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             measured_before=measured_before,
         )
         self.store.log_dose(record.as_dict())
+        self._invalidate_chemistry_cache()
 
         minutes, reason = chem.circulation_for(product)
         if minutes <= 0:
@@ -1366,6 +1520,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         """Mark the water as tested just now, and close off any open dose."""
         now = dt_util.now()
         self.store.last_water_test = now
+        self._invalidate_chemistry_cache()
 
         chemistry = self.water_chemistry
         if self.store.dose_log:

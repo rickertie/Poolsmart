@@ -8,10 +8,13 @@
 
 <p align="center">
   <a href="https://hacs.xyz/docs/faq/custom_repositories">
-    <img src="https://img.shields.io/badge/HACS-Custom-blue?style=flat-square&logo=homeassistant&logoColor=white" alt="HACS Custom">
+    <img src="https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square&logo=homeassistant&logoColor=white" alt="HACS Custom">
   </a>
   <a href="https://github.com/rickertie/Poolsmart/releases">
-    <img src="https://img.shields.io/github/v/release/rickertie/Poolsmart?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/github/v/release/rickertie/Poolsmart?style=flat-square&color=blue" alt="Version">
+  </a>
+  <a href="https://github.com/rickertie/Poolsmart/releases">
+    <img src="https://img.shields.io/github/downloads/rickertie/Poolsmart/total?style=flat-square&color=brightgreen" alt="Downloads">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-orange?style=flat-square" alt="License">
@@ -25,12 +28,10 @@ heat pump control, solar optimization, and water chemistry dosing — all integr
 Home Assistant. A priority-based decision engine evaluates your pool state every 30 seconds,
 balancing energy costs, swim schedules, and equipment protection.
 
-<p align="center">
-  <img src="docs/images/architecture-overview.svg" width="700" alt="PoolSmart System Architecture">
-</p>
+> 🤖 **_Disclaimer: Co-written with AI. If your pool turns into a foam party, blame the LLM (or check your pH)._**
 
 <p align="center">
-  <img src="docs/images/dashboard-mockup.svg" width="700" alt="PoolSmart Dashboard Mockup">
+  <img src="docs/images/architecture-overview.svg" width="700" alt="PoolSmart System Architecture">
 </p>
 
 ---
@@ -56,31 +57,38 @@ balancing energy costs, swim schedules, and equipment protection.
 
 ## Installation
 
-1. Add this repository to HACS as a **custom repository** and install PoolSmart
-2. Restart Home Assistant
-3. **Settings → Devices & Services → Add Integration → PoolSmart**
-4. Work through the wizard — every field arrives pre-filled with a help line
+### Method 1: Easy (One-Click)
 
-> **New to PoolSmart?** After installation, follow the [Getting Started](docs/GETTING_STARTED.MD) guide to verify your setup and understand what to expect.
+1. Click the button below to add PoolSmart to HACS automatically:
+
+   [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rickertie&repository=Poolsmart&category=integration)
+
+2. Click **Download** in HACS and restart Home Assistant.
+3. Click the button below to configure PoolSmart:
+
+   [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=poolsmart)
+
+---
+
+### Method 2: Manual
+
+1. Open **HACS** in your Home Assistant instance.
+2. Click **Custom Repositories** (top right) and add `rickertie/Poolsmart` with category **Integration**.
+3. Download PoolSmart and restart Home Assistant.
+4. Go to **Settings → Devices & Services → Add Integration → PoolSmart**.
+
+> [!NOTE]
+> **Full setup** (unlock all features):
+> - Map your temperature sensors and flow meter
+> - Configure heating source and target temperature
+> - Connect a price sensor for cost optimization
+> - See [HARDWARE.MD](docs/HARDWARE.MD) and [ESPHOME.MD](docs/ESPHOME.MD)
 
 ---
 
-## Quick Start
-
-**Minimum setup** (get running in 5 minutes):
-
-1. Install via HACS, restart HA
-2. Add integration → enter your pool volume and pump flow
-3. That's it — PoolSmart starts filtering on a timer
-
-**Full setup** (unlock all features):
-
-- Map your temperature sensors and flow meter
-- Configure heating source and target temperature
-- Connect a price sensor for cost optimization
-- See [HARDWARE.MD](docs/HARDWARE.MD) and [ESPHOME.MD](docs/ESPHOME.MD)
-
----
+<p align="center">
+  <img src="docs/images/dashboard-mockup.svg" width="700" alt="PoolSmart Dashboard Mockup">
+</p>
 
 ## Documentation
 
@@ -140,11 +148,12 @@ balancing energy costs, swim schedules, and equipment protection.
 
 ## Quick Links
 
-- [Self-Learning](docs/LEARNING.MD) — How PoolSmart improves over time
-- [Planning & Heating](docs/PLANNING.MD) — Price-aware heating strategies
-- [Water Chemistry](docs/CHEMISTRY.MD) — Automated dosing calculations
-- [Dashboards](docs/lovelace/README.md) — Visual pool monitoring
-- [Safety](docs/ARCHITECTURE.MD) — Compressor protection and fail-safes
+> [!TIP]
+> - 🚀 **First time?** Check out the [Getting Started Guide](docs/GETTING_STARTED.MD)
+> - 📈 **COP & Heat loss:** Read about the [Self-Learning Engine](docs/LEARNING.MD)
+> - 💡 **Dynamic Prices:** Learn how [Price-Aware Heating](docs/PLANNING.MD) works
+> - 🧪 **Water Quality:** Review [Automated Dosing Math](docs/CHEMISTRY.MD)
+> - 📊 **UI Layout:** Set up your [Lovelace Dashboards](docs/lovelace/README.md)
 
 ---
 

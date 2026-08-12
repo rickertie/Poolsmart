@@ -35,7 +35,15 @@ record_dose:
       required: true
       selector:
         select:
-          options: [ml, g]
+          options:
+            - label: millilitre
+              value: ml
+            - label: gram
+              value: g
+            - label: litre
+              value: l
+            - label: kilogram
+              value: kg
 
 reset_learned:
   name: Reset one learned value

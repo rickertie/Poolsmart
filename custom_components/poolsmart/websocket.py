@@ -23,6 +23,9 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_entries)
     websocket_api.async_register_command(hass, ws_snapshot)
     websocket_api.async_register_command(hass, ws_clear_log)
+    websocket_api.async_register_command(hass, ws_set_mode)
+    websocket_api.async_register_command(hass, ws_set_target)
+    websocket_api.async_register_command(hass, ws_reset_learning)
 
 
 def _live_session(coordinator) -> dict:
@@ -325,3 +328,67 @@ def ws_clear_log(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         return
     coordinator.store.decision_log = []
     connection.send_result(msg["id"], {"cleared": True})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "poolsmart/set_mode",
+        vol.Required("mode"): vol.In(["auto", "boost", "eco", "pump", "standby", "off"]),
+        vol.Optional("entry_id"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_set_mode(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Change the operating mode."""
+    coordinator = _coordinator(hass, msg.get("entry_id"))
+    if coordinator is None:
+        connection.send_error(msg["id"], "not_found", "No pool is configured")
+        return
+    try:
+        await coordinator.async_set_mode(msg["mode"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_mode", str(err))
+        return
+    connection.send_result(msg["id"], {"mode": msg["mode"]})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "poolsmart/set_target",
+        vol.Required("target"): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=40.0)),
+        vol.Optional("entry_id"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_set_target(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Update the target temperature."""
+    coordinator = _coordinator(hass, msg.get("entry_id"))
+    if coordinator is None:
+        connection.send_error(msg["id"], "not_found", "No pool is configured")
+        return
+    try:
+        await coordinator.async_set_target(msg["target"])
+    except ValueError as err:
+        connection.send_error(msg["id"], "invalid_target", str(err))
+        return
+    connection.send_result(msg["id"], {"target_temp": msg["target"]})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "poolsmart/reset_learning",
+        vol.Optional("entry_id"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_reset_learning(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Clear all learned values."""
+    coordinator = _coordinator(hass, msg.get("entry_id"))
+    if coordinator is None:
+        connection.send_error(msg["id"], "not_found", "No pool is configured")
+        return
+    await coordinator.async_reset_learning()
+    connection.send_result(msg["id"], {"reset": True})

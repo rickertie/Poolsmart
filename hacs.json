@@ -1,6 +1,7 @@
 {
   "name": "PoolSmart",
   "content_in_root": false,
+  "filename": "poolsmart",
   "render_readme": true,
-  "homeassistant": "2024.10.0"
+  "country": ["NL", "EN"]
 }

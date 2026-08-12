@@ -297,27 +297,29 @@ def _required_entities(source: str) -> vol.Schema:
     return vol.Schema(fields)
 
 
-def _optional_entities(source: str, has_solar: bool = False) -> vol.Schema:
-    """The optional sensors, only the ones this installation can answer.
-
-    A pool without a heat pump has no heat pump inlet, outlet or power draw to
-    measure, and a collector sensor is only meaningful when there is a
-    collector to compare against the pool. Asking for them anyway is how the
-    wizard ended up mentioning a heat pump to someone who has none.
-    """
-    fields: dict = {
+def _core_environmental_fields() -> dict:
+    return {
         vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_FLOW_UNIT, default="l_min"): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
-                        translation_key="flow_unit",
-                    )
-                ),
+            selector.SelectSelectorConfig(
+                options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
+                translation_key="flow_unit",
+            )
+        ),
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
         vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+        vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
+        vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["cover", "binary_sensor", "input_boolean"])
+        ),
+    }
+
+
+def _chemistry_fields() -> dict:
+    return {
         vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
@@ -326,16 +328,25 @@ def _optional_entities(source: str, has_solar: bool = False) -> vol.Schema:
         vol.Optional(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
         vol.Optional(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
-        vol.Optional(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
-        ),
-        vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
-        vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
-        vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
-        vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["cover", "binary_sensor", "input_boolean"])
-        ),
     }
+
+
+def _optional_entities(source: str, has_solar: bool = False) -> vol.Schema:
+    """The optional sensors, only the ones this installation can answer.
+
+    A pool without a heat pump has no heat pump inlet, outlet or power draw to
+    measure, and a collector sensor is only meaningful when there is a
+    collector to compare against the pool. Asking for them anyway is how the
+    wizard ended up mentioning a heat pump to someone who has none.
+    """
+    fields: dict = {}
+    fields.update(_core_environmental_fields())
+    fields.update(_chemistry_fields())
+    fields[vol.Optional(c.CONF_CHEAP_PRICE_SENSOR)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
+    )
+    fields[vol.Optional(c.CONF_SOLAR_POWER_SENSOR)] = POWER_SENSOR
+    fields[vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR)] = ANY_SENSOR
 
     if source == "heat_pump":
         fields[vol.Optional(c.CONF_HP_INLET_SENSOR)] = TEMP_SENSOR
@@ -546,28 +557,8 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
         from .core.config import SOURCE_TRAITS, HeatingSource
 
-        fields: dict = {
-            vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
-            vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
-            vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
-            vol.Optional(c.CONF_FLOW_SENSOR): ANY_SENSOR,
-            vol.Optional(
-                c.CONF_FLOW_UNIT, default="l_min"
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=["l_min", "l_h", "m3_h", "l_s", "gpm"],
-                    translation_key="flow_unit",
-                )
-            ),
-            vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
-            vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
-            vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
-            vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=["cover", "binary_sensor", "input_boolean"]
-                )
-            ),
-        }
+        fields: dict = {}
+        fields.update(_core_environmental_fields())
         if source == "heat_pump" and SOURCE_TRAITS[HeatingSource(source)].get("air_temp_limits"):
             fields[vol.Optional(c.CONF_HP_INLET_SENSOR)] = TEMP_SENSOR
             fields[vol.Optional(c.CONF_HP_OUTLET_SENSOR)] = TEMP_SENSOR
@@ -593,16 +584,8 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
                     "optional_finish",
                 ],
             )
-        fields: dict = {
-            vol.Optional(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
-            vol.Optional(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
-        }
+        fields: dict = {}
+        fields.update(_chemistry_fields())
         return self.async_show_form(
             step_id="optional_chemistry",
             data_schema=vol.Schema(fields),

@@ -528,6 +528,12 @@ class PoolConfig:
     #: goes unused on a mild day.
     collector_margin: float = 3.0
 
+    #: How much operational data is shared with the external AI advisor.
+    #: "minimal" sends only aggregated statistics, "standard" sends session
+    #: summaries without precise timestamps or cost figures, "full" sends
+    #: everything the integration knows.
+    privacy_level: str = "standard"
+
     def source_has(self, trait: str) -> bool:
         """Whether the configured heating source has a given capability."""
         return bool(SOURCE_TRAITS[HeatingSource(self.heating_source)].get(trait))

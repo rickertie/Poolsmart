@@ -203,4 +203,24 @@ def validate_import(payload: dict) -> tuple[bool, str]:
     for key in ("session_log", "dose_log"):
         if key in payload and not isinstance(payload[key], list):
             return False, f"{key} is not a list"
+
+    bounds: dict[str, tuple[float, float]] = {
+        "heat_loss_c_per_h": (0.01, 2.0),
+        "heat_loss_covered_c_per_h": (0.01, 2.0),
+        "heating_rate_c_per_h": (0.1, 20.0),
+        "measured_flow_m3h": (0.1, 50.0),
+    }
+    for field_name, (lo, hi) in bounds.items():
+        value = learned.get(field_name)
+        if value is None:
+            continue
+        if not isinstance(value, (int, float)) or not lo <= value <= hi:
+            return False, f"{field_name} of {value!r} is outside the plausible range of {lo} to {hi}"
+
+    buckets = learned.get("cop_by_air_bucket")
+    if isinstance(buckets, dict):
+        for key, cop in buckets.items():
+            if not isinstance(cop, (int, float)) or not 1.0 <= cop <= 10.0:
+                return False, f"COP of {cop!r} in bucket {key!r} is outside the plausible range of 1.0 to 10.0"
+
     return True, "usable"

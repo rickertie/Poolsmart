@@ -10,15 +10,21 @@ the last timestamp that was written.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
 from .const import (
+    DAILY_SUMMARY_MAX_DAYS,
+    DATA_VERSION,
     DECISION_LOG_SIZE,
     DOSE_LOG_SIZE,
     SESSION_LOG_SIZE,
@@ -26,6 +32,7 @@ from .const import (
     STORAGE_SAVE_DEBOUNCE_SECONDS,
     STORAGE_VERSION,
 )
+from .core.trace import NearMissLog
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +87,10 @@ class LearnedValues:
     cop_sessions_by_bucket: dict[str, int] = field(default_factory=dict)
     heating_rate_sessions: int = 0
     session_count: int = 0
+    heating_rate_updated_at: datetime | None = None
+    heat_loss_updated_at: datetime | None = None
+    heat_loss_covered_updated_at: datetime | None = None
+    cop_updated_at: dict[str, datetime] = field(default_factory=dict)
 
     def as_dict(self) -> dict:
         return {
@@ -93,10 +104,32 @@ class LearnedValues:
             "cop_sessions_by_bucket": self.cop_sessions_by_bucket,
             "heating_rate_sessions": self.heating_rate_sessions,
             "session_count": self.session_count,
+            "heating_rate_updated_at": (
+                self.heating_rate_updated_at.isoformat()
+                if self.heating_rate_updated_at
+                else None
+            ),
+            "heat_loss_updated_at": (
+                self.heat_loss_updated_at.isoformat()
+                if self.heat_loss_updated_at
+                else None
+            ),
+            "heat_loss_covered_updated_at": (
+                self.heat_loss_covered_updated_at.isoformat()
+                if self.heat_loss_covered_updated_at
+                else None
+            ),
+            "cop_updated_at": {
+                k: v.isoformat() for k, v in self.cop_updated_at.items()
+            },
         }
 
     @classmethod
     def from_dict(cls, raw: dict) -> LearnedValues:
+        cop_updated_at = {
+            k: datetime.fromisoformat(v)
+            for k, v in raw.get("cop_updated_at", {}).items()
+        }
         return cls(
             heating_rate_c_per_h=raw.get("heating_rate_c_per_h"),
             heat_loss_c_per_h=raw.get("heat_loss_c_per_h"),
@@ -108,6 +141,22 @@ class LearnedValues:
             cop_sessions_by_bucket=raw.get("cop_sessions_by_bucket", {}),
             heating_rate_sessions=raw.get("heating_rate_sessions", 0),
             session_count=raw.get("session_count", 0),
+            heating_rate_updated_at=(
+                datetime.fromisoformat(raw["heating_rate_updated_at"])
+                if raw.get("heating_rate_updated_at")
+                else None
+            ),
+            heat_loss_updated_at=(
+                datetime.fromisoformat(raw["heat_loss_updated_at"])
+                if raw.get("heat_loss_updated_at")
+                else None
+            ),
+            heat_loss_covered_updated_at=(
+                datetime.fromisoformat(raw["heat_loss_covered_updated_at"])
+                if raw.get("heat_loss_covered_updated_at")
+                else None
+            ),
+            cop_updated_at=cop_updated_at,
         )
 
 
@@ -125,6 +174,9 @@ class PoolStore:
         #: The open interval, so :meth:`record_pump` does not have to rescan the
         #: whole list on every tick.
         self._open_interval: RuntimeInterval | None = None
+        #: Running total of closed intervals' hours, so :meth:`runtime_hours`
+        #: stays O(1) regardless of how many start/stop cycles occur today.
+        self._closed_hours: float = 0.0
         self.learned = LearnedValues()
         self.active_block: dict | None = None
         self.heat_pump_stopped_at: datetime | None = None
@@ -132,18 +184,21 @@ class PoolStore:
         self.chemistry_until: datetime | None = None
         self.mode: str | None = None
         self.target_temp: float | None = None
-        self.decision_log: list[dict] = []
-        self.session_log: list[dict] = []
-        self.dose_log: list[dict] = []
+        self.decision_log: deque[dict] = deque(maxlen=DECISION_LOG_SIZE)
+        self.session_log: deque[dict] = deque(maxlen=SESSION_LOG_SIZE)
+        self.dose_log: deque[dict] = deque(maxlen=DOSE_LOG_SIZE)
         self.last_water_test: datetime | None = None
         self.energy_today_kwh: float = 0.0
         self.cost_today: float = 0.0
         self.cost_baseline_today: float = 0.0
+        self.near_miss_log = NearMissLog()
+        self.daily_summaries: list[dict] = []
 
     # -- Loading and saving ------------------------------------------------
 
     async def async_load(self) -> None:
         raw = await self._store.async_load() or {}
+        raw = self._migrate_data(raw.get("data_version", 0), raw)
         try:
             if raw.get("quota_date"):
                 self.quota_date = date.fromisoformat(raw["quota_date"])
@@ -160,24 +215,60 @@ class PoolStore:
                 self.chemistry_until = datetime.fromisoformat(raw["chemistry_until"])
             self.mode = raw.get("mode")
             self.target_temp = raw.get("target_temp")
-            self.decision_log = raw.get("decision_log", [])
-            self.session_log = raw.get("session_log", [])
-            self.dose_log = raw.get("dose_log", [])
+            self.decision_log = deque(raw.get("decision_log", []), maxlen=DECISION_LOG_SIZE)
+            self.session_log = deque(raw.get("session_log", []), maxlen=SESSION_LOG_SIZE)
+            self.dose_log = deque(raw.get("dose_log", []), maxlen=DOSE_LOG_SIZE)
             if raw.get("last_water_test"):
                 self.last_water_test = datetime.fromisoformat(raw["last_water_test"])
             self.energy_today_kwh = raw.get("energy_today_kwh", 0.0)
             self.cost_today = raw.get("cost_today", 0.0)
             self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
+            self.near_miss_log = NearMissLog.from_dict(raw.get("near_miss_log", {}))
+            self.daily_summaries = raw.get("daily_summaries", [])
         except (ValueError, KeyError, TypeError):
             _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
 
         self._close_open_interval()
         self._open_interval = None
+        self._closed_hours = sum(
+            max(0.0, (i.end - i.start).total_seconds() / 3600.0)
+            for i in self.intervals
+            if i.end is not None
+        )
         if self.backfill_cop_counts():
             _LOGGER.info(
                 "Recovered COP session counts for learned values that predate the "
                 "confidence counter"
             )
+
+    def _migrate_data(self, old_version: int, raw: dict) -> dict:
+        """Upgrade stored data from an older schema version to the current one.
+
+        Runs incrementally: each version step is handled in sequence, so data
+        written by any older version arrives at the current schema through a
+        chain of small, individually reviewable transformations.
+
+        The current schema is v1, which is the structure this parser expects.
+        v0 data has no ``data_version`` field -- it predates this mechanism --
+        but is structurally identical, so the v0 step is a no-op that only
+        establishes the pattern. Future schema changes add real steps here.
+        """
+        if old_version >= DATA_VERSION:
+            return raw
+
+        data = dict(raw)
+        version = old_version
+
+        if version < 1:
+            # v0: pre-versioning data. Structurally identical to v1.
+            version = 1
+
+        # if version < 2:
+        #     # v2: describe the structural change here.
+        #     version = 2
+
+        data["data_version"] = version
+        return data
 
     def _close_open_interval(self) -> None:
         """Close an interval that a crash or restart left open.
@@ -191,6 +282,28 @@ class PoolStore:
             if interval.end is None:
                 interval.end = interval.start
                 _LOGGER.debug("Closed a filtration interval left open by a restart")
+
+    async def _async_save_atomic(self, data: dict, path: str) -> None:
+        """Write data to disk with a temp-file-then-rename pattern.
+
+        A crash mid-write can leave a truncated JSON file that cannot be parsed
+        on the next load. Writing to a temporary file and renaming it over the
+        target replaces the old contents atomically: the rename is a single
+        metadata operation on the filesystem, not a copy, so it either
+        completes or it does not.
+        """
+        loop = asyncio.get_running_loop()
+        target = Path(path)
+        tmp = target.with_suffix(".tmp")
+
+        def _write() -> None:
+            with tmp.open("w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2, default=str)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, target)
+
+        await loop.run_in_executor(None, _write)
 
     async def async_save(self, *, force: bool = False) -> None:
         """Persist the state, debounced and serialised.
@@ -210,6 +323,7 @@ class PoolStore:
             return
 
         data = {
+            "data_version": DATA_VERSION,
             "quota_date": self.quota_date.isoformat() if self.quota_date else None,
             "intervals": [i.as_dict() for i in self.intervals],
             "learned": self.learned.as_dict(),
@@ -231,20 +345,22 @@ class PoolStore:
             ),
             "mode": self.mode,
             "target_temp": self.target_temp,
-            "decision_log": self.decision_log[-DECISION_LOG_SIZE:],
-            "session_log": self.session_log[-SESSION_LOG_SIZE:],
-            "dose_log": self.dose_log[-DOSE_LOG_SIZE:],
+            "decision_log": list(self.decision_log),
+            "session_log": list(self.session_log),
+            "dose_log": list(self.dose_log),
             "last_water_test": (
                 self.last_water_test.isoformat() if self.last_water_test else None
             ),
             "energy_today_kwh": self.energy_today_kwh,
             "cost_today": self.cost_today,
             "cost_baseline_today": self.cost_baseline_today,
+            "near_miss_log": self.near_miss_log.as_dict(),
+            "daily_summaries": self.daily_summaries,
         }
 
         async with self._save_lock:
             self._last_saved_at = time.monotonic()
-            await self._store.async_save(data)
+            await self._async_save_atomic(data, self._store.path)
 
     # -- Filtration quota --------------------------------------------------
 
@@ -252,9 +368,22 @@ class PoolStore:
         """Reset the quota when the date changes. Returns True if it rolled."""
         if self.quota_date == now.date():
             return False
+        if self.quota_date is not None:
+            runtime = sum(i.hours for i in self.intervals if i.end is not None)
+            self.daily_summaries.append(
+                {
+                    "date": self.quota_date.isoformat(),
+                    "runtime_hours": round(runtime, 3),
+                    "energy_kwh": round(self.energy_today_kwh, 3),
+                    "cost_euro": round(self.cost_today, 2),
+                }
+            )
+            if len(self.daily_summaries) > DAILY_SUMMARY_MAX_DAYS:
+                self.daily_summaries = self.daily_summaries[-DAILY_SUMMARY_MAX_DAYS:]
         self.quota_date = now.date()
         self.intervals = []
         self._open_interval = None
+        self._closed_hours = 0.0
         self.active_block = None
         self.energy_today_kwh = 0.0
         self.cost_today = 0.0
@@ -276,12 +405,16 @@ class PoolStore:
             self._open_interval.end = None
         elif not running and self._open_interval is not None:
             self._open_interval.end = now
+            self._closed_hours += max(
+                0.0, (now - self._open_interval.start).total_seconds() / 3600.0
+            )
             self._open_interval = None
 
     def clear_runtime(self) -> None:
         """Forget today's credited runtime so a full cycle can run again."""
         self.intervals = []
         self._open_interval = None
+        self._closed_hours = 0.0
 
     def runtime_hours(self, now: datetime) -> float:
         """Filtration runtime credited today, including any open interval.
@@ -290,24 +423,19 @@ class PoolStore:
         automatically. Without that credit the system would filter substantially
         more than needed on heating days.
         """
-        total = 0.0
-        for interval in self.intervals:
-            end = interval.end or now
-            total += max(0.0, (end - interval.start).total_seconds() / 3600.0)
+        total = self._closed_hours
+        if self._open_interval is not None:
+            total += max(0.0, (now - self._open_interval.start).total_seconds() / 3600.0)
         return total
 
     # -- Decision log ------------------------------------------------------
 
     def log_decision(self, payload: dict) -> None:
         self.decision_log.append(payload)
-        if len(self.decision_log) > DECISION_LOG_SIZE:
-            self.decision_log = self.decision_log[-DECISION_LOG_SIZE:]
 
     def log_dose(self, payload: dict) -> None:
         """Record a dose that was applied."""
         self.dose_log.append(payload)
-        if len(self.dose_log) > DOSE_LOG_SIZE:
-            self.dose_log = self.dose_log[-DOSE_LOG_SIZE:]
 
     def log_session(self, payload: dict) -> None:
         """Record a finished heating session, usable or not.
@@ -316,8 +444,6 @@ class PoolStore:
         the reasons things were rejected are the first place to look.
         """
         self.session_log.append(payload)
-        if len(self.session_log) > SESSION_LOG_SIZE:
-            self.session_log = self.session_log[-SESSION_LOG_SIZE:]
 
     # -- Learned values ----------------------------------------------------
 
@@ -391,10 +517,10 @@ class PoolStore:
         # The logs are the evidence the figures were derived from; adopting a
         # summary without them leaves numbers nothing can check or improve.
         if not self.session_log and history.get("session_log"):
-            self.session_log = list(history["session_log"])
+            self.session_log = deque(history["session_log"], maxlen=SESSION_LOG_SIZE)
             taken.append("session_log")
         if not self.dose_log and history.get("dose_log"):
-            self.dose_log = list(history["dose_log"])
+            self.dose_log = deque(history["dose_log"], maxlen=DOSE_LOG_SIZE)
             taken.append("dose_log")
         if self.last_water_test is None and history.get("last_water_test"):
             try:
@@ -427,18 +553,29 @@ class PoolStore:
             setattr(self.learned, count_attr, {} if isinstance(counter, dict) else 0)
         return True
 
-    def apply_learned(self, name: str, value: float, max_step_ratio: float) -> float:
+    def apply_learned(
+        self,
+        name: str,
+        value: float,
+        max_step_ratio: float,
+        now: datetime,
+        updated_at_attr: str | None = None,
+    ) -> float:
         """Update a learned value with a capped step.
 
         A single strange session must not be able to wreck the model, so each
         update may move the value by at most ``max_step_ratio``.
         """
+        from .core.learning import capped_update
+
         current = getattr(self.learned, name, None)
-        if current is None or current == 0:
-            setattr(self.learned, name, value)
-            return value
-        limit = abs(current) * max_step_ratio
-        delta = max(-limit, min(limit, value - current))
-        updated = current + delta
+        updated_at = getattr(self.learned, updated_at_attr) if updated_at_attr else None
+        updated = capped_update(current, value, max_step_ratio, updated_at, now)
         setattr(self.learned, name, updated)
+        if updated_at_attr:
+            setattr(self.learned, updated_at_attr, now)
         return updated
+
+    def daily_summary(self) -> list[dict]:
+        """Return persisted daily runtime and energy summaries."""
+        return list(self.daily_summaries)

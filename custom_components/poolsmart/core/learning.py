@@ -299,11 +299,33 @@ def max_plausible_rate(
     return (thermal + solar) / per_degree * MAX_PLAUSIBLE_RATE_FACTOR
 
 
-def capped_update(current: float | None, proposed: float, max_step_ratio: float) -> float:
-    """Move a learned value towards a new observation, by a limited step."""
+#: Half-life for learned value decay, in days. After this many days an
+#: observation has half the weight of a fresh one, so the model tracks
+#: degrading equipment rather than trusting values from years ago.
+DECAY_HALF_LIFE_DAYS = 90.0
+
+
+def capped_update(
+    current: float | None,
+    proposed: float,
+    max_step_ratio: float,
+    last_updated: datetime | None = None,
+    now: datetime | None = None,
+) -> float:
+    """Move a learned value towards a new observation, by a limited step.
+
+    When ``last_updated`` is supplied the step grows with age: a value not
+    updated in months may move further, because its age says it is measuring
+    a pool that no longer exists -- equipment degrades, liners change.
+    """
     if current is None or current == 0:
         return proposed
-    limit = abs(current) * max_step_ratio
+    ratio = max_step_ratio
+    if last_updated is not None and now is not None:
+        age_days = (now - last_updated).total_seconds() / 86400.0
+        if age_days > 0:
+            ratio = min(1.0, max_step_ratio * (2.0 ** (age_days / DECAY_HALF_LIFE_DAYS)))
+    limit = abs(current) * ratio
     delta = max(-limit, min(limit, proposed - current))
     return current + delta
 
@@ -312,24 +334,33 @@ def update_cop_curve(
     curve: dict[str, float],
     record: SessionRecord,
     config: PoolConfig,
-) -> dict[str, float]:
+    updated_at: dict[str, datetime] | None = None,
+    now: datetime | None = None,
+) -> tuple[dict[str, float], dict[str, datetime]]:
     """Fold a session's measured COP into the per-temperature curve.
 
-    The heat pump does not modulate, so output is a function of outdoor
-    temperature alone. That makes one value per bucket sufficient and the data
-    clean.
+    Returns ``(curve, updated_at)`` so callers can persist when each bucket
+    was last refreshed. When ``updated_at`` is not given a fresh dict is
+    created and decay is not applied.
     """
     cop = record.measured_cop
     air = record.air_avg
     if cop is None or air is None:
-        return curve
+        return curve, dict(updated_at) if updated_at else {}
 
     key = bucket_key(air)
     updated = dict(curve)
+    timestamps = dict(updated_at) if updated_at else {}
+    previous_at = timestamps.get(key)
+    if now is not None:
+        timestamps[key] = now
     updated[key] = round(
-        capped_update(curve.get(key), cop, config.learning.max_step_ratio), 3
+        capped_update(
+            curve.get(key), cop, config.learning.max_step_ratio, previous_at, now
+        ),
+        3,
     )
-    return updated
+    return updated, timestamps
 
 
 def heat_loss_from_idle(
@@ -354,8 +385,9 @@ def heat_loss_from_idle(
 
 
 #: Sessions needed in a bucket before its measured COP is trusted for planning.
-#: One session is an anecdote; three is a pattern.
-COP_CONFIDENCE_SESSIONS = 3
+#: COP varies with flow rate, solar gain, humidity, and more; five sessions is
+#: the minimum before a measured figure is trusted over the datasheet.
+COP_CONFIDENCE_SESSIONS = 5
 
 
 def cop_for(
