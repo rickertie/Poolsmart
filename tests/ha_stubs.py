@@ -134,7 +134,18 @@ def load(module_name: str, relative_path: str):
     spec = importlib.util.spec_from_file_location(full, ROOT / relative_path)
     module = importlib.util.module_from_spec(spec)
     sys.modules[full] = module
-    spec.loader.exec_module(module)
+    # The poolsmart directory on sys.path shadows stdlib modules like ``select``.
+    # Modules being loaded here (store.py in particular) import asyncio, which
+    # imports select through socket and selectors. Without this, the local
+    # select.py is loaded mid-initialization and the resulting circular import
+    # fails asyncio before it finishes.
+    _root = str(ROOT)
+    _count = sys.path.count(_root)
+    sys.path[:] = [p for p in sys.path if p != _root]
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:0] = [_root] * _count
     return module
 
 
