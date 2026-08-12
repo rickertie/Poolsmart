@@ -12,11 +12,7 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
-For release notes on major milestones, see
-[docs/RELEASE_NOTES_1.0.0.md](docs/RELEASE_NOTES_1.0.0.md) and
-[docs/RELEASE_NOTES_0.8.0.md](docs/RELEASE_NOTES_0.8.0.md).
-
-## [Unreleased] — Resilience, Performance & User Control
+## [1.5.0] — Resilience, Performance & User Control
 
 Based on comprehensive code review. See
 [docs/.AI_RECOMMENDATIONS/CODE_REVIEW_RECOMMENDATIONS.md](.AI_RECOMMENDATIONS/CODE_REVIEW_RECOMMENDATIONS.md)
