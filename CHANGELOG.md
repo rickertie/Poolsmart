@@ -12,6 +12,45 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.5.4] — Version Sync
+
+Keeps the published version in sync with the release tag so HACS displays the
+same version as the GitHub release. No functional changes.
+
+## [1.5.3] — Service Handlers & Multi-Pool Cleanup
+
+Service handlers no longer overwrite or mix data across multiple pools, and the
+pool session Lovelace card got a UI refresh.
+
+### Fixed
+
+- **Service calls now target the right pool.** Fixed handlers overwriting or
+  mixing data across multiple pools
+- **Recovery and store cleanup.** Stale state no longer bleeds between entries
+
+### Changed
+
+- **Pool session card UI.** Enhanced the pool session Lovelace card with a
+  cleaner layout
+
+## [1.5.2] — Resilience Fixes
+
+Hardened storage and test tooling after issues reported by users.
+
+### Fixed
+
+- **Missing version key on load.** A stored state without its version key no
+  longer crashes the integration; it is logged, reset, and rebuilt
+- **`select.py` shadowing.** Avoided a circular import caused by `select`
+  shadowing in `load()`
+
+### Changed
+
+- **Setup wizard copy.** Improved the "pool kind" description in Dutch and
+  English — an uninsulated inflatable loses heat several times faster than a
+  built-in pool, and the real figure is measured within days
+- **Test suite.** UTF-8 handling and HA stubs hardened for reliable CI runs
+
 ## [1.5.1] — Setup Wizard Clarity
 
 User-reported UI improvements to the installation wizard (Dutch and English).

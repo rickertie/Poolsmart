@@ -1,0 +1,22 @@
+TITLE: [Project] PoolSmart — my pool now optimizes itself via Home Assistant
+
+BODY:
+I built PoolSmart: an open-source Home Assistant integration that turns a swimming
+pool into a self-optimizing system. ESPHome measures, HA decides, your equipment acts.
+
+Highlights:
+- Smart filtration runtime from pool volume + measured flow
+- Heat pump planning around dynamic energy prices and solar surplus
+- Self-learning: it learns your pool's heat loss, heating rate, and COP over time
+- Chemistry: pH readings become dosing instructions
+- Compressor protection (min off/run times) and an AI advisor that only suggests
+- Ships with a complete hardware guide (BOM, wiring, ESPHome config) + Lovelace dashboards
+
+Everything is in the repo with docs: https://github.com/rickertie/Poolsmart
+
+Installation is one click via HACS (add as custom repo) or manual. It's AGPL-3.0.
+Feedback, issues, and feature requests very welcome!
+
+Quick questions for you:
+- Anyone here running a similar pool automation setup? What's your sensor layout?
+- Would you find dynamic-price-aware heating useful in your area?

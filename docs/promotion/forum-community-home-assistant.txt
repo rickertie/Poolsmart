@@ -1,0 +1,37 @@
+TITLE: PoolSmart — an intelligent, self-optimizing pool controller for Home Assistant
+
+BODY:
+Hi everyone,
+
+I'd like to share a project I've been working on: PoolSmart, an intelligent swimming
+pool controller for Home Assistant. It does not replace your pump/heater — ESPHome
+measures, Home Assistant decides, and your existing equipment acts.
+
+It runs a priority-based decision engine every 30 seconds that balances energy cost,
+swim schedules, and equipment protection. What it can do out of the box:
+
+  - Smart filtration: daily runtime computed from pool volume and measured flow
+  - Heat pump control: plans around dynamic electricity prices and solar surplus
+  - Solar optimization: heats with free surplus when available
+  - Self-learning model: learns your pool's heat loss, heating rate, and COP
+  - Water chemistry: pH readings become clear dosing instructions
+  - Compressor protection: minimum off/run times always enforced
+  - AI advisory: suggests settings, but applies nothing without your approval
+  - Lovelace dashboards: a detailed three-tab view and a simple household page
+
+Installation
+------------
+One-click via HACS (custom repository) or manually; full instructions and docs are
+in the repository. A complete hardware + ESPHome guide is included (BOM, wiring,
+voltage divider, probe calibration).
+
+Links
+-----
+- Repository: https://github.com/rickertie/Poolsmart
+- Docs: https://github.com/rickertie/Poolsmart/tree/main/docs
+- Architecture overview in the README
+
+Safety first: the integration only advises and schedules; it does not dose chemicals
+or override your safety systems on its own.
+
+Happy to answer questions and receive feedback!
