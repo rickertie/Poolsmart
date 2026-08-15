@@ -301,31 +301,7 @@ def _walk(
             )
         skip(Branch.CHEMISTRY, "no chemistry cycle is running")
 
-    # -- 4. Filtration deadline -------------------------------------------
-    if permitted(Branch.FILTRATION_DEADLINE):
-      if filtration.deadline_critical:
-        return win(Decision(
-            pump=True,
-            heat_pump=False,
-            branch=Branch.FILTRATION_DEADLINE,
-            reason=(
-                f"Circulating to meet today's filtration requirement: "
-                f"{filtration.remaining_h:.2f} h still needed and only "
-                f"{filtration.available_h:.2f} h of window left. Price is ignored."
-            ),
-            detail={
-                "remaining_h": round(filtration.remaining_h, 3),
-                "available_h": round(filtration.available_h, 3),
-            },
-        ))
-      else:
-        skip(
-            Branch.FILTRATION_DEADLINE,
-            f"{filtration.remaining_h:.2f} h still owed but {filtration.available_h:.2f} h "
-            "of window left, so there is time",
-        )
-
-    # -- 5. Free electricity ----------------------------------------------
+    # -- 4. Free electricity ----------------------------------------------
     if permitted(Branch.FREE_POWER):
         if not _needs_heat(state, config):
             skip(Branch.FREE_POWER, "the pool is already at target")
@@ -356,7 +332,7 @@ def _walk(
                 else "no price data",
             )
 
-    # -- 6. Heating session ------------------------------------------------
+    # -- 5. Heating session ------------------------------------------------
     if permitted(Branch.HEATING):
         if not _needs_heat(state, config):
             skip(
@@ -427,6 +403,30 @@ def _walk(
                     "period signal."
                 )
             trace.record(Branch.HEATING, Verdict.PRICE, detail)
+
+    # -- 6. Filtration deadline -------------------------------------------
+    if permitted(Branch.FILTRATION_DEADLINE):
+      if filtration.deadline_critical:
+        return win(Decision(
+            pump=True,
+            heat_pump=False,
+            branch=Branch.FILTRATION_DEADLINE,
+            reason=(
+                f"Circulating to meet today's filtration requirement: "
+                f"{filtration.remaining_h:.2f} h still needed and only "
+                f"{filtration.available_h:.2f} h of window left. Price is ignored."
+            ),
+            detail={
+                "remaining_h": round(filtration.remaining_h, 3),
+                "available_h": round(filtration.available_h, 3),
+            },
+        ))
+      else:
+        skip(
+            Branch.FILTRATION_DEADLINE,
+            f"{filtration.remaining_h:.2f} h still owed but {filtration.available_h:.2f} h "
+            "of window left, so there is time",
+        )
 
     # -- 7. Scheduled filtration block ------------------------------------
     if permitted(Branch.FILTRATION_BLOCK):

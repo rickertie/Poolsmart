@@ -786,12 +786,16 @@ def test_t39_filtration_uses_measured_flow():
 def test_t40_deadline_does_not_block_boost():
     """Regression: Boost appeared to do nothing.
 
-    The filtration deadline sits above heating in the ladder and switched the
-    heat pump off. On a pool needing many hours of filtration a day that branch
-    is active most of the time, so heating almost never ran and the reason line
-    talked about filtration while the user waited for a warm pool.
+    Heating used to sit below the filtration deadline in the ladder, so a
+    critical deadline switched the heat pump off outright. On a pool needing
+    many hours of filtration a day that branch was active most of the time, so
+    heating almost never ran and the reason line talked about filtration while
+    the user waited for a warm pool.
 
-    The pump is running either way, so heating alongside costs nothing extra.
+    Heating now sits above the filtration deadline, so Boost heats directly.
+    The pump still runs either way and the tick still counts toward today's
+    filtration quota, so nothing is lost by heating winning the branch outright
+    instead of tacking heat onto a circulation-only decision.
     """
     config = make_config()
     now = datetime(2026, 8, 1, 16, 0, tzinfo=TZ)
@@ -807,10 +811,9 @@ def test_t40_deadline_does_not_block_boost():
     # Deadline critical: more filtration owed than window remaining.
     decision = run_tick(state, config, done_h=1.0)
 
-    assert decision.branch is Branch.FILTRATION_DEADLINE
+    assert decision.branch is Branch.HEATING
     assert decision.pump is True
     assert decision.heat_pump is True, decision.reason
-    assert decision.detail.get("heating_added") is True
 
 
 def test_t40b_deadline_respects_price_outside_boost():
@@ -907,8 +910,12 @@ def test_t46_compressor_minimum_off_time():
     assert decision.heat_pump is True, decision.reason
 
 
-def test_t46b_priority_branch_cannot_bypass_the_compressor_guard():
-    """A filtration deadline may break a hold. It may not restart a compressor."""
+def test_t46b_boost_cannot_bypass_the_compressor_guard():
+    """Boost ignores price, but never hardware protection.
+
+    Restarting the compressor two minutes after it stopped is short cycling no
+    matter which branch of the ladder asked for it.
+    """
     config = make_config()
     stopped = datetime(2026, 8, 1, 20, 1, tzinfo=TZ)
     now = datetime(2026, 8, 1, 20, 3, tzinfo=TZ)
@@ -922,7 +929,7 @@ def test_t46b_priority_branch_cannot_bypass_the_compressor_guard():
         measured_flow_m3h=1.02,
     )
     decision = run_tick(state, config, done_h=1.0)
-    assert decision.branch is Branch.FILTRATION_DEADLINE
+    assert decision.branch is Branch.HEATING
     assert decision.pump is True, "circulation must not be delayed"
     assert decision.heat_pump is False, "but the compressor must be"
 

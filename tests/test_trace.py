@@ -158,8 +158,9 @@ def test_t45_explains_the_boost_puzzle():
     """Boost with a warm pool and a critical filtration deadline.
 
     Before the trace existed, the status line talked about filtration while the
-    user waited for heat, and there was nothing anywhere saying why. Now the
-    winning branch and the outcome both say what happened.
+    user waited for heat, and there was nothing anywhere saying why. Heating now
+    sits above the filtration deadline in the ladder, so Boost heats directly
+    and the winning branch and the outcome both say what happened.
     """
     config = make_config()
     now = datetime(2026, 8, 1, 16, 0, tzinfo=TZ)
@@ -173,9 +174,8 @@ def test_t45_explains_the_boost_puzzle():
     )
     decision, trace = walk(state, config, done_h=1.0)
 
-    assert decision.branch is Branch.FILTRATION_DEADLINE
-    # Heating rides along, so there is no obstacle left to report.
+    assert decision.branch is Branch.HEATING
     assert decision.heat_pump is True
-    assert verdict_for(trace, Branch.FILTRATION_DEADLINE).verdict is Verdict.WON
-    # The branches below were never evaluated, and the trace says so.
-    assert verdict_for(trace, Branch.HEATING).verdict is Verdict.NOT_REACHED
+    assert verdict_for(trace, Branch.HEATING).verdict is Verdict.WON
+    # The branch below was never evaluated, and the trace says so.
+    assert verdict_for(trace, Branch.FILTRATION_DEADLINE).verdict is Verdict.NOT_REACHED
