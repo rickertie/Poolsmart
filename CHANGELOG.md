@@ -12,6 +12,47 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.6.0] — Session Review & the Reload That Wasn't a Restart
+
+A dashboard tweak was reloading the whole integration and quietly discarding
+whatever the pool was in the middle of doing. Fixed at the source, and turned
+the same investigation into a way to correct what the learning model
+remembers.
+
+### Added
+
+- **Session review.** Each finished heating session can be confirmed as
+  Auto/Include/Exclude from the **Sessions** tab, or via the new
+  `poolsmart.set_session_review` service. A "worth a look" flag surfaces
+  sessions the automatic verdict likely got wrong — long enough to hold real
+  data but rejected outright, or accepted despite a fault during it — without
+  ever second-guessing a verdict it agrees with. A correction rebuilds the
+  heating rate and COP curve from the whole session log immediately, instead
+  of only shaping sessions from that point on.
+- **Automatic learning backups.** A rolling `poolsmart_learning_backup.<entry
+  id>.json` is now written after every finished session, so recovering
+  learned history no longer depends on someone having run
+  `poolsmart.export_learning` beforehand.
+
+### Changed
+
+- **Decision ladder order.** Free electricity and Heating now sit above
+  Filtration deadline, so a free or already-planned heating opportunity gets
+  first refusal. A critical deadline still wins outright whenever heating
+  doesn't apply, since the deadline branch is reached right after.
+
+### Fixed
+
+- **Reload wiped in-progress state.** Changing **Max price** or **Solar
+  threshold** from the dashboard reloaded the entire integration. That closed
+  the currently-running filtration interval at its own start — crediting it
+  nothing and making filtration appear to restart from scratch — and silently
+  dropped whatever heating session was in progress, emptying the Sessions
+  tab. Those two entities now update live instead of triggering a reload; a
+  genuine restart still keeps its existing, deliberately conservative
+  handling of a dangling interval. The in-progress session itself is now
+  persisted and restored across a real reload, too.
+
 ## [1.5.4] — Version Sync
 
 Keeps the published version in sync with the release tag so HACS displays the
