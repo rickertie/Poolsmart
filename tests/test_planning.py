@@ -197,8 +197,8 @@ def test_t21_cop_curve_buckets():
     cool.sample_air(16.0)
 
     curve = {}
-    curve, _ = learning.update_cop_curve(curve, warm, config)
-    curve, _ = learning.update_cop_curve(curve, cool, config)
+    curve, _ = learning.update_cop_curve(curve, warm.measured_cop, warm.air_avg, config)
+    curve, _ = learning.update_cop_curve(curve, cool.measured_cop, cool.air_avg, config)
 
     assert learning.bucket_key(26.0) == "25-30"
     assert learning.bucket_key(16.0) == "15-20"

@@ -7,8 +7,11 @@ it must never contain a rule about when something should run.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 from datetime import datetime, time, timedelta
+from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_NAME
@@ -139,6 +142,11 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self.last_error: str | None = None
         #: Optional subsystems that failed, and when. Control continues without them.
         self.subsystem_errors: dict[str, str] = {}
+        #: Set just before an options update that already took effect live (see
+        #: :meth:`async_set_max_price`), so the config entry's update listener
+        #: knows to skip the reload it would otherwise trigger. Consumed by
+        #: :meth:`consume_suppressed_reload`.
+        self._suppress_next_reload: bool = False
 
         self._mode: Mode = Mode.AUTO
         self._target_temp: float = self._conf(c.CONF_TARGET_TEMP, 28.0)
@@ -742,6 +750,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._guard("flow", self._track_flow, now, state, config)
         self._guard("energy", self._track_energy, now, state)
         self._guard("session", self._track_session, now, state, config)
+        self._persist_session()
         self._guard("idle", self._track_idle, now, state, config)
 
         self.decision = decision
@@ -992,7 +1001,13 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         payload["usable"] = measurements.anything_usable
         payload["verdict"] = measurements.describe()
         payload["measurements"] = measurements.as_dict()
+        #: Human curation, WashData-style: "auto" leaves the automatic verdict
+        #: above in charge; "included"/"excluded" (set via async_set_session_review)
+        #: override it and win when the learned values are next rebuilt.
+        payload["needs_review"] = learning.needs_review(record, measurements)
+        payload["review"] = "auto"
         self.store.log_session(payload)
+        self._write_learning_snapshot()
 
         if not measurements.anything_usable or not config.learning.enabled:
             _LOGGER.debug("Session taught nothing: %s", measurements.describe())
@@ -1023,7 +1038,8 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             before = dict(self.store.learned.cop_by_air_bucket)
             curve, cop_timestamps = learning.update_cop_curve(
                 before,
-                record,
+                record.measured_cop,
+                record.air_avg,
                 config,
                 self.store.learned.cop_updated_at,
                 record.end,
@@ -1037,6 +1053,37 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 self.store.learned.cop_sessions_by_bucket = counts
 
         self.store.learned.session_count += 1
+
+    def _write_learning_snapshot(self) -> None:
+        """Write a rolling safety-net copy of the learned history to disk.
+
+        A reload -- or any other way the ``.storage`` file could be lost --
+        should not depend on the user having remembered to run
+        ``poolsmart.export_learning`` beforehand (see #2, where a reload bug
+        wiped an in-progress session with nothing to recover it from). Mirrors
+        that service's payload, overwritten after every finished session,
+        which is roughly how often the learned values actually change. Runs in
+        the background rather than blocking the tick that triggered it.
+        """
+        from .recovery import export_payload
+
+        payload = export_payload(self.store)
+        path = Path(
+            self.hass.config.path(f"poolsmart_learning_backup.{self.entry.entry_id}.json")
+        )
+
+        def _write() -> None:
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+            os.replace(tmp, path)
+
+        async def _run() -> None:
+            try:
+                await self.hass.async_add_executor_job(_write)
+            except OSError:
+                _LOGGER.exception("Could not write the learning safety-net snapshot")
+
+        self.hass.async_create_task(_run())
 
     # -- Idle observation, for heat loss -----------------------------------
 
@@ -1205,6 +1252,16 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         elif decision.branch is not Branch.FILTRATION_BLOCK:
             self.store.active_block = None
 
+    def _persist_session(self) -> None:
+        """Keep the store's copy of the in-progress session current.
+
+        Without this a reload -- deliberate or a real restart -- loses whatever
+        heating session was running, because :attr:`_session` otherwise lives
+        only in memory. Written every tick alongside the block above so a save
+        never captures one without the other.
+        """
+        self.store.active_session = self._session.snapshot() if self._session else None
+
     def _log(self, decision: Decision, state: PoolState) -> None:
         """Record the decision, in the store and in the Home Assistant logbook.
 
@@ -1350,6 +1407,57 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._config_cache = None
         self.store.target_temp = value
         await self.async_request_refresh()
+
+    async def _async_set_option_live(self, key: str, value: float) -> None:
+        """Update one config-entry option without reloading the integration.
+
+        Unlike a change made through the options flow, this is a plain value the
+        user tunes from the dashboard -- the price ceiling, the solar threshold
+        -- while a session may be running. A full reload used to follow, which
+        restarted the coordinator, closed the currently-open filtration interval
+        at its own start (crediting it nothing), and discarded whatever heating
+        session was in progress. ``async_update_entry`` still runs, so the value
+        is persisted and visible in the options flow; :meth:`consume_suppressed_reload`
+        is what stops the reload that would otherwise follow.
+        """
+        options = dict(self.entry.options)
+        options[key] = value
+        self._suppress_next_reload = True
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+        self._config_cache = None
+        await self.async_request_refresh()
+
+    async def async_set_max_price(self, value: float) -> None:
+        await self._async_set_option_live(c.CONF_MAX_PRICE, value)
+
+    async def async_set_solar_threshold(self, value: float) -> None:
+        await self._async_set_option_live(c.CONF_SOLAR_THRESHOLD_W, value)
+
+    async def async_set_session_review(self, session_start: str, review: str) -> bool:
+        """Override whether one logged session counts toward learning.
+
+        ``session_start`` identifies the session by its ``start`` field, as
+        shown in the Sessions tab. Rebuilds the learned values from the whole
+        log afterwards, so the change actually takes effect immediately rather
+        than only influencing the next session.
+        """
+        found = self.store.set_session_review(session_start, review)
+        if not found:
+            return False
+        self.store.rebuild_learned(self.pool_config)
+        await self.store.async_save(force=True)
+        await self.async_request_refresh()
+        return True
+
+    def consume_suppressed_reload(self) -> bool:
+        """Whether the config entry's next options-triggered reload should be skipped.
+
+        True at most once per call: set by :meth:`_async_set_option_live` for a
+        value that already took effect live, then cleared here so it can't
+        accidentally swallow a later, genuine options-flow change too.
+        """
+        suppress, self._suppress_next_reload = self._suppress_next_reload, False
+        return suppress
 
     async def async_set_manual_pump(self, enabled: bool) -> None:
         self._manual_pump_request = enabled
@@ -1581,6 +1689,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 self._mode = Mode.AUTO
         if self.store.target_temp is not None:
             self._target_temp = self.store.target_temp
+        if self.store.active_session is not None:
+            try:
+                self._session = learning.SessionRecord.from_snapshot(
+                    self.store.active_session
+                )
+            except (KeyError, ValueError, TypeError):
+                _LOGGER.warning("Stored in-progress session was unreadable and was dropped")
+                self.store.active_session = None
 
     # -- Convenience for entities -----------------------------------------
 

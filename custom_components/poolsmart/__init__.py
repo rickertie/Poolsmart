@@ -292,6 +292,30 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, "reset_learned", _reset)
 
+    async def _set_session_review(call) -> None:
+        from .core.learning import SESSION_REVIEW_STATES
+
+        review = str(call.data["review"])
+        if review not in SESSION_REVIEW_STATES:
+            _LOGGER.error("Refusing unknown review %r", review)
+            return
+
+        coordinator = _target_coordinator(hass, "review a session")
+        if coordinator is None:
+            return
+        session_start = str(call.data["session_start"])
+        found = await coordinator.async_set_session_review(session_start, review)
+        if not found:
+            _LOGGER.error(
+                "Refusing to set review %r: no session starting at %s was found",
+                review,
+                session_start,
+            )
+            return
+        _LOGGER.info("Session %s reviewed as %r", session_start, review)
+
+    hass.services.async_register(DOMAIN, "set_session_review", _set_session_review)
+
     async def _export(call) -> None:
         from .recovery import export_payload
 
@@ -395,5 +419,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload when options change."""
+    """Reload when options change.
+
+    Skipped when the change already took effect live -- see
+    :meth:`PoolSmartCoordinator.consume_suppressed_reload`, set by the number
+    entities (price ceiling, solar threshold) that update an option without
+    needing the integration restarted. A genuine options-flow change still
+    reloads as before.
+    """
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None and coordinator.consume_suppressed_reload():
+        return
     await hass.config_entries.async_reload(entry.entry_id)

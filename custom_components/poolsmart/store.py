@@ -18,9 +18,13 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
+
+if TYPE_CHECKING:
+    from .core.config import PoolConfig
 
 from .const import (
     DAILY_SUMMARY_MAX_DAYS,
@@ -179,6 +183,9 @@ class PoolStore:
         self._closed_hours: float = 0.0
         self.learned = LearnedValues()
         self.active_block: dict | None = None
+        #: A heating session still in progress, so it survives a reload instead
+        #: of vanishing from the Sessions tab. See core.learning.SessionRecord.
+        self.active_session: dict | None = None
         self.heat_pump_stopped_at: datetime | None = None
         self.heat_pump_started_at: datetime | None = None
         self.chemistry_until: datetime | None = None
@@ -213,6 +220,7 @@ class PoolStore:
             ]
             self.learned = LearnedValues.from_dict(raw.get("learned", {}))
             self.active_block = raw.get("active_block")
+            self.active_session = raw.get("active_session")
             if raw.get("heat_pump_stopped_at"):
                 self.heat_pump_stopped_at = datetime.fromisoformat(raw["heat_pump_stopped_at"])
             if raw.get("heat_pump_started_at"):
@@ -334,6 +342,7 @@ class PoolStore:
             "intervals": [i.as_dict() for i in self.intervals],
             "learned": self.learned.as_dict(),
             "active_block": self.active_block,
+            "active_session": self.active_session,
             "heat_pump_stopped_at": (
                 self.heat_pump_stopped_at.isoformat()
                 if self.heat_pump_stopped_at
@@ -451,7 +460,48 @@ class PoolStore:
         """
         self.session_log.append(payload)
 
+    def set_session_review(self, session_start: str, review: str) -> bool:
+        """Override whether one logged session counts toward learning.
+
+        ``session_start`` is the session's ``start`` field -- its natural id,
+        since two sessions cannot begin at the same instant. Returns whether a
+        matching session was found. Does not itself recompute the learned
+        values; call :meth:`rebuild_learned` afterwards so a batch of reviews
+        only costs one rebuild.
+        """
+        from .core.learning import SESSION_REVIEW_STATES
+
+        if review not in SESSION_REVIEW_STATES:
+            return False
+        for entry in self.session_log:
+            if entry.get("start") == session_start:
+                entry["review"] = review
+                return True
+        return False
+
     # -- Learned values ----------------------------------------------------
+
+    def rebuild_learned(self, config: "PoolConfig") -> None:
+        """Recompute the session-derived learned values from the current log.
+
+        Replaces rather than nudges: unlike the incremental update applied as
+        each session finishes, this re-derives the heating rate and COP curve
+        from every session that currently counts, so a review change made long
+        after the fact actually changes what the model believes. Leaves heat
+        loss and measured flow alone -- those come from idle periods and flow
+        sensors, not sessions, so a session review has nothing to say about
+        them.
+        """
+        from .core.learning import rebuild_learned as _rebuild_learned
+
+        result = _rebuild_learned(list(self.session_log), config)
+        self.learned.heating_rate_c_per_h = result["heating_rate_c_per_h"]
+        self.learned.heating_rate_sessions = result["heating_rate_sessions"]
+        self.learned.heating_rate_updated_at = result["heating_rate_updated_at"]
+        self.learned.cop_by_air_bucket = result["cop_by_air_bucket"]
+        self.learned.cop_updated_at = result["cop_updated_at"]
+        self.learned.cop_sessions_by_bucket = result["cop_sessions_by_bucket"]
+        self.learned.session_count = result["session_count"]
 
     def backfill_cop_counts(self) -> bool:
         """Give pre-1.1 buckets a session count they were never given.

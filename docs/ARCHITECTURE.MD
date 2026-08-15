@@ -27,20 +27,27 @@ condition that matches wins**, and all lower branches are ignored.
 | **1** | Frost protection | Yes | Temp drops below safe threshold; forces circulation. |
 | **2** | Manual override | Yes | User manually forced the pump ON/OFF in Home Assistant. |
 | **3** | Chemistry cycle | Yes | Scheduled chemical dosing or shock treatment. |
-| **4** | Filtration deadline | Yes | Ensures minimum turnover is met before the day ends. |
-| **5** | Free electricity | Yes | Triggered when electricity price is negative (< 0). |
-| **6** | Heating session | **No** | Dynamic heating session active based on COP and prices. |
+| **4** | Free electricity | Yes | Triggered when electricity price is negative (< 0). |
+| **5** | Heating session | **No** | Dynamic heating session active based on COP and prices. |
+| **6** | Filtration deadline | Yes | Ensures minimum turnover is met before the day ends. |
 | **7** | Scheduled filtration | **No** | Regular background filtration block. |
 | **8** | Pump rundown | **No** | Cool-down period after heating before turning pump off. |
 | **9** | Idle | — | No action required; pump and heating remain off. |
 
-> **Safety interlock:** Branches 0, 1, and 4 stay active even if the integration
-> is turned OFF. An off-switch must never be able to cause pipe freeze or damaged
-> equipment.
+Free electricity and Heating sit above Filtration deadline: a free or
+already-planned heating opportunity gets first refusal, and the deadline's
+"circulate regardless of price" override only kicks in once neither applies —
+so a critical deadline still wins exactly as before whenever heating doesn't.
+
+> **Safety interlock:** Branches 0–3 and 6 (Emergency stop, Frost protection,
+> Manual, Chemistry, Filtration deadline) may always break an ordinary hold.
+> They are **not** active when the pool's mode is **Off**: off means off,
+> including frost protection. Use **Stand-by** instead of Off to keep frost
+> protection active on a pool that is unattended but still filled.
 
 ### Heat Pump Operating Envelope
 
-In front of branches **5 (Free Electricity)** and **6 (Heating)** sits an
+In front of branches **4 (Free Electricity)** and **5 (Heating)** sits an
 operating envelope gate. If the outdoor air temperature drops below the heat
 pump's minimum operating limit (e.g., < 11 °C), heating is disabled. In this
 state, Frost Protection (Branch 1) will only trigger simple **water circulation**,

@@ -64,6 +64,35 @@ If the planning target dates stop updating or seem inaccurate, checking the
 **Learning** tab in the `/poolsmart` panel for rejected sessions is the first
 step in troubleshooting.
 
+### Reviewing a Session
+
+The automatic accept/reject verdict is usually right, but it cannot know a
+probe glitched or the pool was topped up mid-session. The **Sessions** tab in
+the `/poolsmart` panel flags a session **"worth a look"** when it ran long
+enough to hold real data but was rejected outright, or when it was accepted
+despite a fault having occurred during it — never the other way around; the
+flag only ever points at a case a human might read differently, it never makes
+the automatic verdict more confident on its own.
+
+Each session offers three states: **Auto** (the automatic verdict stands),
+**Include** (count it regardless of the verdict, as long as it still carries a
+raw measurement), and **Exclude** (never count it). Changing a session's state
+recomputes the heating rate and COP curve immediately from every session that
+currently counts — it is not a one-off nudge, so a correction made after the
+fact actually changes what the model believes. Heat loss and measured flow are
+untouched by this, since those are learned from idle periods and flow readings
+rather than sessions. The same override is available as the
+`poolsmart.set_session_review` service, for use from automations or scripts.
+
+### Backing Up Learned History
+
+After every finished session, PoolSmart writes a rolling
+`poolsmart_learning_backup.<entry_id>.json` file to the Home Assistant config
+directory — the same shape `poolsmart.export_learning` produces, kept current
+automatically rather than depending on someone having run that service
+beforehand. Restore from it (or from any manual export) with
+`poolsmart.import_learning`.
+
 ---
 
 ## See Also

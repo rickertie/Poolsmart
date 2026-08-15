@@ -129,6 +129,42 @@ class SessionRecord:
             "faults": self.faults,
         }
 
+    def snapshot(self) -> dict:
+        """Full state of a still-running session, for resuming it after a restart.
+
+        Unlike :meth:`as_dict`, which is a rounded summary for the finished-session
+        log, this keeps every raw field the running session still needs to
+        accumulate correctly -- the sample counts behind ``air_avg``, not the
+        average itself.
+        """
+        return {
+            "start": self.start.isoformat(),
+            "water_start": self.water_start,
+            "air_sum": self.air_sum,
+            "air_samples": self.air_samples,
+            "irradiance_samples": list(self.irradiance_samples),
+            "spans_daylight": self.spans_daylight,
+            "energy_kwh": self.energy_kwh,
+            "thermal_kwh": self.thermal_kwh,
+            "interrupted": self.interrupted,
+            "faults": list(self.faults),
+        }
+
+    @classmethod
+    def from_snapshot(cls, raw: dict) -> SessionRecord:
+        return cls(
+            start=datetime.fromisoformat(raw["start"]),
+            water_start=raw.get("water_start"),
+            air_sum=raw.get("air_sum", 0.0),
+            air_samples=raw.get("air_samples", 0),
+            irradiance_samples=list(raw.get("irradiance_samples", [])),
+            spans_daylight=raw.get("spans_daylight", False),
+            energy_kwh=raw.get("energy_kwh", 0.0),
+            thermal_kwh=raw.get("thermal_kwh", 0.0),
+            interrupted=raw.get("interrupted", False),
+            faults=list(raw.get("faults", [])),
+        )
+
 
 #: How far above the appliance's theoretical best a measured rise may sit before
 #: it is rejected. A little slack absorbs sensor noise and a warm afternoon
@@ -332,19 +368,22 @@ def capped_update(
 
 def update_cop_curve(
     curve: dict[str, float],
-    record: SessionRecord,
+    cop: float | None,
+    air: float | None,
     config: PoolConfig,
     updated_at: dict[str, datetime] | None = None,
     now: datetime | None = None,
 ) -> tuple[dict[str, float], dict[str, datetime]]:
-    """Fold a session's measured COP into the per-temperature curve.
+    """Fold one measured COP into the per-temperature curve.
 
     Returns ``(curve, updated_at)`` so callers can persist when each bucket
     was last refreshed. When ``updated_at`` is not given a fresh dict is
     created and decay is not applied.
+
+    Takes the raw ``cop``/``air`` rather than a :class:`SessionRecord` so that
+    :func:`rebuild_learned`, replaying the logged session history rather than a
+    live session, can call the exact same update rule.
     """
-    cop = record.measured_cop
-    air = record.air_avg
     if cop is None or air is None:
         return curve, dict(updated_at) if updated_at else {}
 
@@ -478,6 +517,97 @@ def recover_cop_counts(
     return counts
 
 
+#: Review states a logged session can carry. "auto" leaves the verdict that
+#: was recorded when the session finished in charge; the other two are a
+#: human's explicit correction and outrank it.
+SESSION_REVIEW_STATES = ("auto", "included", "excluded")
+
+
+def rebuild_learned(session_log: list[dict], config: PoolConfig) -> dict:
+    """Recompute everything sessions teach, replaying the whole log in order.
+
+    ``_finish_session`` updates the learned values incrementally, once, as each
+    session finishes. That is fine until a session's review changes after the
+    fact -- a capped incremental update has no way to go back and un-teach a
+    session that turns out to have been excluded, or teach one that was
+    wrongly rejected. Call this whenever a review changes, and use the result
+    to replace (not merge into) the corresponding learned fields.
+
+    Per entry, in order: "excluded" drops it regardless of what the automatic
+    verdict said; "included" forces it in as long as the underlying value
+    actually exists; "auto" (or a missing review, for logs written before this
+    existed) falls back to the verdict recorded in ``measurements`` at the
+    time. Only touches what sessions actually feed -- the heating rate and the
+    COP curve -- because heat loss and measured flow come from idle periods
+    and flow sensors, not sessions.
+    """
+    heating_rate_c_per_h: float | None = None
+    heating_rate_updated_at: datetime | None = None
+    heating_rate_sessions = 0
+    cop_by_air_bucket: dict[str, float] = {}
+    cop_updated_at: dict[str, datetime] = {}
+    cop_sessions_by_bucket: dict[str, int] = {}
+    session_count = 0
+
+    ratio = config.learning.max_step_ratio
+
+    for entry in session_log:
+        if entry.get("review") == "excluded":
+            continue
+        included = entry.get("review") == "included"
+        verdict = entry.get("measurements") or {}
+        use_rate = (included or verdict.get("heating_rate")) and entry.get(
+            "heating_rate"
+        ) is not None
+        use_cop = (included or verdict.get("cop")) and entry.get(
+            "measured_cop"
+        ) is not None
+        if not (use_rate or use_cop):
+            continue
+
+        end = datetime.fromisoformat(entry["end"]) if entry.get("end") else None
+
+        if use_rate:
+            heating_rate_c_per_h = round(
+                capped_update(
+                    heating_rate_c_per_h,
+                    entry["heating_rate"],
+                    ratio,
+                    heating_rate_updated_at,
+                    end,
+                ),
+                4,
+            )
+            heating_rate_updated_at = end
+            heating_rate_sessions += 1
+
+        if use_cop:
+            cop_by_air_bucket, cop_updated_at = update_cop_curve(
+                cop_by_air_bucket,
+                entry["measured_cop"],
+                entry.get("air_avg"),
+                config,
+                cop_updated_at,
+                end,
+            )
+            air = entry.get("air_avg")
+            if air is not None:
+                key = bucket_key(float(air))
+                cop_sessions_by_bucket[key] = cop_sessions_by_bucket.get(key, 0) + 1
+
+        session_count += 1
+
+    return {
+        "heating_rate_c_per_h": heating_rate_c_per_h,
+        "heating_rate_sessions": heating_rate_sessions,
+        "heating_rate_updated_at": heating_rate_updated_at,
+        "cop_by_air_bucket": cop_by_air_bucket,
+        "cop_updated_at": cop_updated_at,
+        "cop_sessions_by_bucket": cop_sessions_by_bucket,
+        "session_count": session_count,
+    }
+
+
 #: Faults that spoil one measurement without touching the other. A probe on the
 #: heat pump outlet is what delta-T and therefore COP are built from; it has
 #: nothing to do with how fast the pool warmed up.
@@ -493,6 +623,24 @@ COP_ONLY_FAULTS = frozenset(
 
 #: Faults that make the temperature rise itself untrustworthy.
 RATE_FAULTS = frozenset({"stale_water", "no_flow_while_pump_running"})
+
+
+def needs_review(record: SessionRecord, measurements: MeasurementVerdicts) -> bool:
+    """Whether a finished session is worth a human look before trusting the verdict.
+
+    Mirrors the downgrade-only quality gates a confirm/correct workflow like
+    WashData's uses: this never makes the automatic verdict more confident, it
+    only flags the two cases where a person is likely to know something the
+    heuristic does not -- a session long enough to hold real data that the
+    heuristic rejected outright, or one it kept despite a fault having occurred
+    during it.
+    """
+    long_enough = record.duration_h * 60 >= MIN_SESSION_MINUTES
+    if not measurements.anything_usable and long_enough:
+        return True
+    if measurements.anything_usable and record.faults:
+        return True
+    return False
 
 
 def assess_measurements(

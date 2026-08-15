@@ -77,11 +77,7 @@ class PoolSmartMaxPrice(PoolSmartEntity, NumberEntity):
         return configured if configured is not None else c.DEFAULT_MAX_PRICE
 
     async def async_set_native_value(self, value: float) -> None:
-        options = dict(self.coordinator.entry.options)
-        options[c.CONF_MAX_PRICE] = value
-        self.hass.config_entries.async_update_entry(
-            self.coordinator.entry, options=options
-        )
+        await self.coordinator.async_set_max_price(value)
 
 
 class PoolSmartSolarThreshold(PoolSmartEntity, NumberEntity):
@@ -117,8 +113,4 @@ class PoolSmartSolarThreshold(PoolSmartEntity, NumberEntity):
         }
 
     async def async_set_native_value(self, value: float) -> None:
-        options = dict(self.coordinator.entry.options)
-        options[c.CONF_SOLAR_THRESHOLD_W] = value
-        self.hass.config_entries.async_update_entry(
-            self.coordinator.entry, options=options
-        )
+        await self.coordinator.async_set_solar_threshold(value)

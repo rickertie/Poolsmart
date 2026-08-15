@@ -97,3 +97,35 @@ import_learning:
       example: /config/poolsmart_learning.json
       selector:
         text:
+
+set_session_review:
+  name: Review a heating session
+  description: >-
+    Override whether one logged heating session counts toward learning. The
+    automatic verdict is usually right, but it cannot know a probe glitched or
+    the pool was topped up mid-session -- this is how you correct it. The
+    heating rate and COP curve are recomputed immediately from every session
+    that currently counts, so the correction takes effect right away rather
+    than only shaping future sessions.
+  fields:
+    session_start:
+      name: Session
+      description: >-
+        The session's start time, exactly as shown in the Sessions tab
+        (ISO 8601, e.g. 2026-08-14T18:03:00+02:00).
+      required: true
+      example: "2026-08-14T18:03:00+02:00"
+      selector:
+        text:
+    review:
+      name: Review
+      required: true
+      selector:
+        select:
+          options:
+            - label: Use the automatic verdict
+              value: auto
+            - label: Always count this session
+              value: included
+            - label: Never count this session
+              value: excluded

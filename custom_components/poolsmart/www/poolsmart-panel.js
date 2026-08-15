@@ -57,6 +57,12 @@ const STRINGS = {
     readings: "Readings", combinedChlorine: "Combined chlorine",
     whatItMeans: "What this means together", circulate: "Circulate for",
     target: "target", outdoors: "outdoors",
+    reviewAuto: "Auto", reviewInclude: "Include", reviewExclude: "Exclude",
+    needsReview: "worth a look",
+    reviewHint:
+      "Auto leaves the automatic verdict in charge. Include/Exclude override " +
+      "it and take effect immediately -- the heating rate and COP curve are " +
+      "recomputed from every session that currently counts.",
   },
   nl: {
     overview: "Overzicht", planning: "Planning", water: "Water",
@@ -93,6 +99,12 @@ const STRINGS = {
     readings: "Metingen", combinedChlorine: "Gebonden chloor",
     whatItMeans: "Wat dit samen betekent", circulate: "Laat circuleren",
     target: "doel", outdoors: "buiten",
+    reviewAuto: "Auto", reviewInclude: "Meetellen", reviewExclude: "Uitsluiten",
+    needsReview: "even bekijken",
+    reviewHint:
+      "Auto laat het automatische oordeel gelden. Meetellen/Uitsluiten overrulen " +
+      "dat en gelden meteen -- de stijgsnelheid en COP-curve worden herberekend " +
+      "uit alle sessies die op dat moment meetellen.",
   },
 };
 
@@ -337,6 +349,15 @@ class PoolSmartPanel extends HTMLElement {
         button.action { background: var(--primary-color,#03a9f4); color:#fff; border:none; border-radius:8px;
                         padding:8px 14px; cursor:pointer; margin-right:8px; font-size:14px; }
         .slot { display:flex; justify-content:space-between; padding:4px 0; font-size:13px; }
+        .review-cell { white-space:nowrap; }
+        .needs-review { display:inline-block; margin-bottom:4px; padding:2px 8px; border-radius:10px;
+                         font-size:11px; background: color-mix(in srgb, #ef6c00 18%, transparent);
+                         color:#ef6c00; }
+        .review-btn { background:none; border:1px solid var(--divider-color,#e0e0e0); color: var(--secondary-text-color,#666);
+                       border-radius:6px; padding:3px 8px; margin-right:4px; margin-top:2px; cursor:pointer; font-size:11px; }
+        .review-btn:hover:not(:disabled) { color: var(--primary-text-color,#212121); }
+        .review-btn.active { background: var(--primary-color,#03a9f4); border-color: var(--primary-color,#03a9f4); color:#fff; cursor:default; }
+        .review-btn:disabled { cursor:default; }
       </style>
       <h1>${esc(s ? s.title : "PoolSmart")}</h1>
       ${
@@ -777,11 +798,33 @@ class PoolSmartPanel extends HTMLElement {
       }`;
   }
 
+  _reviewButtons(x) {
+    const current = x.review || "auto";
+    const options = [
+      ["auto", this.t("reviewAuto")],
+      ["included", this.t("reviewInclude")],
+      ["excluded", this.t("reviewExclude")],
+    ];
+    return options
+      .map(([value, label]) => {
+        const active = current === value;
+        const payload = JSON.stringify({
+          session_start: x.start,
+          review: value,
+        }).replace(/'/g, "&#39;");
+        return `<button class="review-btn${active ? " active" : ""}"
+                  data-service="poolsmart.set_session_review" data-payload='${payload}'
+                  ${active ? "disabled" : ""}
+                  aria-label="${esc(label)}: ${fmtDateTime(x.start)}">${esc(label)}</button>`;
+      })
+      .join("");
+  }
+
   _sessions(s) {
     if (!s.session_log.length)
       return `<div class="card muted">No finished heating sessions yet.</div>`;
     return `<div class="card"><table>
-      <tr><th>Started</th><th>Duration</th><th>Gain</th><th>COP</th><th>Used</th></tr>
+      <tr><th>Started</th><th>Duration</th><th>Gain</th><th>COP</th><th>Used</th><th>Review</th></tr>
       ${s.session_log
         .map(
           (x) => `<tr>
@@ -794,10 +837,19 @@ class PoolSmartPanel extends HTMLElement {
             }</td>
             <td>${x.measured_cop ?? "—"}</td>
             <td>${x.usable ? "yes" : `<span class="muted">${esc(x.verdict)}</span>`}</td>
+            <td class="review-cell">
+              ${
+                x.needs_review
+                  ? `<div class="needs-review">${esc(this.t("needsReview"))}</div>`
+                  : ""
+              }
+              <div>${this._reviewButtons(x)}</div>
+            </td>
           </tr>`
         )
         .join("")}
-    </table></div>`;
+    </table></div>
+    <div class="card muted reason">${esc(this.t("reviewHint"))}</div>`;
   }
 
   _learning(s) {
