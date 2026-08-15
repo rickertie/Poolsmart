@@ -12,6 +12,43 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.7.0] — Storage Stats, Maintenance & Bulk Export/Import
+
+Rounds out 1.6.0's session review with the tools to act on history in bulk,
+inspired by how WashData handles its own training data: reprocess after a
+batch of changes, see what's actually on disk, and export or import exactly
+the parts you want instead of all-or-nothing.
+
+### Added
+
+- **Storage stats.** The Learning tab now shows session/dose/decision counts,
+  how many near-misses are tracked, and the on-disk file size — refreshed on
+  request, since the size check is a disk read.
+- **Maintenance actions.** `poolsmart.rebuild_learning` reprocesses the whole
+  session log in one go (same effect as reviewing a session, applied to
+  everything at once). `poolsmart.clear_debug_log` empties the decision log
+  and near-miss tally — diagnostics only, always safe. `poolsmart.clear_all_history`
+  permanently deletes every learned value, session, dose, and log entry;
+  requires an explicit `confirm: true` and the panel asks twice before
+  sending it.
+- **Selective export and advanced replace.** `poolsmart.export_learning`
+  takes an optional `sections` field to export only some of learned
+  values/session log/dose log/last water test. New `poolsmart.replace_learning`
+  overwrites instead of merging — for restoring a backup exactly as it was,
+  not routine use — also `sections`-aware and `confirm`-gated.
+
+### Fixed
+
+- **Export could crash on real data.** `export_payload` handed the session
+  and dose logs to the JSON encoder as-is; both are `deque`s, which the
+  standard encoder cannot serialize. Never triggered by the test suite
+  because nothing exercised it with real, non-empty logs. Exports now convert
+  them explicitly.
+- **A history import missing "learned" was silently dropped.** `adopt()`
+  bailed out before looking at the session log, dose log, or last water test
+  if the import had no learned values — which a sections-only export now
+  legitimately can. It now processes each part independently.
+
 ## [1.6.0] — Session Review & the Reload That Wasn't a Restart
 
 A dashboard tweak was reloading the whole integration and quietly discarding
