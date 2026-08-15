@@ -201,6 +201,26 @@ class PoolStore:
         self.near_miss_log = NearMissLog()
         self.daily_summaries: list[dict] = []
 
+    @property
+    def path(self) -> str:
+        """Where this pool's state lives on disk, for stats and diagnostics."""
+        return self._store.path
+
+    def stats(self) -> dict:
+        """In-memory counts, cheap enough to compute on every request.
+
+        File size is not included here -- that needs a blocking stat() call,
+        kept out of this method so callers stay free to run it without an
+        executor.
+        """
+        return {
+            "sessions": len(self.session_log),
+            "doses": len(self.dose_log),
+            "decisions": len(self.decision_log),
+            "near_misses": len(self.near_miss_log.tallies),
+            "daily_summaries": len(self.daily_summaries),
+        }
+
     # -- Loading and saving ------------------------------------------------
 
     async def async_load(self) -> None:
@@ -536,9 +556,6 @@ class PoolStore:
         own since setup, that is measured on the actual installation and wins.
         """
         learned = history.get("learned") or {}
-        if not learned:
-            return "nothing to adopt"
-
         incoming = LearnedValues.from_dict(learned)
         taken: list[str] = []
 
@@ -588,6 +605,42 @@ class PoolStore:
 
         self.backfill_cop_counts()
         return ", ".join(taken) if taken else "nothing was missing"
+
+    def replace(self, history: dict, sections: "list[str] | None" = None) -> str:
+        """Overwrite (not merge) with history from elsewhere.
+
+        The advanced counterpart to :meth:`adopt`: where that keeps whatever
+        this pool has already measured for itself, this discards it in favour
+        of the import outright. For recovering from a bad rebuild or bringing
+        a backup back exactly as it was -- not for routine use, which is what
+        :meth:`adopt` is for. ``sections`` limits which parts are replaced;
+        omitted sections are left untouched.
+        """
+        from .recovery import EXPORT_SECTIONS
+
+        chosen = set(sections) if sections is not None else set(EXPORT_SECTIONS)
+        replaced: list[str] = []
+
+        if "learned" in chosen and "learned" in history:
+            self.learned = LearnedValues.from_dict(history.get("learned") or {})
+            replaced.append("learned")
+        if "session_log" in chosen and "session_log" in history:
+            self.session_log = deque(history["session_log"], maxlen=SESSION_LOG_SIZE)
+            replaced.append("session_log")
+        if "dose_log" in chosen and "dose_log" in history:
+            self.dose_log = deque(history["dose_log"], maxlen=DOSE_LOG_SIZE)
+            replaced.append("dose_log")
+        if "last_water_test" in chosen and "last_water_test" in history:
+            raw = history.get("last_water_test")
+            try:
+                self.last_water_test = datetime.fromisoformat(raw) if raw else None
+            except (TypeError, ValueError):
+                pass
+            else:
+                replaced.append("last_water_test")
+
+        self.backfill_cop_counts()
+        return ", ".join(replaced) if replaced else "nothing to replace"
 
     def reset_learned(self, name: str) -> bool:
         """Clear one learned value without discarding the rest.

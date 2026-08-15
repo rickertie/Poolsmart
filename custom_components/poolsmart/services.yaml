@@ -84,6 +84,22 @@ export_learning:
       example: /config/poolsmart_learning.json
       selector:
         text:
+    sections:
+      name: What to include
+      description: Leave empty to include everything (the default).
+      required: false
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Learned values
+              value: learned
+            - label: Session log
+              value: session_log
+            - label: Dose log
+              value: dose_log
+            - label: Last water test
+              value: last_water_test
 
 import_learning:
   name: Import learned history
@@ -97,6 +113,70 @@ import_learning:
       example: /config/poolsmart_learning.json
       selector:
         text:
+
+replace_learning:
+  name: Replace learned history (advanced)
+  description: >-
+    Overwrite learned history from a file instead of merging it. Unlike Import,
+    this discards what this pool has already measured for itself in favour of
+    the file — for recovering a backup exactly as it was, not routine use.
+    Requires Confirm to be on.
+  fields:
+    path:
+      name: File path
+      required: true
+      example: /config/poolsmart_learning.json
+      selector:
+        text:
+    sections:
+      name: What to replace
+      description: Leave empty to replace everything the file contains.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options:
+            - label: Learned values
+              value: learned
+            - label: Session log
+              value: session_log
+            - label: Dose log
+              value: dose_log
+            - label: Last water test
+              value: last_water_test
+    confirm:
+      name: Confirm
+      description: Must be on. This overwrites existing history and cannot be undone.
+      required: true
+      selector:
+        boolean:
+
+rebuild_learning:
+  name: Reprocess learning history
+  description: >-
+    Recompute the heating rate and COP curve from the whole session log, and
+    recover COP session counts. Useful after a batch of session reviews or an
+    import, so the effect is immediate rather than waiting on the next session.
+
+clear_debug_log:
+  name: Clear debug log
+  description: >-
+    Empty the decision log and the near-miss tally. Diagnostic trails only —
+    this never touches learned values, sessions, or doses.
+
+clear_all_history:
+  name: Clear all history (advanced)
+  description: >-
+    Permanently delete every learned value, session, dose, and log entry.
+    Today's live filtration progress and current mode/target are left alone.
+    Cannot be undone. Requires Confirm to be on.
+  fields:
+    confirm:
+      name: Confirm
+      description: Must be on. This permanently deletes history and cannot be undone.
+      required: true
+      selector:
+        boolean:
 
 set_session_review:
   name: Review a heating session

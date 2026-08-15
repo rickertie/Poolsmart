@@ -169,23 +169,36 @@ def read_history(path: str) -> dict:
     }
 
 
-def export_payload(store) -> dict:
+#: What an export can contain. All four are opt-out: pass ``sections`` to
+#: :func:`export_payload` to carry only some of them across.
+EXPORT_SECTIONS = ("learned", "session_log", "dose_log", "last_water_test")
+
+
+def export_payload(store, sections: "list[str] | None" = None) -> dict:
     """What an export contains.
 
     Deliberately not the whole storage file: today's filtration quota, the
     current mode and the decision log describe a moment rather than a pool, and
     carrying them to another system would be carrying noise.
+
+    ``sections`` narrows this further, for someone who wants the learned
+    figures without also carrying the raw session log across, say. ``None``
+    (the default) exports everything above, unchanged from before this
+    parameter existed.
     """
-    return {
-        "version": 1,
-        "exported": datetime.now().isoformat(),
-        "learned": store.learned.as_dict(),
-        "session_log": store.session_log,
-        "dose_log": store.dose_log,
-        "last_water_test": (
+    chosen = set(sections) if sections is not None else set(EXPORT_SECTIONS)
+    payload = {"version": 1, "exported": datetime.now().isoformat()}
+    if "learned" in chosen:
+        payload["learned"] = store.learned.as_dict()
+    if "session_log" in chosen:
+        payload["session_log"] = list(store.session_log)
+    if "dose_log" in chosen:
+        payload["dose_log"] = list(store.dose_log)
+    if "last_water_test" in chosen:
+        payload["last_water_test"] = (
             store.last_water_test.isoformat() if store.last_water_test else None
-        ),
-    }
+        )
+    return payload
 
 
 def validate_import(payload: dict) -> tuple[bool, str]:
@@ -199,13 +212,15 @@ def validate_import(payload: dict) -> tuple[bool, str]:
         return False, "the file does not contain an export"
     if payload.get("version") != 1:
         return False, f"unsupported export version {payload.get('version')!r}"
-    learned = payload.get("learned")
-    if not isinstance(learned, dict):
-        return False, "the export contains no learned values"
+    if not set(EXPORT_SECTIONS) & payload.keys():
+        return False, "the export contains none of: " + ", ".join(EXPORT_SECTIONS)
+    if "learned" in payload and not isinstance(payload["learned"], dict):
+        return False, "learned is not an object"
     for key in ("session_log", "dose_log"):
         if key in payload and not isinstance(payload[key], list):
             return False, f"{key} is not a list"
 
+    learned = payload.get("learned") or {}
     bounds: dict[str, tuple[float, float]] = {
         "heat_loss_c_per_h": (0.01, 2.0),
         "heat_loss_covered_c_per_h": (0.01, 2.0),

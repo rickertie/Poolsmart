@@ -7,6 +7,7 @@ entries on every state change. They are served on request instead.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import voluptuous as vol
@@ -26,6 +27,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_set_mode)
     websocket_api.async_register_command(hass, ws_set_target)
     websocket_api.async_register_command(hass, ws_reset_learning)
+    websocket_api.async_register_command(hass, ws_storage_stats)
 
 
 def _live_session(coordinator) -> dict:
@@ -390,3 +392,32 @@ async def ws_reset_learning(hass: HomeAssistant, connection, msg: dict[str, Any]
         return
     await coordinator.async_reset_learning()
     connection.send_result(msg["id"], {"reset": True})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "poolsmart/storage_stats",
+        vol.Optional("entry_id"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_storage_stats(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+    """Counts and on-disk size, for the maintenance card.
+
+    Kept off the regular snapshot: the file-size stat is a blocking call, and
+    the panel only needs this when the maintenance section is actually open.
+    """
+    coordinator = _coordinator(hass, msg.get("entry_id"))
+    if coordinator is None:
+        connection.send_error(msg["id"], "not_found", "No pool is configured")
+        return
+
+    stats = coordinator.store.stats()
+    try:
+        stats["file_size_bytes"] = await hass.async_add_executor_job(
+            os.path.getsize, coordinator.store.path
+        )
+    except OSError:
+        stats["file_size_bytes"] = None
+    connection.send_result(msg["id"], stats)

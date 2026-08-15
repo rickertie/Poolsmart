@@ -93,6 +93,36 @@ automatically rather than depending on someone having run that service
 beforehand. Restore from it (or from any manual export) with
 `poolsmart.import_learning`.
 
+### Maintenance & Export/Import
+
+The bottom of the **Learning** tab covers storage and bulk history operations.
+
+**Storage** shows counts (sessions, doses, decisions logged, near misses
+tracked) and the on-disk file size, refreshed on request rather than on every
+panel load, since the size check is a disk read.
+
+**Maintenance:**
+
+| Action | Service | What it does |
+|---|---|---|
+| Process now | `poolsmart.rebuild_learning` | Recomputes the heating rate and COP curve from the whole session log, and recovers COP session counts. Same effect as reviewing a session, but for the whole log at once — useful after a batch of reviews or an import. |
+| Clear debug traces | `poolsmart.clear_debug_log` | Empties the decision log and the near-miss tally. Diagnostics only; never touches learned values, sessions, or doses. Always safe. |
+| Clear all history | `poolsmart.clear_all_history` | Permanently deletes every learned value, session, dose, and log entry. Today's live filtration progress and current mode/target are left alone. **Cannot be undone**, and requires a `confirm: true` field — the panel button asks twice before sending it. |
+
+**Export / Import:**
+
+- **Quick export** (`poolsmart.export_learning` with no `sections`) writes
+  everything: learned values, session log, dose log, last water test.
+- **Choosing what to export** narrows that with the `sections` field —
+  useful for carrying only the learned figures across without the raw session
+  log, for example.
+- **Import** (`poolsmart.import_learning`) merges: a value this pool has
+  already measured for itself is kept over the imported one.
+- **Advanced: replace** (`poolsmart.replace_learning`) overwrites instead of
+  merging — what this pool has already measured for itself is discarded in
+  favour of the file. Also `sections`-aware, and also requires `confirm: true`.
+  For recovering a backup exactly as it was, not routine use.
+
 ---
 
 ## See Also

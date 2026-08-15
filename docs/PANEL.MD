@@ -28,8 +28,8 @@ thing.
 |---|---|
 | Overview | Current status, mode, temperature, and the reason for the last decision |
 | Planning | Heating plan, price forecast, and target time/date |
-| Sessions | Session history with learned values and rejection reasons |
-| Learning | Learned heat loss, heating rate, and COP curve with confidence bars |
+| Sessions | Session history with learned values, rejection reasons, and manual review controls |
+| Learning | Learned heat loss, heating rate, and COP curve with confidence bars; storage stats, maintenance actions, and export/import |
 | Settings | Quick access to common settings without opening the full options flow |
 | Diagnostics | Full ladder trace, decision log, faults, and export button |
 
@@ -56,7 +56,7 @@ Displays the automated heating schedule, real-time dynamic energy price forecast
 ---
 
 ### 3. Sessions Tab
-Logs past heating and filtration cycles, displaying evaluated metrics, learned parameter updates, and reasons for any rejected runs.
+Logs past heating and filtration cycles, displaying evaluated metrics, learned parameter updates, and reasons for any rejected runs. Each session carries Auto/Include/Exclude review controls, with a "worth a look" flag on sessions the automatic verdict is likely to have gotten wrong. See [LEARNING.MD](LEARNING.MD#reviewing-a-session).
 
 <p align="center">
   <img src="images/panel-sessions.svg" width="750" alt="PoolSmart Sessions Tab">
@@ -65,7 +65,7 @@ Logs past heating and filtration cycles, displaying evaluated metrics, learned p
 ---
 
 ### 4. Learning Tab
-Visualizes the self-learning engine's performance models, including heat loss calculations, heating rate estimations, and the active COP curve with confidence margins.
+Visualizes the self-learning engine's performance models, including heat loss calculations, heating rate estimations, and the active COP curve with confidence margins. Below that sits storage statistics, maintenance actions (reprocess history, clear debug traces, clear all history), and export/import, including a selective export and an advanced full-replace option. See [LEARNING.MD](LEARNING.MD#maintenance--exportimport).
 
 <p align="center">
   <img src="images/panel-learning.svg" width="750" alt="PoolSmart Learning Tab">

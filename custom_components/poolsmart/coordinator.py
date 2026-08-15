@@ -1680,6 +1680,67 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         await self.store.async_save()
         await self.async_request_refresh()
 
+    async def async_rebuild_learning(self) -> None:
+        """Reprocess the session log: recompute rate/COP, recover COP counts.
+
+        The maintenance-tab equivalent of re-running matching on stored
+        history. Nothing here reads new data -- it re-derives the learned
+        heating rate and COP curve from the session log exactly as
+        :meth:`async_set_session_review` does after one review, useful after a
+        batch of reviews or an import where doing it session-by-session would
+        be tedious.
+        """
+        self.store.rebuild_learned(self.pool_config)
+        self.store.backfill_cop_counts()
+        await self.store.async_save(force=True)
+        await self.async_request_refresh()
+
+    async def async_clear_debug_log(self) -> None:
+        """Empty the decision log and the near-miss tally.
+
+        Diagnostic trails only -- nothing here is read by the decision engine
+        or the learning model, so this is always safe and never loses
+        anything that could be relearned.
+        """
+        self.store.decision_log.clear()
+        self.store.near_miss_log = NearMissLog()
+        self.near_misses = NearMissLog()
+        await self.store.async_save(force=True)
+        await self.async_request_refresh()
+
+    async def async_clear_all_history(self) -> None:
+        """Factory-reset everything sessions and doses have taught the model.
+
+        Irreversible, and deliberately not reachable without an explicit
+        confirmation -- see the ``confirm`` field on the
+        ``poolsmart.clear_all_history`` service. Leaves today's live
+        filtration progress and current mode/target alone: those are ongoing
+        operational state, not history.
+        """
+        from .store import LearnedValues
+
+        self.store.learned = LearnedValues()
+        self.store.session_log.clear()
+        self.store.dose_log.clear()
+        self.store.decision_log.clear()
+        self.store.near_miss_log = NearMissLog()
+        self.near_misses = NearMissLog()
+        self.store.daily_summaries = []
+        self.store.last_water_test = None
+        await self.store.async_save(force=True)
+        await self.async_request_refresh()
+
+    async def async_replace_history(self, payload: dict, sections: list[str] | None) -> str:
+        """Overwrite learned history from a validated import payload.
+
+        Thin wrapper so the service handler in ``__init__.py`` does not have
+        to know about cache invalidation and refresh order.
+        """
+        replaced = self.store.replace(payload, sections)
+        await self.store.async_save(force=True)
+        await self.async_request_refresh()
+        return replaced
+
     async def async_restore(self) -> None:
         await self.store.async_load()
         if self.store.mode:

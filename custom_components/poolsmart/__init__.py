@@ -330,7 +330,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         coordinator = _target_coordinator(hass, "export learned history")
         if coordinator is None:
             return
-        payload = export_payload(coordinator.store)
+        payload = export_payload(coordinator.store, call.data.get("sections"))
 
         def _write() -> None:
             path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -374,6 +374,81 @@ def _async_register_services(hass: HomeAssistant) -> None:
         _LOGGER.info("Imported learned history from %s: %s", path, taken)
 
     hass.services.async_register(DOMAIN, "import_learning", _import)
+
+    async def _replace(call) -> None:
+        from .recovery import validate_import
+
+        if not call.data.get("confirm"):
+            _LOGGER.error(
+                "Refusing to replace learned history: confirm was not set to true"
+            )
+            return
+
+        try:
+            path = _resolve_config_path(hass, call.data["path"])
+        except (ValueError, KeyError) as err:
+            _LOGGER.error("Refusing to import: %s", err)
+            return
+
+        def _read() -> dict:
+            return json.loads(path.read_text(encoding="utf-8"))
+
+        try:
+            payload = await hass.async_add_executor_job(_read)
+        except (OSError, ValueError) as err:
+            _LOGGER.error("Could not read %s: %s", path, err)
+            return
+
+        usable, why = validate_import(payload)
+        if not usable:
+            _LOGGER.error("Refusing to import %s: %s", path, why)
+            return
+
+        coordinator = _target_coordinator(hass, "replace learned history")
+        if coordinator is None:
+            return
+        replaced = await coordinator.async_replace_history(
+            payload, call.data.get("sections")
+        )
+        _LOGGER.warning(
+            "Replaced learned history from %s, discarding what was there before: %s",
+            path,
+            replaced,
+        )
+
+    hass.services.async_register(DOMAIN, "replace_learning", _replace)
+
+    async def _rebuild_learning(call) -> None:
+        coordinator = _target_coordinator(hass, "reprocess learning history")
+        if coordinator is None:
+            return
+        await coordinator.async_rebuild_learning()
+        _LOGGER.info("Reprocessed learning history from the session log")
+
+    hass.services.async_register(DOMAIN, "rebuild_learning", _rebuild_learning)
+
+    async def _clear_debug_log(call) -> None:
+        coordinator = _target_coordinator(hass, "clear the debug log")
+        if coordinator is None:
+            return
+        await coordinator.async_clear_debug_log()
+        _LOGGER.info("Cleared the decision log and near-miss tally")
+
+    hass.services.async_register(DOMAIN, "clear_debug_log", _clear_debug_log)
+
+    async def _clear_all_history(call) -> None:
+        if not call.data.get("confirm"):
+            _LOGGER.error(
+                "Refusing to clear all history: confirm was not set to true"
+            )
+            return
+        coordinator = _target_coordinator(hass, "clear all history")
+        if coordinator is None:
+            return
+        await coordinator.async_clear_all_history()
+        _LOGGER.warning("Cleared all learned history, sessions, doses, and logs")
+
+    hass.services.async_register(DOMAIN, "clear_all_history", _clear_all_history)
 
 
 async def _async_adopt_history(hass, entry, coordinator) -> None:

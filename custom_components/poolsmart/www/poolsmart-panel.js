@@ -170,6 +170,14 @@ const fmtHours = (h) => {
   return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
 };
 
+const fmtBytes = (n) => {
+  if (n === null || n === undefined) return "—";
+  const num = Number(n);
+  if (num < 1024) return `${num} B`;
+  if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} kB`;
+  return `${(num / (1024 * 1024)).toFixed(2)} MB`;
+};
+
 const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (ch) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch])
@@ -193,6 +201,9 @@ class PoolSmartPanel extends HTMLElement {
     this._loading = true;
     this._refreshing = false;
     this._timer = null;
+    this._storageStats = null;
+    this._storageStatsLoading = false;
+    this._maintStatus = "";
     this.attachShadow({ mode: "open" });
   }
 
@@ -225,6 +236,20 @@ class PoolSmartPanel extends HTMLElement {
       this._loading = false;
     }
     this._refreshing = false;
+    this._render();
+  }
+
+  async _loadStorageStats() {
+    if (!this._hass || this._storageStatsLoading) return;
+    this._storageStatsLoading = true;
+    try {
+      this._storageStats = await this._hass.connection.sendMessagePromise({
+        type: "poolsmart/storage_stats",
+      });
+    } catch (err) {
+      this._storageStats = { error: err && err.message ? err.message : "Could not load" };
+    }
+    this._storageStatsLoading = false;
     this._render();
   }
 
@@ -420,6 +445,97 @@ class PoolSmartPanel extends HTMLElement {
         this._callService(domain, service, JSON.parse(b.dataset.payload || "{}"));
       })
     );
+    if (this._tab === "learning" && !this._storageStats && !this._storageStatsLoading) {
+      this._loadStorageStats();
+    }
+    this._wireMaintenance();
+  }
+
+  _wireMaintenance() {
+    const root = this.shadowRoot;
+    const setStatus = (msg) => {
+      this._maintStatus = msg;
+      const el = root.querySelector("#maint-status");
+      if (el) el.textContent = msg;
+    };
+
+    root.querySelector("#btn-refresh-stats")?.addEventListener("click", () => {
+      this._loadStorageStats();
+    });
+
+    root.querySelector("#btn-clear-debug")?.addEventListener("click", async () => {
+      if (
+        !confirm(
+          "Clear the decision log and near-miss tally? This only affects diagnostics, not learned values, sessions, or doses."
+        )
+      )
+        return;
+      await this._hass.callService("poolsmart", "clear_debug_log", {});
+      setStatus("Debug traces cleared.");
+      setTimeout(() => this._refresh(), 800);
+    });
+
+    root.querySelector("#btn-clear-all")?.addEventListener("click", async () => {
+      if (
+        !confirm(
+          "Permanently delete every learned value, session, dose, and log entry? This cannot be undone."
+        )
+      )
+        return;
+      if (!confirm("Really sure? There is no way to get this back unless you have an export."))
+        return;
+      await this._hass.callService("poolsmart", "clear_all_history", { confirm: true });
+      setStatus("All history cleared.");
+      setTimeout(() => this._refresh(), 800);
+    });
+
+    root.querySelector("#btn-export-chosen")?.addEventListener("click", async () => {
+      const sections = Array.from(root.querySelectorAll(".export-section:checked")).map(
+        (el) => el.value
+      );
+      if (!sections.length) {
+        setStatus("Choose at least one section to export.");
+        return;
+      }
+      const path = root.querySelector("#export-path")?.value.trim();
+      const data = { sections };
+      if (path) data.path = path;
+      await this._hass.callService("poolsmart", "export_learning", data);
+      setStatus(`Exported: ${sections.join(", ")}.`);
+    });
+
+    root.querySelector("#btn-import")?.addEventListener("click", async () => {
+      const path = root.querySelector("#import-path")?.value.trim();
+      if (!path) {
+        setStatus("Enter a file path to import.");
+        return;
+      }
+      await this._hass.callService("poolsmart", "import_learning", { path });
+      setStatus(`Imported from ${path}.`);
+      setTimeout(() => this._refresh(), 800);
+    });
+
+    const replaceConfirm = root.querySelector("#replace-confirm");
+    const replaceBtn = root.querySelector("#btn-replace");
+    replaceConfirm?.addEventListener("change", () => {
+      if (replaceBtn) replaceBtn.disabled = !replaceConfirm.checked;
+    });
+    replaceBtn?.addEventListener("click", async () => {
+      const path = root.querySelector("#replace-path")?.value.trim();
+      if (!path) {
+        setStatus("Enter a file path to replace from.");
+        return;
+      }
+      if (
+        !confirm(
+          "Overwrite existing learned history from this file? What this pool has measured for itself will be discarded. This cannot be undone."
+        )
+      )
+        return;
+      await this._hass.callService("poolsmart", "replace_learning", { path, confirm: true });
+      setStatus(`Replaced history from ${path}.`);
+      setTimeout(() => this._refresh(), 800);
+    });
   }
 
   _renderTab(s) {
@@ -951,6 +1067,96 @@ class PoolSmartPanel extends HTMLElement {
         <div class="reason muted">Updates are capped, so a single odd session cannot move a
           value far. Resetting is only needed after changing hardware.</div>
       </div>
+      ${this._maintenanceCard()}
+    `;
+  }
+
+  _maintenanceCard() {
+    const stats = this._storageStats || {};
+    return `
+      <div class="card">
+        <strong>Storage</strong>
+        ${
+          stats.error
+            ? `<div class="reason warn">${esc(stats.error)}</div>`
+            : `<div class="row"><span>Sessions</span><span>${stats.sessions ?? "—"}</span></div>
+               <div class="row"><span>Doses</span><span>${stats.doses ?? "—"}</span></div>
+               <div class="row"><span>Decisions logged</span><span>${
+                 stats.decisions ?? "—"
+               }</span></div>
+               <div class="row"><span>Near misses tracked</span><span>${
+                 stats.near_misses ?? "—"
+               }</span></div>
+               <div class="row"><span>File size</span><span>${fmtBytes(
+                 stats.file_size_bytes
+               )}</span></div>`
+        }
+        <button class="action" id="btn-refresh-stats" style="margin-top:10px;background:transparent;
+          border:1px solid var(--divider-color);color:var(--secondary-text-color)"
+          ${this._storageStatsLoading ? "disabled" : ""}>Refresh</button>
+      </div>
+
+      <div class="card">
+        <strong>Maintenance</strong>
+        <div class="reason muted">Reprocess after a batch of session reviews or an import, so
+          the effect is immediate instead of waiting on the next session. Clearing debug traces
+          is always safe; clearing all history is not.</div>
+        <button class="action" data-service="poolsmart.rebuild_learning" data-payload='{}'>Process now</button>
+        <button class="action" id="btn-clear-debug" style="background:transparent;
+          border:1px solid var(--divider-color);color:var(--secondary-text-color)">Clear debug traces</button>
+        <button class="action" id="btn-clear-all" style="background:#c62828">Clear all history</button>
+      </div>
+
+      <div class="card">
+        <strong>Export</strong>
+        <div class="reason muted">Quick export writes everything below. Choosing data lets you
+          leave parts out.</div>
+        <button class="action" data-service="poolsmart.export_learning" data-payload='{}'>Export everything</button>
+        <div style="margin-top:12px;font-size:13px;">
+          <label style="display:block;color:var(--secondary-text-color);margin-bottom:6px;font-size:12px;">Sections to export</label>
+          ${["learned", "session_log", "dose_log", "last_water_test"]
+            .map(
+              (v) =>
+                `<label style="margin-right:12px;"><input type="checkbox" class="export-section" value="${v}" checked> ${esc(
+                  v.replace(/_/g, " ")
+                )}</label>`
+            )
+            .join("")}
+        </div>
+        <input type="text" id="export-path" placeholder="/config/poolsmart_learning.json (optional)"
+          style="width:100%;margin-top:10px;padding:7px 10px;border-radius:6px;
+          border:1px solid var(--divider-color);background:transparent;color:var(--primary-text-color);
+          box-sizing:border-box;font-size:13px;">
+        <button class="action" id="btn-export-chosen" style="margin-top:10px;">Export chosen data</button>
+      </div>
+
+      <div class="card">
+        <strong>Import</strong>
+        <div class="reason muted">Merges: values this pool has already measured for itself are
+          kept, not overwritten.</div>
+        <input type="text" id="import-path" placeholder="/config/poolsmart_learning.json"
+          style="width:100%;margin-top:6px;padding:7px 10px;border-radius:6px;
+          border:1px solid var(--divider-color);background:transparent;color:var(--primary-text-color);
+          box-sizing:border-box;font-size:13px;">
+        <button class="action" id="btn-import" style="margin-top:10px;">Import</button>
+      </div>
+
+      <div class="card">
+        <strong>Advanced: replace from JSON</strong>
+        <div class="reason muted">Overwrites instead of merging: what this pool has already
+          measured for itself is discarded in favour of the file. Not for routine use.</div>
+        <input type="text" id="replace-path" placeholder="/config/poolsmart_learning.json"
+          style="width:100%;margin-top:6px;padding:7px 10px;border-radius:6px;
+          border:1px solid var(--divider-color);background:transparent;color:var(--primary-text-color);
+          box-sizing:border-box;font-size:13px;">
+        <label style="display:block;margin-top:10px;font-size:13px;">
+          <input type="checkbox" id="replace-confirm"> I understand this overwrites existing
+          history and cannot be undone
+        </label>
+        <button class="action" id="btn-replace" style="margin-top:10px;background:#c62828" disabled>Replace everything</button>
+      </div>
+
+      <div class="reason muted" id="maint-status">${esc(this._maintStatus)}</div>
     `;
   }
 
