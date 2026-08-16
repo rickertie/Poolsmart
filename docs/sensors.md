@@ -119,6 +119,18 @@ Settings → Devices & services → PoolSmart → Configure → Entities.
 | Flow meter | `sensor.<device>_flow` | Flow protection, filtration timing |
 | Electricity price | your tariff integration | Price optimisation |
 | Cheap price period | your tariff integration's binary sensor | Beats the price ceiling |
+| Solar irradiance | a pyranometer or weather-station radiation sensor (e.g. a KNMI-style entity) | Learning heat loss from sunny idle periods, and the plausibility ceiling on a heating session's rise |
+| Current solar production | your inverter's power sensor, plus "Solar panel peak power" under **When to heat** | Same as above, only used when no irradiance sensor is mapped |
+
+**A direct irradiance sensor is preferred over the solar production sensor
+wherever both are mapped.** It already reads in W/m², the unit the learning
+model works in, so it needs no peak figure to scale against -- and it works
+just as well for a pool with no solar panels of its own, using a garden
+weather station's radiation sensor instead. Only when no irradiance sensor is
+configured does the integration fall back to scaling the solar production
+sensor against "Solar panel peak power" (under **Configure → When to heat**).
+With neither mapped, sunny idle periods still teach the model something,
+through a more conservative time-of-day estimate -- see [Learning](learning.md).
 
 Pump inlet, pump outlet, heat pump inlet and heat pump outlet are four separate
 fields on purpose, because plumbing differs between installations. A pool with a

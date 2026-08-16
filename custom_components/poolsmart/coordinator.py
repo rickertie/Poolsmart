@@ -67,6 +67,7 @@ _PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "pump_power": (0.0, 10000.0),
     "hp_power": (0.0, 10000.0),
     "solar": (0.0, 1500.0),
+    "irradiance": (0.0, 1500.0),
 }
 
 #: Conversion to cubic metres per hour.
@@ -587,6 +588,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         price_total, price_energy = self._read_price()
 
         solar = self._read(c.CONF_SOLAR_POWER_SENSOR, "solar")
+        irradiance = self._read(c.CONF_IRRADIANCE_SENSOR, "irradiance")
         cheap_now = self._read_binary(c.CONF_CHEAP_PRICE_SENSOR)
         covered = self._read_binary(c.CONF_COVER_ENTITY)
         pump_on = self._switch_is_on(c.CONF_PUMP_SWITCH)
@@ -643,6 +645,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             price_total=price_total,
             price_energy=price_energy,
             solar_power_w=solar.value,
+            irradiance_w_m2=irradiance.value,
             cheap_price_now=cheap_now,
             covered=covered,
             target_temp=self._target_temp,
@@ -848,12 +851,21 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
     def _irradiance(self, state: PoolState) -> float | None:
         """Sunlight per square metre, if anything can tell us.
 
-        A solar power sensor measures a panel array rather than the pool, but
-        the two rise and fall together, so scaling the array against its peak
-        gives a serviceable estimate of how bright it is. Without a peak figure
-        to scale against there is nothing to infer, and the caller falls back to
-        an assumption rather than a bad number.
+        A direct irradiance sensor -- a weather station's pyranometer, a
+        KNMI-style solar-radiation entity, anything already reporting W/m2 --
+        is used as-is when mapped, and wins over the estimate below because it
+        measures the sky rather than a proxy for it. It works for a pool with
+        no solar panels of its own just as well as for one with them.
+
+        Failing that, a solar power sensor measures a panel array rather than
+        the pool, but the two rise and fall together, so scaling the array
+        against its peak gives a serviceable estimate of how bright it is.
+        Without either a direct sensor or a peak figure to scale against there
+        is nothing to infer, and the caller falls back to a time-of-day
+        assumption rather than a bad number.
         """
+        if state.irradiance_w_m2 is not None:
+            return state.irradiance_w_m2
         if state.solar_power_w is None:
             return None
         peak = float(self._conf(c.CONF_SOLAR_PEAK_W, 0) or 0)

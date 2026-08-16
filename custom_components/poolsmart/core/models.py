@@ -185,6 +185,10 @@ class PoolState:
     #: Cheapest upcoming intervals, as (start, end, all-in price) tuples.
     price_forecast: tuple[tuple[datetime, datetime, float], ...] = ()
     solar_power_w: float | None = None
+    #: Sunlight per square metre, W/m2, from a sensor that already reads in
+    #: that unit. ``None`` when no such sensor is configured, in which case
+    #: the solar power sensor above (scaled by its peak) stands in instead.
+    irradiance_w_m2: float | None = None
     #: Whether the cover is on. ``None`` when no cover entity is configured.
     covered: bool | None = None
 
