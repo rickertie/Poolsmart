@@ -123,8 +123,6 @@ Start here: [Getting Started Guide](getting_started.md) — first-time setup, ve
 | Logging & diagnostics | [Logging](logging.md) | Logbook entries, notifications, full trace |
 | Troubleshooting | [Troubleshooting](troubleshooting.md) | Common issues, fault isolation, diagnostics |
 | Development | [Development](development.md) | Running tests, contributing |
-| Brand images | [Brand images](brand-image.md) | Integration icon and logo, HACS workaround |
-| Community post | [Community post](community_post.md) | Community launch announcement |
 | Changelog | [CHANGELOG.md](https://github.com/rickertie/Poolsmart/blob/main/CHANGELOG.md) | Release history |
 
 ---

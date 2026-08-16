@@ -52,6 +52,8 @@ exclude_docs: |
   .AI_RECOMMENDATIONS/
   promotion/
   images/README.md
+  brand-image.md
+  community_post.md
 
 nav:
   - Home: index.md
@@ -77,7 +79,5 @@ nav:
       - Logging & Diagnostics: logging.md
       - Troubleshooting: troubleshooting.md
       - Development: development.md
-      - Brand Images: brand-image.md
-      - Community Post: community_post.md
       - ESPHome Example YAML: esphome/pool_sensors.yaml
   - Changelog: https://github.com/rickertie/Poolsmart/blob/main/CHANGELOG.md
