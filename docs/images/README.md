@@ -8,15 +8,15 @@ All paths use forward slashes for cross-platform compatibility.
 | # | File | Status | Used In | Description |
 |---|------|--------|---------|-------------|
 | 1 | `architecture-overview.svg` | Placeholder | README.md | System architecture overview: ESPHome → HA → Decision Engine |
-| 2 | `priority-ladder.svg` | Placeholder | ARCHITECTURE.MD | 10-branch priority ladder flowchart |
+| 2 | `priority-ladder.svg` | Placeholder | architecture.md | 10-branch priority ladder flowchart |
 | 3 | `dashboard-mockup.svg` | Placeholder | — | Three-tab pool management panel mockup |
-| 4 | `cop-curve.svg` | Placeholder | LEARNING.MD | COP vs outdoor temperature curve |
-| 5 | `heating-timeline.svg` | Placeholder | PLANNING.MD | Maintenance vs seasonal heating timeline |
-| 6 | `turnover-infographic.svg` | Placeholder | FILTRATION.MD | Cumulative filtration effectiveness chart |
-| 7 | `operating-envelope.svg` | Placeholder | TROUBLESHOOTING.MD | Heat pump temperature thresholds |
+| 4 | `cop-curve.svg` | Placeholder | learning.md | COP vs outdoor temperature curve |
+| 5 | `heating-timeline.svg` | Placeholder | planning.md | Maintenance vs seasonal heating timeline |
+| 6 | `turnover-infographic.svg` | Placeholder | filtration.md | Cumulative filtration effectiveness chart |
+| 7 | `operating-envelope.svg` | Placeholder | troubleshooting.md | Heat pump temperature thresholds |
 | 8 | `solar-surplus.svg` | Placeholder | — | Solar surplus heating diagram |
-| 9 | `data-flow.svg` | Placeholder | ENTITIES.MD | Data flow and entity relationship map |
-| 10 | `chemistry-intervals.svg` | Placeholder | CHEMISTRY.MD | Test intervals by water temperature |
+| 9 | `data-flow.svg` | Placeholder | entities.md | Data flow and entity relationship map |
+| 10 | `chemistry-intervals.svg` | Placeholder | chemistry.md | Test intervals by water temperature |
 | 11 | `heat-loss-comparison.svg` | Placeholder | — | Pool cover vs no cover heat loss |
 | 12 | `bucket-test-calibration.svg` | Placeholder | — | Flow meter calibration procedure |
 

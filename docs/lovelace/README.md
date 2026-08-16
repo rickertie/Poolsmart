@@ -1,4 +1,4 @@
-> [← Back to README](../../README.md) | [Getting Started](../GETTING_STARTED.MD) | [Architecture](../ARCHITECTURE.MD) | [Configuration](../CONFIGURATION.MD) | [Troubleshooting](../TROUBLESHOOTING.MD)
+> [Home](../index.md) | [Getting Started](../getting_started.md) | [Architecture](../architecture.md) | [Configuration](../configuration.md) | [Troubleshooting](../troubleshooting.md)
 
 ---
 
@@ -6,8 +6,8 @@
 
 This document covers installing and customizing the PoolSmart Lovelace
 dashboards. For the main project documentation, see the
-[README](../../README.md). For the management panel (a separate interface in the
-sidebar), see the [README section on the management panel](../../README.md#the-management-panel).
+[README](../index.md). For the management panel (a separate interface in the
+sidebar), see the [README section on the management panel](../index.md#the-management-panel).
 
 ---
 
@@ -73,7 +73,7 @@ This dashboard is for using the pool. The panel is for understanding it.
 
 ## See Also
 
-- [README](../../README.md) — Main project documentation.
+- [README](../index.md) — Main project documentation.
 - [dashboard.yaml](dashboard.yaml) — Complete three-tab dashboard configuration.
-- [docs/SENSORS.MD](../SENSORS.MD) — Sensor mapping & calibration.
-- [docs/PANEL.MD](../PANEL.MD) — The management panel (a separate interface).
+- [docs/sensors.md](../sensors.md) — Sensor mapping & calibration.
+- [docs/panel.md](../panel.md) — The management panel (a separate interface).

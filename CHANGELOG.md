@@ -1,4 +1,4 @@
-[? Back to README](../README.md) • **Changelog**
+[? Back to README](index.md) • **Changelog**
 
 ---
 
@@ -858,7 +858,7 @@ First stable release.
 - Calibration offsets as number entities on the board: adjustable without
   reflashing, and they survive a restart
 - A running pulse total, so the flow meter can be calibrated with a bucket
-- `docs/SENSORS.MD`, covering probe calibration, flow calibration and which
+- `docs/sensors.md`, covering probe calibration, flow calibration and which
   sensor maps to which field
 
 ### Fixed

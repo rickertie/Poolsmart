@@ -51,7 +51,7 @@ balancing energy costs, swim schedules, and equipment protection.
 - [Home Assistant](https://www.home-assistant.io/) 2024.x or later
 - [HACS](https://hacs.xyz/) installed
 - [ESPHome](https://esphome.io/) add-on (for the sensor board)
-- Compatible pool equipment — see [HARDWARE.MD](docs/HARDWARE.MD)
+- Compatible pool equipment — see [Hardware](docs/hardware.md)
 
 ---
 
@@ -82,7 +82,7 @@ balancing energy costs, swim schedules, and equipment protection.
 > - Map your temperature sensors and flow meter
 > - Configure heating source and target temperature
 > - Connect a price sensor for cost optimization
-> - See [HARDWARE.MD](docs/HARDWARE.MD) and [ESPHOME.MD](docs/ESPHOME.MD)
+> - See [Hardware](docs/hardware.md) and [ESPHome](docs/esphome.md)
 
 ---
 
@@ -97,9 +97,9 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Architecture & decision core | [ARCHITECTURE.MD](docs/ARCHITECTURE.MD) | Priority ladder, filtration math, AI layer |
-| Heating planning & prices | [PLANNING.MD](docs/PLANNING.MD) | Maintenance vs. seasonal mode, price integrations |
-| Self-learning model | [LEARNING.MD](docs/LEARNING.MD) | Learned parameters, validation rules, session logging |
+| Architecture & decision core | [Architecture](docs/architecture.md) | Priority ladder, filtration math, AI layer |
+| Heating planning & prices | [Planning](docs/planning.md) | Maintenance vs. seasonal mode, price integrations |
+| Self-learning model | [Learning](docs/learning.md) | Learned parameters, validation rules, session logging |
 
 </details>
 
@@ -108,9 +108,9 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Filtration | [FILTRATION.MD](docs/FILTRATION.MD) | Turnover, daily minimum, filter media, delta-T |
-| Heating sources | [HEATING.MD](docs/HEATING.MD) | Heat pump, electric, solar, gas |
-| Water chemistry | [CHEMISTRY.MD](docs/CHEMISTRY.MD) | Dosing, test intervals, circulation timing |
+| Filtration | [Filtration](docs/filtration.md) | Turnover, daily minimum, filter media, delta-T |
+| Heating sources | [Heating](docs/heating.md) | Heat pump, electric, solar, gas |
+| Water chemistry | [Chemistry](docs/chemistry.md) | Dosing, test intervals, circulation timing |
 
 </details>
 
@@ -119,11 +119,11 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Hardware & wiring | [HARDWARE.MD](docs/HARDWARE.MD) | Bill of materials, pinouts, voltage divider |
-| ESPHome setup | [ESPHOME.MD](docs/ESPHOME.MD) | Board configuration, probe calibration |
-| Sensor mapping | [SENSORS.MD](docs/SENSORS.MD) | Sensor placement, calibration procedures |
-| Configuration | [CONFIGURATION.MD](docs/CONFIGURATION.MD) | Options flow, entity reassignment |
-| Pre-filling the wizard | [DEFAULTS.MD](docs/DEFAULTS.MD) | Starting the wizard with your own figures |
+| Hardware & wiring | [Hardware](docs/hardware.md) | Bill of materials, pinouts, voltage divider |
+| ESPHome setup | [ESPHome](docs/esphome.md) | Board configuration, probe calibration |
+| Sensor mapping | [Sensors](docs/sensors.md) | Sensor placement, calibration procedures |
+| Configuration | [Configuration](docs/configuration.md) | Options flow, entity reassignment |
+| Pre-filling the wizard | [Defaults](docs/defaults.md) | Starting the wizard with your own figures |
 
 </details>
 
@@ -132,14 +132,14 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Entity IDs | [ENTITIES.MD](docs/ENTITIES.MD) | Fixed IDs, translated names, source sensors |
-| Management panel | [PANEL.MD](docs/PANEL.MD) | Six-tab sidebar panel at `/poolsmart` |
+| Entity IDs | [Entities](docs/entities.md) | Fixed IDs, translated names, source sensors |
+| Management panel | [Panel](docs/panel.md) | Six-tab sidebar panel at `/poolsmart` |
 | Dashboards | [lovelace/README.md](docs/lovelace/README.md) | Installing and customizing Lovelace dashboards |
-| Logging & diagnostics | [LOGGING.MD](docs/LOGGING.MD) | Logbook entries, notifications, full trace |
-| Troubleshooting | [TROUBLESHOOTING.MD](docs/TROUBLESHOOTING.MD) | Common issues, fault isolation, diagnostics |
-| Getting started | [GETTING_STARTED.MD](docs/GETTING_STARTED.MD) | First-time setup, verifying your installation |
-| Development | [DEVELOPMENT.MD](docs/DEVELOPMENT.MD) | Running tests, contributing |
-| Brand images | [BRAND-IMAGE.MD](docs/BRAND-IMAGE.MD) | Integration icon and logo, HACS workaround |
+| Logging & diagnostics | [Logging](docs/logging.md) | Logbook entries, notifications, full trace |
+| Troubleshooting | [Troubleshooting](docs/troubleshooting.md) | Common issues, fault isolation, diagnostics |
+| Getting started | [Getting Started](docs/getting_started.md) | First-time setup, verifying your installation |
+| Development | [Development](docs/development.md) | Running tests, contributing |
+| Brand images | [Brand images](docs/brand-image.md) | Integration icon and logo, HACS workaround |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) | Release history |
 
 </details>
@@ -149,10 +149,10 @@ balancing energy costs, swim schedules, and equipment protection.
 ## Quick Links
 
 > [!TIP]
-> - 🚀 **First time?** Check out the [Getting Started Guide](docs/GETTING_STARTED.MD)
-> - 📈 **COP & Heat loss:** Read about the [Self-Learning Engine](docs/LEARNING.MD)
-> - 💡 **Dynamic Prices:** Learn how [Price-Aware Heating](docs/PLANNING.MD) works
-> - 🧪 **Water Quality:** Review [Automated Dosing Math](docs/CHEMISTRY.MD)
+> - 🚀 **First time?** Check out the [Getting Started Guide](docs/getting_started.md)
+> - 📈 **COP & Heat loss:** Read about the [Self-Learning Engine](docs/learning.md)
+> - 💡 **Dynamic Prices:** Learn how [Price-Aware Heating](docs/planning.md) works
+> - 🧪 **Water Quality:** Review [Automated Dosing Math](docs/chemistry.md)
 > - 📊 **UI Layout:** Set up your [Lovelace Dashboards](docs/lovelace/README.md)
 
 ---
