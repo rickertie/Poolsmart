@@ -402,23 +402,76 @@ def update_cop_curve(
     return updated, timestamps
 
 
+#: Conservative fallback irradiance for an idle period with no solar sensor,
+#: in W/m2. Deliberately far below :data:`ASSUMED_PEAK_IRRADIANCE`: that figure
+#: is a ceiling a measured rate must stay under, so erring generous is the safe
+#: direction. This one is subtracted from the observed warming instead, so
+#: erring generous here would manufacture heat loss that never happened.
+#: Erring conservative only costs some of the sunniest idle periods, which
+#: stay discarded exactly as before -- the same outcome as today, not a worse
+#: one.
+ESTIMATED_IDLE_IRRADIANCE_W_M2 = 150.0
+
+
+def idle_solar_gain_c(
+    config: PoolConfig | None,
+    duration_h: float,
+    irradiance_w_m2: float | None,
+    daytime: bool,
+) -> float:
+    """Degrees the sun alone likely added to the pool over an idle period.
+
+    With a real irradiance reading (a solar sensor, averaged over the period)
+    the figure is measured directly. Without one, a conservative flat estimate
+    stands in for whatever part of the period fell in daylight hours, and
+    nothing at all is assumed for a period with no daylight in it.
+    """
+    if config is None:
+        return 0.0
+    if irradiance_w_m2 is not None:
+        watts = irradiance_w_m2
+    elif daytime:
+        watts = ESTIMATED_IDLE_IRRADIANCE_W_M2
+    else:
+        return 0.0
+    per_degree = config.pool.kwh_thermal_per_degree
+    if per_degree <= 0:
+        return 0.0
+    return solar_gain_kw(config, watts) * duration_h / per_degree
+
+
 def heat_loss_from_idle(
     water_start: float,
     water_end: float,
     duration_h: float,
+    config: PoolConfig | None = None,
     covered: bool = False,
+    irradiance_w_m2: float | None = None,
+    daytime: bool = False,
 ) -> float | None:
     """Heat loss in degrees per hour, measured over an idle period.
 
     ``covered`` is carried through so the cover's effect can be learned as soon
     as a sensor or switch reports its position. Until then every observation is
     attributed to the uncovered case, which is the conservative direction.
+
+    A sunny idle period used to be a dead end: any period in which the water
+    warmed up was discarded outright as "sunshine, not heat loss", which meant
+    heat loss could only ever be learned at night or under cloud. Here the
+    solar contribution estimated by :func:`idle_solar_gain_c` is added back
+    into the observed change before judging it, so a warming period is
+    understood rather than thrown away -- the loss the sun was masking still
+    comes through as long as it exceeds what the sun can plausibly explain.
+    Passing neither ``irradiance_w_m2`` nor ``daytime=True`` reproduces the old
+    behaviour exactly, since the estimate is then zero.
     """
     if duration_h * 60 < MIN_IDLE_MINUTES:
         return None
-    drop = water_start - water_end
+    solar = idle_solar_gain_c(config, duration_h, irradiance_w_m2, daytime)
+    drop = (water_start - water_end) + solar
     if drop <= 0:
-        # The pool warmed up on its own: sunshine, not heat loss.
+        # Even crediting the sun its due, the water still net warmed up: real
+        # sunshine outside what could be estimated, not heat loss.
         return None
     return drop / duration_h
 
