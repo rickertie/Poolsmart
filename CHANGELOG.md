@@ -12,6 +12,28 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.10.0] — The Sun Sensor Nobody Could Actually Configure
+
+v1.9.0's solar-gain-during-idle feature had a sensor pathway that could never
+switch on: `_irradiance()` needs a configured peak wattage to scale a solar
+power sensor into W/m², and that setting existed only as a constant, with no
+field anywhere in the config flow. Mapping "Current solar production" alone
+could never produce an irradiance estimate -- the feature always ran on the
+conservative time-of-day fallback, however good the sensor was.
+
+### Added
+
+- **A direct irradiance sensor.** A new "Solar irradiance" field accepts any
+  sensor already reading in W/m² -- a weather station's pyranometer, a
+  KNMI-style solar-radiation entity, and so on -- and is preferred over the
+  solar-power estimate wherever both are mapped, since it measures the sky
+  rather than a proxy for it. This also means a pool with no solar panels of
+  its own can now benefit from the same learning, using outdoor sunlight
+  instead.
+- **The missing "Solar panel peak power" field**, under **When to heat**, so
+  the solar-power-sensor pathway can actually be configured for anyone who
+  would rather not add a second sensor.
+
 ## [1.9.0] — A Sunny Afternoon Finally Teaches the Model Something
 
 `heat_loss_from_idle` discarded any idle period in which the water warmed up,
