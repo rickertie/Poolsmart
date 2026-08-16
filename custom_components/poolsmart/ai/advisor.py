@@ -53,6 +53,10 @@ that is when a flow problem is worth raising. The field `flow_adequacy` below
 already contains this verdict; trust it over any comparison you make yourself
 between measured flow and the datasheet minimum.
 
+If `trends` lists a metric moving consistently over several months, it is worth
+a sentence -- that kind of gradual drift is easy for a human to miss session by
+session.
+
 Reply with JSON only. No prose, no markdown fences. Use this shape:
 {"summary": "two or three plain sentences for a homeowner",
  "observations": ["short factual observations"],
@@ -158,6 +162,7 @@ class Advisor:
         )
 
         privacy_level = getattr(config, "privacy_level", "standard")
+        trends = self._trends()
 
         payload: dict = {
             "flow_adequacy": {
@@ -179,6 +184,10 @@ class Advisor:
             "turnover_factor": config.filtration.turnover_factor,
             "target_temp": self.coordinator.target_temp,
         }
+        if trends:
+            # No timestamps or raw values in here, only a direction and a
+            # rate -- sent at every privacy level, the same as `learned`.
+            payload["trends"] = trends
 
         sessions = recent(store.session_log)[-20:]
         decisions = recent(store.decision_log)[-40:]
@@ -199,6 +208,29 @@ class Advisor:
             payload["cost_today"] = round(store.cost_today, 2)
 
         return payload
+
+    def _trends(self) -> list[dict]:
+        """Long-term drift worth a model's attention.
+
+        Only metrics actually moving one way or the other are included --
+        "stable" and "insufficient_data" have nothing for the model to
+        comment on, and would only pad the prompt.
+        """
+        from ..core import aggregates
+
+        months = list(self.coordinator.store.monthly_aggregates.values())
+        out = []
+        for metric, result in aggregates.all_trends(months).items():
+            if result.direction not in ("improving", "degrading"):
+                continue
+            out.append(
+                {
+                    "metric": metric,
+                    "direction": result.direction,
+                    "pct_per_month": round(result.pct_per_month, 2),
+                }
+            )
+        return out
 
     # -- Running -----------------------------------------------------------
 

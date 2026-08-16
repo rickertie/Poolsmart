@@ -1032,6 +1032,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 )
                 self.store.learned.heating_rate_updated_at = record.end
                 self.store.learned.heating_rate_sessions += 1
+                self.store.record_monthly_metric(
+                    "heating_rate", record.heating_rate, record.end
+                )
 
             if measurements.cop:
                 before = dict(self.store.learned.cop_by_air_bucket)
@@ -1050,8 +1053,12 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                     counts = dict(self.store.learned.cop_sessions_by_bucket)
                     counts[key] = counts.get(key, 0) + 1
                     self.store.learned.cop_sessions_by_bucket = counts
+                    self.store.record_monthly_cop(
+                        record.air_avg, record.measured_cop, record.end
+                    )
 
             self.store.learned.session_count += 1
+            self.store.bump_monthly_session_count(record.end)
 
         # Last, and never allowed to take the learning update above down with
         # it: a failure writing this backup must never look like a failure to
@@ -1148,6 +1155,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             )
             learned.heat_loss_covered_updated_at = now
             learned.heat_loss_covered_samples += 1
+            self.store.record_monthly_metric("heat_loss_covered", rate, now)
         else:
             learned.heat_loss_c_per_h = round(
                 learning.capped_update(
@@ -1161,6 +1169,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             )
             learned.heat_loss_updated_at = now
             learned.heat_loss_samples += 1
+            self.store.record_monthly_metric("heat_loss", rate, now)
 
     # -- Execution ---------------------------------------------------------
 

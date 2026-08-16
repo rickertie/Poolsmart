@@ -31,11 +31,13 @@ from .const import (
     DATA_VERSION,
     DECISION_LOG_SIZE,
     DOSE_LOG_SIZE,
+    MONTHLY_AGGREGATE_MAX_MONTHS,
     SESSION_LOG_SIZE,
     STORAGE_KEY,
     STORAGE_SAVE_DEBOUNCE_SECONDS,
     STORAGE_VERSION,
 )
+from .core.aggregates import MonthlyAggregate, month_key
 from .core.trace import NearMissLog
 
 _LOGGER = logging.getLogger(__name__)
@@ -200,6 +202,11 @@ class PoolStore:
         self.cost_baseline_today: float = 0.0
         self.near_miss_log = NearMissLog()
         self.daily_summaries: list[dict] = []
+        #: One row per calendar month, kept indefinitely (subject only to
+        #: MONTHLY_AGGREGATE_MAX_MONTHS) so a slow drift in a learned value is
+        #: still visible long after the session log and daily summaries that
+        #: fed it have rolled off their caps. See core.aggregates.
+        self.monthly_aggregates: dict[str, MonthlyAggregate] = {}
 
     @property
     def path(self) -> str:
@@ -219,6 +226,7 @@ class PoolStore:
             "decisions": len(self.decision_log),
             "near_misses": len(self.near_miss_log.tallies),
             "daily_summaries": len(self.daily_summaries),
+            "monthly_aggregates": len(self.monthly_aggregates),
         }
 
     # -- Loading and saving ------------------------------------------------
@@ -265,6 +273,10 @@ class PoolStore:
             self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
             self.near_miss_log = NearMissLog.from_dict(raw.get("near_miss_log", {}))
             self.daily_summaries = raw.get("daily_summaries", [])
+            self.monthly_aggregates = {
+                key: MonthlyAggregate.from_dict(value)
+                for key, value in raw.get("monthly_aggregates", {}).items()
+            }
         except (ValueError, KeyError, TypeError):
             _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
 
@@ -409,6 +421,9 @@ class PoolStore:
             "cost_baseline_today": self.cost_baseline_today,
             "near_miss_log": self.near_miss_log.as_dict(),
             "daily_summaries": self.daily_summaries,
+            "monthly_aggregates": {
+                key: agg.as_dict() for key, agg in self.monthly_aggregates.items()
+            },
         }
 
         async with self._save_lock:
@@ -433,6 +448,10 @@ class PoolStore:
             )
             if len(self.daily_summaries) > DAILY_SUMMARY_MAX_DAYS:
                 self.daily_summaries = self.daily_summaries[-DAILY_SUMMARY_MAX_DAYS:]
+            agg = self._month_agg(self.quota_date)
+            agg.runtime_hours += runtime
+            agg.energy_kwh += self.energy_today_kwh
+            agg.cost_euro += self.cost_today
         self.quota_date = now.date()
         self.intervals = []
         self._open_interval = None
@@ -706,3 +725,61 @@ class PoolStore:
     def daily_summary(self) -> list[dict]:
         """Return persisted daily runtime and energy summaries."""
         return list(self.daily_summaries)
+
+    # -- Monthly aggregates --------------------------------------------------
+
+    def _month_agg(self, when) -> MonthlyAggregate:
+        """Get or create the aggregate row for ``when``'s calendar month.
+
+        ``when`` may be a ``date`` or a ``datetime`` -- only ``year``/``month``
+        are used. Enforces MONTHLY_AGGREGATE_MAX_MONTHS by dropping the oldest
+        rows, which only ever matters after a decade of continuous use.
+        """
+        key = month_key(when)
+        agg = self.monthly_aggregates.get(key)
+        if agg is None:
+            agg = MonthlyAggregate(month=key)
+            self.monthly_aggregates[key] = agg
+            if len(self.monthly_aggregates) > MONTHLY_AGGREGATE_MAX_MONTHS:
+                oldest = sorted(self.monthly_aggregates)[
+                    : len(self.monthly_aggregates) - MONTHLY_AGGREGATE_MAX_MONTHS
+                ]
+                for stale_key in oldest:
+                    del self.monthly_aggregates[stale_key]
+        return agg
+
+    def record_monthly_metric(self, name: str, value: float, when: datetime) -> None:
+        """Fold one observation into the named field of ``when``'s month.
+
+        ``name`` is one of ``heating_rate``, ``heat_loss``, ``heat_loss_covered``
+        -- the MetricStat fields on MonthlyAggregate. Mirrors exactly what
+        already gets folded into the corresponding learned value, at the same
+        call sites, so the monthly trend can never diverge from what the model
+        actually learned from.
+        """
+        agg = self._month_agg(when)
+        getattr(agg, name).fold(value)
+
+    def record_monthly_cop(self, air_temp: float, cop: float, when: datetime) -> None:
+        """Fold one measured COP into the right temperature bucket of ``when``'s month."""
+        from .core.learning import bucket_key
+
+        agg = self._month_agg(when)
+        agg.cop_stat(bucket_key(air_temp)).fold(cop)
+
+    def bump_monthly_session_count(self, when: datetime) -> None:
+        """Count one more usable session against ``when``'s month.
+
+        Called once per session that taught the model anything -- mirrors
+        ``learned.session_count`` in :meth:`~PoolStore.rebuild_learned`, just
+        never rebuilt, since a monthly row is never re-derived from the log
+        the way the overall learned values are.
+        """
+        self._month_agg(when).session_count += 1
+
+    def monthly_summary(self) -> list[dict]:
+        """Monthly aggregates, oldest first, for the panel and websocket API."""
+        return [
+            self.monthly_aggregates[key].as_dict()
+            for key in sorted(self.monthly_aggregates)
+        ]

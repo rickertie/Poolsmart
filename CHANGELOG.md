@@ -12,6 +12,33 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.8.0] — A Season Doesn't Fit in 60 Sessions
+
+The session log holds 60 entries and the daily runtime summaries hold 90 days;
+past those caps the oldest raw data was simply dropped. That is fine for
+noticing a sudden fault, but it made a slow drift over months — a heat pump's
+COP sagging, a filter fouling gradually, one season behaving differently from
+the last — invisible by the time enough sessions had rolled off the end to
+notice it. Addresses [#11](https://github.com/rickertie/Poolsmart/issues/11).
+
+### Added
+
+- **Monthly trend retention.** A new, unbounded second tier keeps one row per
+  calendar month — running mean/min/max for heating rate, heat loss (covered
+  and uncovered), and COP per outdoor-temperature band, plus the runtime,
+  energy, and cost the daily summaries already tracked. None of it is ever
+  dropped by the session or daily caps, so it survives them indefinitely.
+- **Trend detection.** Each metric's monthly means are fitted with a simple
+  regression to say whether it has been improving, degrading, or holding
+  steady over the last several months, and by roughly how much per month.
+- **Long-term trends card.** The Learning tab shows a table of recent months
+  alongside a trend badge for anything actually moving, so a drift shows up on
+  the panel long before it would otherwise be noticed.
+- **The AI advisor now sees trends too.** A clear multi-month drift is passed
+  to the weekly review so it can be called out in plain language — "COP has
+  been falling roughly 4%/month since June" — instead of being buried in 20
+  individual sessions.
+
 ## [1.7.3] — Settings Stopped Racing Themselves, and the COP Window Is Now Yours to Set
 
 ### Fixed

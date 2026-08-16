@@ -1059,6 +1059,7 @@ class PoolSmartPanel extends HTMLElement {
                datasheet is used, which is less accurate but perfectly workable.</div>`
         }
       </div>
+      ${this._trendsCard(s)}
       ${this._advisorCard(s)}
       <div class="card">
         <button class="action" data-service="button.press"
@@ -1069,6 +1070,78 @@ class PoolSmartPanel extends HTMLElement {
       </div>
       ${this._maintenanceCard(s)}
     `;
+  }
+
+  _trendLabel(metric) {
+    if (metric.startsWith("cop_by_bucket.")) {
+      return `COP (${metric.slice("cop_by_bucket.".length)} °C)`;
+    }
+    return { heating_rate: "Heating rate", heat_loss: "Heat loss",
+      heat_loss_covered: "Heat loss (covered)" }[metric] || metric;
+  }
+
+  _trendBadge(direction) {
+    const color = { improving: "#2e7d32", degrading: "#c62828", stable: "#78909c" }[
+      direction
+    ] || "#78909c";
+    const label = { improving: "improving", degrading: "degrading", stable: "stable" }[
+      direction
+    ] || direction;
+    return `<span class="badge" style="background:${color}">${label}</span>`;
+  }
+
+  _trendsCard(s) {
+    const months = s.monthly_aggregates || [];
+    if (!months.length) return "";
+    const trends = s.monthly_trends || {};
+    const moving = Object.entries(trends).filter(
+      ([, t]) => t.direction === "improving" || t.direction === "degrading"
+    );
+
+    const recent = months.slice(-12);
+    const copMean = (m) => {
+      const buckets = Object.values(m.cop_by_bucket || {});
+      const n = buckets.reduce((a, b) => a + b.n, 0);
+      if (!n) return null;
+      return buckets.reduce((a, b) => a + b.mean * b.n, 0) / n;
+    };
+
+    return `
+      <div class="card">
+        <strong>Long-term trends</strong>
+        <div class="reason muted">Monthly averages survive the session and daily caps
+          indefinitely, so a slow drift over months or seasons stays visible after the
+          detail behind it has rolled off.</div>
+        ${
+          moving.length
+            ? moving
+                .map(
+                  ([metric, t]) =>
+                    `<div class="row"><span>${esc(this._trendLabel(metric))}</span>
+                     <span>${this._trendBadge(t.direction)}
+                       <span class="muted" style="margin-left:6px">${
+                         t.pct_per_month > 0 ? "+" : ""
+                       }${t.pct_per_month}%/mo over ${t.months_considered} months</span></span></div>`
+                )
+                .join("")
+            : `<div class="muted">Nothing trending yet; everything measured is holding steady.</div>`
+        }
+        <table style="margin-top:10px">
+          <tr><th>Month</th><th>Sessions</th><th>Heating rate</th><th>Heat loss</th><th>COP</th></tr>
+          ${recent
+            .map((m) => {
+              const cop = copMean(m);
+              return `<tr>
+                <td>${esc(m.month)}</td>
+                <td>${m.session_count}</td>
+                <td>${m.heating_rate.n ? m.heating_rate.mean.toFixed(3) : "—"}</td>
+                <td>${m.heat_loss.n ? m.heat_loss.mean.toFixed(3) : "—"}</td>
+                <td>${cop !== null ? cop.toFixed(2) : "—"}</td>
+              </tr>`;
+            })
+            .join("")}
+        </table>
+      </div>`;
   }
 
   _maintenanceCard(s) {
@@ -1089,6 +1162,9 @@ class PoolSmartPanel extends HTMLElement {
                }</span></div>
                <div class="row"><span>Near misses tracked</span><span>${
                  stats.near_misses ?? "—"
+               }</span></div>
+               <div class="row"><span>Monthly trend rows</span><span>${
+                 stats.monthly_aggregates ?? "—"
                }</span></div>
                <div class="row"><span>File size</span><span>${fmtBytes(
                  stats.file_size_bytes
