@@ -12,6 +12,37 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.7.3] — Settings Stopped Racing Themselves, and the COP Window Is Now Yours to Set
+
+### Fixed
+
+- **Saving several settings in one visit could permanently wipe the session
+  log.** The options flow saves each section immediately and returns to its
+  menu instead of closing, so filling in a few values in one sitting fires
+  Home Assistant's update listener -- and therefore a full unload/setup cycle
+  -- once per save, each as its own background task. Nothing serialised those
+  against each other: two saves made close together could each start
+  reloading the integration while the other was still mid-flight, and
+  whichever coordinator finished setting up last kept running in the
+  background and eventually persisted its own, older session log over the
+  good one -- discarding everything logged in between. `async_reload_entry`
+  now holds a per-entry lock, so reloads for the same pool always run one at
+  a time.
+
+### Added
+
+- **The COP plausibility window is now a setting.** `cop_clamp_min` and
+  `cop_clamp_max` have driven the COP curve and the automatic session verdict
+  since early on, but neither config flow ever asked for them, so every
+  installation was stuck with the 3.0-6.0 default regardless of what its heat
+  pump actually does. A heat pump running outside that band had every
+  session's COP measurement rejected by the automatic verdict -- left sitting
+  as "auto" and excluded from learning -- until someone noticed and set it to
+  Included by hand. **Settings -> Advanced** now has "Lowest/highest
+  plausible COP" fields. This only affects sessions logged from here on;
+  sessions already in the log keep the verdict they were given at the time,
+  so an existing rejection still needs a manual review to be included.
+
 ## [1.7.2] — A Restart Loses Less, and Import Isn't a Blank Field Anymore
 
 ### Fixed
