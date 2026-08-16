@@ -178,6 +178,7 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
         msg["id"],
         {
             "title": coordinator.entry.title,
+            "entry_id": coordinator.entry.entry_id,
             "mode": coordinator.mode.value,
             "target_temp": coordinator.target_temp,
             "water_temp": (

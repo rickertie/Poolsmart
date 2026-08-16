@@ -183,6 +183,55 @@ def test_replace_reports_nothing_when_sections_are_absent():
 # ---------------------------------------------------------------------------
 
 
+def test_close_open_interval_uses_synced_at_when_available():
+    """A restart should lose only the unsaved tail, not the whole interval."""
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
+    synced_at = datetime(2026, 8, 1, 13, 58, tzinfo=TZ)
+    store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
+
+    store._close_open_interval(synced_at)
+
+    assert store.intervals[0].end == synced_at
+
+
+def test_close_open_interval_falls_back_without_synced_at():
+    """An old file predating this field keeps the original conservative behaviour."""
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
+    store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
+
+    store._close_open_interval(None)
+
+    assert store.intervals[0].end == start
+
+
+def test_close_open_interval_ignores_a_synced_at_before_the_interval_started():
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
+    stale_synced_at = datetime(2026, 8, 1, 6, 0, tzinfo=TZ)
+    store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
+
+    store._close_open_interval(stale_synced_at)
+
+    assert store.intervals[0].end == start
+
+
+def test_close_open_interval_leaves_already_closed_intervals_alone():
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
+    end = datetime(2026, 8, 1, 9, 0, tzinfo=TZ)
+    store.intervals = [store_module.RuntimeInterval(start=start, end=end)]
+
+    store._close_open_interval(datetime(2026, 8, 1, 12, 0, tzinfo=TZ))
+
+    assert store.intervals[0].end == end
+
+
 def test_store_rebuild_learned_matches_the_core_function():
     config = make_config()
     start = datetime(2026, 8, 1, 9, 0, tzinfo=TZ)

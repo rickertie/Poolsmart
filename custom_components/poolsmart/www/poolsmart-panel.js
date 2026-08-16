@@ -1067,12 +1067,15 @@ class PoolSmartPanel extends HTMLElement {
         <div class="reason muted">Updates are capped, so a single odd session cannot move a
           value far. Resetting is only needed after changing hardware.</div>
       </div>
-      ${this._maintenanceCard()}
+      ${this._maintenanceCard(s)}
     `;
   }
 
-  _maintenanceCard() {
+  _maintenanceCard(s) {
     const stats = this._storageStats || {};
+    const backupPath = s.entry_id
+      ? `/config/poolsmart_learning_backup.${s.entry_id}.json`
+      : "";
     return `
       <div class="card">
         <strong>Storage</strong>
@@ -1133,8 +1136,10 @@ class PoolSmartPanel extends HTMLElement {
       <div class="card">
         <strong>Import</strong>
         <div class="reason muted">Merges: values this pool has already measured for itself are
-          kept, not overwritten.</div>
+          kept, not overwritten. Pre-filled with this pool's automatic safety-net backup --
+          change it to point at a manual export instead.</div>
         <input type="text" id="import-path" placeholder="/config/poolsmart_learning.json"
+          value="${esc(backupPath)}"
           style="width:100%;margin-top:6px;padding:7px 10px;border-radius:6px;
           border:1px solid var(--divider-color);background:transparent;color:var(--primary-text-color);
           box-sizing:border-box;font-size:13px;">
@@ -1146,6 +1151,7 @@ class PoolSmartPanel extends HTMLElement {
         <div class="reason muted">Overwrites instead of merging: what this pool has already
           measured for itself is discarded in favour of the file. Not for routine use.</div>
         <input type="text" id="replace-path" placeholder="/config/poolsmart_learning.json"
+          value="${esc(backupPath)}"
           style="width:100%;margin-top:6px;padding:7px 10px;border-radius:6px;
           border:1px solid var(--divider-color);background:transparent;color:var(--primary-text-color);
           box-sizing:border-box;font-size:13px;">

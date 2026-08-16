@@ -16,7 +16,7 @@ import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -232,6 +232,12 @@ class PoolStore:
             )
             return
         raw = self._migrate_data(raw.get("data_version", 0), raw)
+        synced_at: datetime | None = None
+        if raw.get("synced_at"):
+            try:
+                synced_at = datetime.fromisoformat(raw["synced_at"])
+            except (TypeError, ValueError):
+                synced_at = None
         try:
             if raw.get("quota_date"):
                 self.quota_date = date.fromisoformat(raw["quota_date"])
@@ -262,7 +268,7 @@ class PoolStore:
         except (ValueError, KeyError, TypeError):
             _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
 
-        self._close_open_interval()
+        self._close_open_interval(synced_at)
         self._open_interval = None
         self._closed_hours = sum(
             max(0.0, (i.end - i.start).total_seconds() / 3600.0)
@@ -304,17 +310,25 @@ class PoolStore:
         data["data_version"] = version
         return data
 
-    def _close_open_interval(self) -> None:
+    def _close_open_interval(self, synced_at: datetime | None) -> None:
         """Close an interval that a crash or restart left open.
 
-        The pump state after a restart is unknown until the first tick, so the
-        interval is closed at its own start. At worst one tick of runtime is lost;
-        the alternative -- assuming it kept running -- would silently inflate the
-        quota and skip real filtration.
+        The pump state after the gap is unknown, so the interval cannot simply
+        be left running. ``synced_at`` -- when a previous save actually reached
+        disk -- is the latest moment this integration can vouch for, and is
+        used as the close point so an interval that had been open for hours
+        loses only the unsaved tail, not the whole thing. Without a usable
+        ``synced_at`` (an old file predating this field, or one somehow from
+        the future) the interval is closed at its own start instead, crediting
+        it nothing -- the same conservative fallback this always used, kept
+        for exactly the cases it was meant to cover.
         """
         for interval in self.intervals:
             if interval.end is None:
-                interval.end = interval.start
+                if synced_at is not None and synced_at > interval.start:
+                    interval.end = synced_at
+                else:
+                    interval.end = interval.start
                 _LOGGER.debug("Closed a filtration interval left open by a restart")
 
     async def _async_save_atomic(self, data: dict, path: str) -> None:
@@ -358,6 +372,10 @@ class PoolStore:
 
         data = {
             "data_version": DATA_VERSION,
+            #: Wall-clock time this save actually reached disk, so a dangling
+            #: open interval found on the next load can be closed here instead
+            #: of at its own start -- see _close_open_interval.
+            "synced_at": datetime.now(timezone.utc).isoformat(),
             "quota_date": self.quota_date.isoformat() if self.quota_date else None,
             "intervals": [i.as_dict() for i in self.intervals],
             "learned": self.learned.as_dict(),
