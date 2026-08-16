@@ -42,6 +42,9 @@ MANUAL_OR_SENSOR = selector.EntitySelector(
 POWER_SENSOR = selector.EntitySelector(
     selector.EntitySelectorConfig(domain="sensor", device_class="power")
 )
+IRRADIANCE_SENSOR = selector.EntitySelector(
+    selector.EntitySelectorConfig(domain="sensor", device_class="irradiance")
+)
 SWITCH = selector.EntitySelector(
     selector.EntitySelectorConfig(domain=["switch", "input_boolean"])
 )
@@ -597,6 +600,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         source = self._data.get(c.CONF_HEATING_SOURCE, "heat_pump")
         has_solar = bool(self._data.get(c.CONF_HAS_SOLAR_COLLECTOR, False))
         fields: dict = {
+            vol.Optional(c.CONF_IRRADIANCE_SENSOR): IRRADIANCE_SENSOR,
             vol.Optional(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
             vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
         }
@@ -823,6 +827,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     domain=["binary_sensor", "input_boolean"]
                 )
             ),
+            field(c.CONF_IRRADIANCE_SENSOR): IRRADIANCE_SENSOR,
             field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
             field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
             field(c.CONF_WEATHER_ENTITY): WEATHER,
@@ -1210,6 +1215,12 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         c.CONF_SOLAR_THRESHOLD_W,
                         description={
                             "suggested_value": current.get(c.CONF_SOLAR_THRESHOLD_W)
+                        },
+                    ): _positive(0, 20000, 50),
+                    vol.Optional(
+                        c.CONF_SOLAR_PEAK_W,
+                        description={
+                            "suggested_value": current.get(c.CONF_SOLAR_PEAK_W)
                         },
                     ): _positive(0, 20000, 50),
                     vol.Optional(

@@ -122,6 +122,12 @@ CONF_PRICE_SENSOR = "price_sensor"
 CONF_CHEAP_PRICE_SENSOR = "cheap_price_sensor"
 CONF_SOLAR_POWER_SENSOR = "solar_power_sensor"
 CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
+#: A sensor already reading in W/m2 -- a weather station's pyranometer, a
+#: KNMI-style solar-radiation entity, and so on. Preferred over the solar
+#: power sensor below wherever both are mapped, because it needs no peak
+#: figure to scale against: it already reads in the unit this whole module
+#: works in, for a pool with or without solar panels of its own.
+CONF_IRRADIANCE_SENSOR = "irradiance_sensor"
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_COVER_ENTITY = "cover_entity"
 
@@ -179,6 +185,7 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_SALT_SENSOR,
     CONF_SOLAR_POWER_SENSOR,
     CONF_SOLAR_FORECAST_SENSOR,
+    CONF_IRRADIANCE_SENSOR,
     CONF_WEATHER_ENTITY,
     CONF_COVER_ENTITY,
     CONF_COLLECTOR_SENSOR,

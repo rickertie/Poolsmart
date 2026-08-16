@@ -221,11 +221,11 @@ def test_t22_heat_loss_measurement():
 
 
 # ---------------------------------------------------------------------------
-# T12 - solar gain is modelled during idle periods, not just discarded
+# T111 - solar gain is modelled during idle periods, not just discarded
 # (closes #12)
 # ---------------------------------------------------------------------------
 
-def test_t12_measured_irradiance_recovers_a_sunny_idle_period():
+def test_t111_measured_irradiance_recovers_a_sunny_idle_period():
     """A real solar sensor can explain away a warming period entirely.
 
     Without the correction this period is indistinguishable from any other
@@ -240,7 +240,7 @@ def test_t12_measured_irradiance_recovers_a_sunny_idle_period():
     assert rate is not None and rate > 0
 
 
-def test_t12_daylight_estimate_recovers_only_mild_warming():
+def test_t111b_daylight_estimate_recovers_only_mild_warming():
     """Without a sensor, only a conservative amount of warming is explained.
 
     A mildly-sunny period is recovered from the flat time-of-day estimate, but
@@ -261,7 +261,7 @@ def test_t12_daylight_estimate_recovers_only_mild_warming():
     assert strong is None
 
 
-def test_t12_no_signal_reproduces_old_behaviour():
+def test_t111c_no_signal_reproduces_old_behaviour():
     """Neither a sensor reading nor a daylight flag: nothing changes."""
     config = make_config()
     assert (
@@ -270,3 +270,31 @@ def test_t12_no_signal_reproduces_old_behaviour():
     )
     rate = learning.heat_loss_from_idle(28.0, 27.0, duration_h=10.0, config=config)
     assert abs(rate - 0.1) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# T112 - a direct irradiance sensor outranks the scaled solar-power estimate
+# ---------------------------------------------------------------------------
+
+def test_t112_irradiance_sensor_preferred_over_solar_power_estimate():
+    """A real W/m2 reading is never overridden by the coarser panel estimate.
+
+    The guard lives in the coordinator's ``_irradiance``; this pins that the
+    direct sensor is checked first, ahead of scaling the solar-power sensor
+    against its configured peak.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "poolsmart"
+        / "coordinator.py"
+    ).read_text()
+    irradiance_method = source[source.index("def _irradiance(") :]
+    irradiance_method = irradiance_method[: irradiance_method.index("\n    def ")]
+
+    assert "if state.irradiance_w_m2 is not None:" in irradiance_method
+    assert "return state.irradiance_w_m2" in irradiance_method
+    # And it comes before the solar-power fallback, not after.
+    assert irradiance_method.index("state.irradiance_w_m2") < irradiance_method.index(
+        "state.solar_power_w"
+    )

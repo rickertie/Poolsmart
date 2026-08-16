@@ -19,15 +19,17 @@ After each heating session, PoolSmart updates three core parameters:
    active heating.
 2. **Heat loss rate (°C/h):** How quickly your pool loses heat to ambient air
    and evaporation. Measured from idle periods -- no pump, no heat pump, just
-   the pool cooling (or, on a sunny day, warming) on its own. A solar-power
-   sensor or, failing that, a conservative time-of-day estimate is used to
-   work out how much of an idle period's temperature change was the sun
-   rather than heat loss, so a sunny afternoon teaches the model too instead
-   of being discarded as "warmed up on its own." A cover change mid-period
-   still voids the observation, and an estimate with no sensor behind it is
-   never generous enough to invent heat loss that did not happen -- a strongly
-   sunny period with no solar sensor mapped is still set aside, exactly as
-   before.
+   the pool cooling (or, on a sunny day, warming) on its own. How much of an
+   idle period's temperature change was the sun rather than heat loss is
+   worked out, in order of preference: a direct irradiance sensor (W/m²) if
+   one is mapped; failing that, a solar-production sensor scaled by its peak
+   wattage; failing that, a conservative time-of-day estimate. Whichever
+   source is available, a sunny afternoon teaches the model too, instead of
+   being discarded as "warmed up on its own." A cover change mid-period still
+   voids the observation, and the estimate used without a sensor is never
+   generous enough to invent heat loss that did not happen -- a strongly
+   sunny period with neither sensor mapped is still set aside, exactly as
+   before. See [Sensors](sensors.md) for where to map these.
 3. **COP curve (per 5 °C air band):** Thermal efficiency measured per 5 °C
    outdoor temperature bracket (e.g., 10–15 °C, 15–20 °C, 20–25 °C). Because
    non-inverter heat pumps operate at fixed output, one COP value per temperature
