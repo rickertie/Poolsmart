@@ -13,17 +13,17 @@ sensors to integration fields, see [Sensors](sensors.md).
 
 ## Bill of Materials
 
-| Component | Image | Function / Application | Notes |
+| Component | Function / Application | Notes |
 | :--- | :---: | :--- | :--- |
-| **Seeed XIAO ESP32-C6** | — | Main microcontroller running ESPHome. | Compact, native Wi-Fi 6 / Bluetooth. |
-| **5× DS18B20 probes** | <img src="images/DS18B20.svg" width="160"> | Temperature sensors for pool, pump, heat pump, and outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
-| **DN50 pulse flow sensor** | — | Measures volume flow rate through the heat pump loop. | Yanmis DN50 Hall-effect pulse sensor. |
-| **4.7 kΩ resistor** | — | Pull-up resistor for the 1-Wire bus. | Connects between 3.3 V and GPIO22. |
-| **10 kΩ + 20 kΩ resistors** | — | Voltage divider for the flow meter signal. | Steps 5 V pulses down to 3.3 V for GPIO19. |
-| **Waterproof enclosure** | — | IP65+ junction box near the pool pump setup. | Protects ESP32 board and wiring. |
-| **Bestway Flowclear** | <img src="images/Bestway_pump.svg" width="160"> | Circulation filter pump. | Measured at ~3.6 m³/h. |
-| **W'eau Mini Power (3 kW)** | <img src="images/w_eau_mini_power_3kw_warmtepomp.svg" width="160"> | Heat pump for water heating. | ~0.58 kW electric input. |
-| **Intex Metal Frame** | — | Pool structure (3,834 L at 66 cm water level). | 300 × 200 × 75 cm. |
+| **Seeed XIAO ESP32-C6** | Main microcontroller running ESPHome. | Compact, native Wi-Fi 6 / Bluetooth. |
+| **5× DS18B20 probes** | Temperature sensors for pool, pump, heat pump, and outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
+| **DN50 pulse flow sensor** | Measures volume flow rate through the heat pump loop. | Yanmis DN50 Hall-effect pulse sensor. |
+| **4.7 kΩ resistor** | Pull-up resistor for the 1-Wire bus. | Connects between 3.3 V and GPIO22. |
+| **10 kΩ + 20 kΩ resistors** | Voltage divider for the flow meter signal. | Steps 5 V pulses down to 3.3 V for GPIO19. |
+| **Waterproof enclosure** | IP65+ junction box near the pool pump setup. | Protects ESP32 board and wiring. |
+| **Bestway Flowclear** | Circulation filter pump. | Measured at ~3.6 m³/h. |
+| **W'eau Mini Power (3 kW)** | Heat pump for water heating. | ~0.58 kW electric input. |
+| **Intex Metal Frame** | Pool structure (3,834 L at 66 cm water level). | 300 × 200 × 75 cm. |
 
 The pool itself is a 300 × 200 × 75 cm above-ground Intex Metal Frame pool; at
 the 66 cm operating water level it holds 3,834 L.
