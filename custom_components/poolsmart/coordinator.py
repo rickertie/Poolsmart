@@ -158,6 +158,8 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._idle_since: datetime | None = None
         self._idle_water_temp: float | None = None
         self._idle_covered: bool | None = None
+        self._idle_irradiance_samples: list[float] = []
+        self._idle_daylight: bool = False
         self._session_cost: float = 0.0
         self._price_slots: tuple = ()
         self._last_obstacle: tuple | None = None
@@ -1103,28 +1105,52 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if not idle or not state.water_temp.available:
             self._idle_since = None
             self._idle_water_temp = None
+            self._idle_irradiance_samples = []
+            self._idle_daylight = False
             return
 
         if self._idle_since is None:
             self._idle_since = now
             self._idle_water_temp = state.water_temp.value
+            self._idle_irradiance_samples = []
+            self._idle_daylight = False
             return
+
+        # Sampled on every idle tick, not only at the boundary, for the same
+        # reason a session samples irradiance throughout rather than once: an
+        # average across the whole period is what the solar-gain estimate
+        # needs, not a snapshot from whichever moment it happened to close.
+        irradiance = self._irradiance(state)
+        if irradiance is not None:
+            self._idle_irradiance_samples.append(irradiance)
+        if 7 <= state.now.hour < 20:
+            self._idle_daylight = True
 
         hours = (now - self._idle_since).total_seconds() / 3600.0
         if hours < 6:
             return
 
         covered = state.covered
+        irradiance_avg = (
+            sum(self._idle_irradiance_samples) / len(self._idle_irradiance_samples)
+            if self._idle_irradiance_samples
+            else None
+        )
         rate = learning.heat_loss_from_idle(
             self._idle_water_temp,
             state.water_temp.value,
             hours,
+            config,
             covered=bool(covered),
+            irradiance_w_m2=irradiance_avg,
+            daytime=self._idle_daylight,
         )
         started_covered = self._idle_covered
         self._idle_since = now
         self._idle_water_temp = state.water_temp.value
         self._idle_covered = covered
+        self._idle_irradiance_samples = []
+        self._idle_daylight = False
 
         if rate is None or not config.learning.enabled:
             return

@@ -218,3 +218,55 @@ def test_t22_heat_loss_measurement():
 
     rate = learning.heat_loss_from_idle(28.0, 27.0, duration_h=10.0)
     assert abs(rate - 0.1) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# T12 - solar gain is modelled during idle periods, not just discarded
+# (closes #12)
+# ---------------------------------------------------------------------------
+
+def test_t12_measured_irradiance_recovers_a_sunny_idle_period():
+    """A real solar sensor can explain away a warming period entirely.
+
+    Without the correction this period is indistinguishable from any other
+    warming afternoon and gets thrown away. With a measured irradiance average
+    it is recovered as a small, genuine heat-loss reading -- the sun explains
+    most, but not all, of the observed rise.
+    """
+    config = make_config()
+    rate = learning.heat_loss_from_idle(
+        27.0, 27.9, duration_h=3.0, config=config, irradiance_w_m2=300.0
+    )
+    assert rate is not None and rate > 0
+
+
+def test_t12_daylight_estimate_recovers_only_mild_warming():
+    """Without a sensor, only a conservative amount of warming is explained.
+
+    A mildly-sunny period is recovered from the flat time-of-day estimate, but
+    a strongly-sunny one -- an amount of warming the conservative estimate
+    cannot plausibly account for -- is still discarded exactly as before. The
+    estimate is deliberately low so it never manufactures heat loss that never
+    happened.
+    """
+    config = make_config()
+    mild = learning.heat_loss_from_idle(
+        27.0, 27.2, duration_h=2.0, config=config, daytime=True
+    )
+    assert mild is not None and mild > 0
+
+    strong = learning.heat_loss_from_idle(
+        27.0, 28.0, duration_h=2.0, config=config, daytime=True
+    )
+    assert strong is None
+
+
+def test_t12_no_signal_reproduces_old_behaviour():
+    """Neither a sensor reading nor a daylight flag: nothing changes."""
+    config = make_config()
+    assert (
+        learning.heat_loss_from_idle(27.0, 27.6, duration_h=5.0, config=config)
+        is None
+    )
+    rate = learning.heat_loss_from_idle(28.0, 27.0, duration_h=10.0, config=config)
+    assert abs(rate - 0.1) < 1e-9
