@@ -103,6 +103,14 @@ def _learning_insight(coordinator) -> list[dict]:
     ]
 
 
+def _monthly_trends(coordinator) -> dict:
+    """Trend direction for every metric with enough monthly history to judge."""
+    from .core import aggregates
+
+    months = list(coordinator.store.monthly_aggregates.values())
+    return {k: v.as_dict() for k, v in aggregates.all_trends(months).items()}
+
+
 def _branch_time_today(coordinator) -> list[dict]:
     """How much of today each branch spent in charge.
 
@@ -309,6 +317,8 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             },
             "decision_log": list(reversed(coordinator.store.decision_log)),
             "session_log": list(reversed(coordinator.store.session_log)),
+            "monthly_aggregates": coordinator.store.monthly_summary(),
+            "monthly_trends": _monthly_trends(coordinator),
         },
     )
 

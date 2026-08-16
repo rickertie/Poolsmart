@@ -45,6 +45,12 @@ SESSION_LOG_SIZE = 60
 #: Number of days of runtime summaries kept before the oldest is dropped.
 DAILY_SUMMARY_MAX_DAYS = 90
 
+#: Number of monthly trend rows kept before the oldest is dropped. Unlike the
+#: session and daily caps this is purely defensive -- ten years is 120 tiny
+#: rows -- because the whole point of the monthly aggregate is to survive
+#: those caps indefinitely. See core.aggregates.
+MONTHLY_AGGREGATE_MAX_MONTHS = 120
+
 # -- Events, which is how decisions reach the Home Assistant logbook -------
 EVENT_DECISION = f"{DOMAIN}_decision"
 EVENT_OBSTACLE = f"{DOMAIN}_obstacle"

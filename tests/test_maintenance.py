@@ -30,6 +30,7 @@ def _new_store():
     store.dose_log = []
     store.decision_log = []
     store.daily_summaries = []
+    store.monthly_aggregates = {}
     store.last_water_test = None
     store.near_miss_log = types.SimpleNamespace(tallies={})
     return store
@@ -56,6 +57,7 @@ def test_stats_counts_each_log():
         "decisions": 3,
         "near_misses": 2,
         "daily_summaries": 1,
+        "monthly_aggregates": 0,
     }
 
 
