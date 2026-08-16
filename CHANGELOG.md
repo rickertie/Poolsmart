@@ -12,6 +12,29 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.7.2] — A Restart Loses Less, and Import Isn't a Blank Field Anymore
+
+### Fixed
+
+- **A restart used to discard an entire running filtration interval, not just
+  the gap.** `_close_open_interval` closed a dangling open interval at its own
+  `start`, crediting it nothing at all -- so a pump that had been running for
+  hours before a routine Home Assistant restart lost every one of those
+  hours, not "at worst one tick" as it was meant to. Saves now record a
+  `synced_at` timestamp; a restart closes a dangling interval there instead,
+  so only the genuinely unsaved tail (at most one save interval) is lost.
+  Files from before this change, or a `synced_at` that is somehow older than
+  the interval itself, fall back to the original conservative behaviour
+  unchanged.
+
+### Changed
+
+- **Import and Replace default to this pool's own backup.** The panel's
+  Import and Advanced-replace path fields are now pre-filled with this pool's
+  automatic safety-net snapshot (`poolsmart_learning_backup.<entry id>.json`)
+  instead of an empty field, so pressing the button no longer just says
+  "Enter a file path to import."
+
 ## [1.7.1] — Sessions Stopped Teaching the Model
 
 **Regression in 1.7.0, fixed here.** The new safety-net snapshot
