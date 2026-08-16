@@ -11,9 +11,9 @@ sensors to integration fields, see [Sensors](sensors.md).
 
 ---
 
-## Bill of Materials
+## Bill of my Materials
 
-| Component | Function / Application | Notes |
+| Component | Function | Application ||
 | :--- | :---: | :--- | :--- |
 | **Seeed XIAO ESP32-C6** | Main microcontroller running ESPHome. | Compact, native Wi-Fi 6 / Bluetooth. |
 | **5× DS18B20 probes** | Temperature sensors for pool, pump, heat pump, and outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
