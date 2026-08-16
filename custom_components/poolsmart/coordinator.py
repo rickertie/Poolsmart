@@ -1007,52 +1007,62 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         payload["needs_review"] = learning.needs_review(record, measurements)
         payload["review"] = "auto"
         self.store.log_session(payload)
-        self._write_learning_snapshot()
 
         if not measurements.anything_usable or not config.learning.enabled:
             _LOGGER.debug("Session taught nothing: %s", measurements.describe())
-            return
+        else:
+            # Each measurement stands or falls on its own. The all-or-nothing
+            # version discarded seven sessions out of seven on a real
+            # installation, several of which held perfectly good evidence of
+            # how fast the pool warms up -- ruined by a probe on the heat pump
+            # going quiet, which spoils the efficiency figure and says
+            # nothing whatever about the rise.
+            ratio = config.learning.max_step_ratio
 
-        # Each measurement stands or falls on its own. The all-or-nothing
-        # version discarded seven sessions out of seven on a real installation,
-        # several of which held perfectly good evidence of how fast the pool
-        # warms up -- ruined by a probe on the heat pump going quiet, which
-        # spoils the efficiency figure and says nothing whatever about the rise.
-        ratio = config.learning.max_step_ratio
+            if measurements.heating_rate and record.heating_rate is not None:
+                self.store.learned.heating_rate_c_per_h = round(
+                    learning.capped_update(
+                        self.store.learned.heating_rate_c_per_h,
+                        record.heating_rate,
+                        ratio,
+                        self.store.learned.heating_rate_updated_at,
+                        record.end,
+                    ),
+                    4,
+                )
+                self.store.learned.heating_rate_updated_at = record.end
+                self.store.learned.heating_rate_sessions += 1
 
-        if measurements.heating_rate and record.heating_rate is not None:
-            self.store.learned.heating_rate_c_per_h = round(
-                learning.capped_update(
-                    self.store.learned.heating_rate_c_per_h,
-                    record.heating_rate,
-                    ratio,
-                    self.store.learned.heating_rate_updated_at,
+            if measurements.cop:
+                before = dict(self.store.learned.cop_by_air_bucket)
+                curve, cop_timestamps = learning.update_cop_curve(
+                    before,
+                    record.measured_cop,
+                    record.air_avg,
+                    config,
+                    self.store.learned.cop_updated_at,
                     record.end,
-                ),
-                4,
-            )
-            self.store.learned.heating_rate_updated_at = record.end
-            self.store.learned.heating_rate_sessions += 1
+                )
+                self.store.learned.cop_by_air_bucket = curve
+                self.store.learned.cop_updated_at = cop_timestamps
+                if record.air_avg is not None and record.measured_cop is not None:
+                    key = learning.bucket_key(record.air_avg)
+                    counts = dict(self.store.learned.cop_sessions_by_bucket)
+                    counts[key] = counts.get(key, 0) + 1
+                    self.store.learned.cop_sessions_by_bucket = counts
 
-        if measurements.cop:
-            before = dict(self.store.learned.cop_by_air_bucket)
-            curve, cop_timestamps = learning.update_cop_curve(
-                before,
-                record.measured_cop,
-                record.air_avg,
-                config,
-                self.store.learned.cop_updated_at,
-                record.end,
-            )
-            self.store.learned.cop_by_air_bucket = curve
-            self.store.learned.cop_updated_at = cop_timestamps
-            if record.air_avg is not None and record.measured_cop is not None:
-                key = learning.bucket_key(record.air_avg)
-                counts = dict(self.store.learned.cop_sessions_by_bucket)
-                counts[key] = counts.get(key, 0) + 1
-                self.store.learned.cop_sessions_by_bucket = counts
+            self.store.learned.session_count += 1
 
-        self.store.learned.session_count += 1
+        # Last, and never allowed to take the learning update above down with
+        # it: a failure writing this backup must never look like a failure to
+        # learn. See _write_learning_snapshot's own guard as well -- this is
+        # belt and suspenders on purpose, after a version of this ran ahead of
+        # the learning update with nothing catching it, silently discarding
+        # every session's learning behind whatever went wrong.
+        try:
+            self._write_learning_snapshot()
+        except Exception:  # noqa: BLE001 -- see comment above
+            _LOGGER.exception("Could not schedule the learning safety-net snapshot")
 
     def _write_learning_snapshot(self) -> None:
         """Write a rolling safety-net copy of the learned history to disk.
