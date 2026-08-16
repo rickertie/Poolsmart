@@ -6,6 +6,7 @@ decision comes from a single priority ladder in :mod:`core.ladder`.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -501,8 +502,22 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     entities (price ceiling, solar threshold) that update an option without
     needing the integration restarted. A genuine options-flow change still
     reloads as before.
+
+    The options flow's ``_save`` returns to its menu instead of closing, so
+    saving several sections in one visit fires this listener once per save --
+    each as its own background task, since that is how Home Assistant invokes
+    update listeners. Nothing serialised those against each other: two saves a
+    moment apart could each begin a full unload/setup cycle for this entry
+    while the other was still mid-flight, and whichever one's coordinator
+    finished setting up last would win the ``hass.data`` slot while the other
+    kept ticking in the background -- eventually persisting its own, older
+    session log over the good one. The lock below makes sure only one
+    unload/setup cycle for this entry ever runs at a time.
     """
     coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     if coordinator is not None and coordinator.consume_suppressed_reload():
         return
-    await hass.config_entries.async_reload(entry.entry_id)
+    locks: dict[str, asyncio.Lock] = hass.data.setdefault(f"{DOMAIN}_reload_locks", {})
+    lock = locks.setdefault(entry.entry_id, asyncio.Lock())
+    async with lock:
+        await hass.config_entries.async_reload(entry.entry_id)

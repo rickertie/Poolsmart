@@ -664,7 +664,9 @@
           "stale_blocking_seconds": "Treat a sensor as dead after (seconds)",
           "stale_warning_seconds": "Warn when a reading is older than (seconds)",
           "temp_hysteresis": "Temperature hysteresis (°C)",
-          "max_step_ratio": "Maximum change per measurement"
+          "max_step_ratio": "Maximum change per measurement",
+          "hp_cop_clamp_min": "Lowest plausible COP",
+          "hp_cop_clamp_max": "Highest plausible COP"
         },
         "data_description": {
           "calibration_tolerance": "How far the pool probe and the pump inlet may differ before it is mentioned. DS18B20s are accurate to roughly ±0.5 °C, so anything under that is the sensors rather than the pool.",
@@ -677,7 +679,9 @@
           "stale_blocking_seconds": "When to treat the sensor as dead and pause heating. Circulation and filtration continue.",
           "stale_warning_seconds": "Some sensors only report when their value changes, so a steady temperature can look old. This is when to start mentioning it.",
           "temp_hysteresis": "How far below target the water must fall before heating restarts. Stopping happens exactly at target.",
-          "max_step_ratio": "How far a learned value may move in one go, as a fraction. At 0.15 a single odd session shifts things by at most fifteen percent, so one bad measurement cannot undo weeks of good ones. Lower is steadier and slower to adapt."
+          "max_step_ratio": "How far a learned value may move in one go, as a fraction. At 0.15 a single odd session shifts things by at most fifteen percent, so one bad measurement cannot undo weeks of good ones. Lower is steadier and slower to adapt.",
+          "hp_cop_clamp_min": "A session whose measured COP falls below this is treated as a bad reading and left out of the automatic verdict, whatever review state it carries. Raise this only if your heat pump's genuine efficiency runs lower than the default 3.0 allows for.",
+          "hp_cop_clamp_max": "The same ceiling on the high side. A measured COP above this is treated as a bad reading rather than an unusually efficient session. Also caps the planning curve, so this affects predictions as well as which sessions teach the model."
         }
       }
     }
