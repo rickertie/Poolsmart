@@ -12,6 +12,29 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.7.1] — Sessions Stopped Teaching the Model
+
+**Regression in 1.7.0, fixed here.** The new safety-net snapshot
+(`_write_learning_snapshot`, added in 1.6.0) was called before the learned-value
+update in `_finish_session`, with nothing catching a failure in it. Any
+exception there aborted the rest of the function, so a session was still
+logged to the Sessions tab but never actually updated the heating rate, COP
+curve, or session count -- every finished session since upgrading to 1.6.0
+silently taught the model nothing, without any error visible in the panel.
+
+### Fixed
+
+- **Learning silently stopped after 1.6.0.** The snapshot write now runs last
+  and can never take the learned-value update down with it, on top of its own
+  existing internal guard.
+
+### Recovering sessions caught by this
+
+No data was lost -- every session is still in the log with its measurements
+intact, just never applied. After upgrading, press **Process now** on the
+Learning tab (or call `poolsmart.rebuild_learning`) once to recompute the
+heating rate and COP curve from the full session log in one go.
+
 ## [1.7.0] — Storage Stats, Maintenance & Bulk Export/Import
 
 Rounds out 1.6.0's session review with the tools to act on history in bulk,
