@@ -41,7 +41,7 @@ balancing energy costs, swim schedules, and equipment protection.
 | | | |
 |---|---|---|
 | **Smart filtration** — runtime from pool volume and measured flow | **Heat pump control** — plans around dynamic prices and solar surplus | **Self-learning** — learns heat loss, heating rate, and COP, with manual session review |
-| **Water chemistry** — pH readings become dosing instructions | **Solar optimization** — heats with free surplus | **Price-aware scheduling** — works backwards from swim time |
+| **Water chemistry** — pH readings become dosing instructions | **Solar optimization** — heats with free surplus, and now learns heat loss from sunny idle periods too | **Price-aware scheduling** — works backwards from swim time |
 | **Compressor protection** — minimum off/run times enforced | **AI advisory** — suggests settings, applies nothing without approval | **Dashboards** — detailed three-tab view and simple household page |
 
 ---

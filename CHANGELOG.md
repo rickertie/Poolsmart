@@ -12,6 +12,31 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.9.0] — A Sunny Afternoon Finally Teaches the Model Something
+
+`heat_loss_from_idle` discarded any idle period in which the water warmed up,
+on the reasoning that warming meant sunshine, not heat loss. That reasoning is
+right, but its consequence was that heat loss could only ever be learned at
+night or under cloud -- exactly the hours a pool is idle *and* sunny were
+thrown away, which is most of them. Addresses
+[#12](https://github.com/rickertie/Poolsmart/issues/12).
+
+### Added
+
+- **Solar gain is modelled during idle periods, not just discarded.** Where a
+  solar-power sensor is mapped, its measured average over the idle period is
+  used to work out how much of the observed warming was the sun; the heat
+  loss the sun was masking still comes through once that is subtracted out.
+  Without a sensor, a conservative time-of-day estimate stands in instead --
+  low enough that it can only recover mildly-sunny periods, never generous
+  enough to invent heat loss that never happened. A strongly sunny period with
+  no solar sensor mapped is still set aside, exactly as before: this unlocks
+  more of the data that was always there, without loosening the honesty rules
+  that keep a wrong measurement from teaching the model anything.
+- Idle-period tracking now samples irradiance on every tick while idle, the
+  same way a heating session already does, rather than only at the moment the
+  period is judged.
+
 ## [1.8.0] — A Season Doesn't Fit in 60 Sessions
 
 The session log holds 60 entries and the daily runtime summaries hold 90 days;
