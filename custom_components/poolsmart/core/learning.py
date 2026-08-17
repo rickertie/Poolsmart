@@ -476,6 +476,48 @@ def heat_loss_from_idle(
     return drop / duration_h
 
 
+#: How far a forecast may scale the learned heat-loss figure. Asymmetric on
+#: purpose: a forecast suggesting less loss than usual is trusted only so far,
+#: since under-estimating loss is the failure that actually shows up as a cold
+#: pool at swim time. A forecast suggesting much more loss is given a wider
+#: berth, because over-estimating only means the plan starts early -- the same
+#: safe-direction reasoning ``_heat_loss_for`` already applies to the covered
+#: vs. uncovered fallback.
+FORECAST_LOSS_FLOOR = 0.6
+FORECAST_LOSS_CEILING = 2.5
+
+
+def forecast_scaled_heat_loss_c_per_h(
+    base_c_per_h: float,
+    water_temp: float,
+    current_air_temp: float,
+    forecast_air_temp: float,
+) -> float:
+    """Scale a learned heat-loss figure by the air-temperature gap ahead.
+
+    Heat loss to the air roughly tracks the gap between the water and the air:
+    twice the gap, twice the loss. The learned figure reflects whatever gap was
+    typical while it was measured; a forecast colder or warmer than today's air
+    temperature moves that gap; and the figure moves with it rather than
+    staying pinned to conditions that are about to change, which is what let a
+    cold snap start the heating plan too late and a warm spell over-heat for no
+    reason.
+
+    Bounded by :data:`FORECAST_LOSS_FLOOR` and :data:`FORECAST_LOSS_CEILING`
+    against a single forecast reading swinging the plan wildly.
+    """
+    current_gap = water_temp - current_air_temp
+    if current_gap <= 0.5:
+        # Too small a baseline gap to divide by without amplifying noise into
+        # a large, meaningless scale factor.
+        return base_c_per_h
+
+    forecast_gap = water_temp - forecast_air_temp
+    ratio = forecast_gap / current_gap
+    ratio = max(FORECAST_LOSS_FLOOR, min(FORECAST_LOSS_CEILING, ratio))
+    return base_c_per_h * ratio
+
+
 #: Sessions needed in a bucket before its measured COP is trusted for planning.
 #: COP varies with flow rate, solar gain, humidity, and more; three sessions is
 #: the minimum before a measured figure is trusted over the datasheet.

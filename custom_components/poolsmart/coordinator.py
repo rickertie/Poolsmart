@@ -52,6 +52,16 @@ _LOGGER = logging.getLogger(__name__)
 
 UNAVAILABLE = ("unknown", "unavailable", "none", "")
 
+#: How often the weather forecast is refetched. A forecast does not move fast
+#: enough to justify a service call on every tick, and a figure up to this old
+#: is still far closer to tomorrow's weather than none at all.
+_WEATHER_FORECAST_REFRESH = timedelta(minutes=30)
+
+#: How far ahead the forecast is averaged into one figure: about a day of
+#: hourly entries, or a couple of days when only a daily forecast is on offer.
+_WEATHER_FORECAST_HOURLY_HORIZON = 24
+_WEATHER_FORECAST_DAILY_HORIZON = 2
+
 #: Physically plausible ranges per sensor role, as (min, max). Readings outside
 #: these are rejected at ingestion rather than stored in ``_last_good``, so an
 #: impossible value can never be used as the fallback when bridging or leak into
@@ -163,6 +173,11 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._idle_daylight: bool = False
         self._session_cost: float = 0.0
         self._price_slots: tuple = ()
+        #: Air temperature the weather forecast expects over the coming day,
+        #: averaged into one figure. ``None`` when no weather entity is
+        #: mapped, or the last fetch failed.
+        self._forecast_air_temp: float | None = None
+        self._forecast_fetched_at: datetime | None = None
         self._last_obstacle: tuple | None = None
         self._last_obstacle_at: datetime | None = None
         self._active_faults: dict[str, datetime] = {}
@@ -627,11 +642,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 block = None
         self._restored_block = block
 
+        water_temp = self._read(c.CONF_WATER_TEMP_SENSOR, "water")
+        air_temp = self._read(c.CONF_AIR_TEMP_SENSOR, "air")
+
         return PoolState(
             now=now,
             mode=self._mode,
-            water_temp=self._read(c.CONF_WATER_TEMP_SENSOR, "water"),
-            air_temp=self._read(c.CONF_AIR_TEMP_SENSOR, "air"),
+            water_temp=water_temp,
+            air_temp=air_temp,
             pump_inlet=self._read(c.CONF_PUMP_INLET_SENSOR, "pump_inlet"),
             pump_outlet=self._read(c.CONF_PUMP_OUTLET_SENSOR, "pump_outlet"),
             hp_inlet=self._read(c.CONF_HP_INLET_SENSOR, "hp_inlet"),
@@ -656,7 +674,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             heat_pump_started_at=self.store.heat_pump_started_at,
             chemistry_until=self.store.chemistry_until,
             manual_pump_request=self._manual_pump_request,
-            heat_loss_c_per_h=self._heat_loss_for(covered),
+            heat_loss_c_per_h=self._heat_loss_for(covered, water_temp, air_temp),
             session_started_at=self._session.start if self._session else None,
             session_start_temp=(
                 self._session.water_start if self._session else None
@@ -705,6 +723,12 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         if self.store.roll_day(now):
             _LOGGER.debug("Filtration quota reset for a new day")
+
+        try:
+            await self._refresh_weather_forecast(now)
+        except Exception:  # noqa: BLE001 -- see _async_update_data
+            _LOGGER.exception("PoolSmart weather forecast fetch failed")
+            self.subsystem_errors["weather_forecast"] = dt_util.now().isoformat()
 
         state = self._build_state(now, config)
 
@@ -848,6 +872,58 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._device_id_cache = device.id if device else None
         return self._device_id_cache
 
+    async def _refresh_weather_forecast(self, now: datetime) -> None:
+        """Keep a cached forecast air temperature for the coming day.
+
+        Refetched at most every :data:`_WEATHER_FORECAST_REFRESH`: a forecast
+        does not change fast enough to justify a service call on every tick.
+        Hourly entries are tried first for the finer-grained next-day figure
+        the issue asked for; a weather integration that only offers a daily
+        forecast still gets a usable, coarser figure rather than nothing.
+        """
+        entity_id = self._conf(c.CONF_WEATHER_ENTITY)
+        if not entity_id:
+            self._forecast_air_temp = None
+            return
+
+        if (
+            self._forecast_fetched_at is not None
+            and now - self._forecast_fetched_at < _WEATHER_FORECAST_REFRESH
+        ):
+            return
+        self._forecast_fetched_at = now
+
+        entries: list = []
+        for forecast_type, horizon in (
+            ("hourly", _WEATHER_FORECAST_HOURLY_HORIZON),
+            ("daily", _WEATHER_FORECAST_DAILY_HORIZON),
+        ):
+            try:
+                response = await self.hass.services.async_call(
+                    "weather",
+                    "get_forecasts",
+                    {"entity_id": entity_id, "type": forecast_type},
+                    blocking=True,
+                    return_response=True,
+                )
+            except Exception:  # noqa: BLE001 -- a type this integration does not support
+                continue
+            entries = ((response or {}).get(entity_id) or {}).get("forecast") or []
+            if entries:
+                entries = entries[:horizon]
+                break
+
+        temps = []
+        for entry in entries:
+            temp = entry.get("temperature")
+            templow = entry.get("templow")
+            if isinstance(temp, (int, float)) and isinstance(templow, (int, float)):
+                temps.append((temp + templow) / 2)
+            elif isinstance(temp, (int, float)):
+                temps.append(float(temp))
+
+        self._forecast_air_temp = sum(temps) / len(temps) if temps else None
+
     def _irradiance(self, state: PoolState) -> float | None:
         """Sunlight per square metre, if anything can tell us.
 
@@ -873,24 +949,46 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             return None
         return max(0.0, min(1.0, state.solar_power_w / peak)) * 1000.0
 
-    def _heat_loss_for(self, covered: bool | None) -> float:
-        """The heat loss figure matching the current cover state.
+    def _heat_loss_for(
+        self,
+        covered: bool | None,
+        water_temp: SensorReading,
+        air_temp: SensorReading,
+    ) -> float:
+        """The heat loss figure matching the current cover state and forecast.
 
-        Kept separate rather than averaged. A cover typically halves the loss or
-        better, and on a pool losing two thirds of its input to the air that is
-        the difference between a two degree rise taking fourteen hours and taking
-        five. One averaged number would be wrong in both states.
+        Kept separate by cover state rather than averaged. A cover typically
+        halves the loss or better, and on a pool losing two thirds of its
+        input to the air that is the difference between a two degree rise
+        taking fourteen hours and taking five. One averaged number would be
+        wrong in both states.
 
         Until the covered figure has been measured, the open-air one is used:
-        over-estimating the loss makes the system start early, which is the safe
-        direction to be wrong in.
+        over-estimating the loss makes the system start early, which is the
+        safe direction to be wrong in. The same reasoning sets the bounds in
+        :func:`learning.forecast_scaled_heat_loss_c_per_h`, which the learned
+        figure is then run through when a weather forecast is mapped: a colder
+        day ahead is trusted more than a warmer one claiming less loss than
+        usual.
         """
         learned = self.store.learned
         if covered and learned.heat_loss_covered_c_per_h is not None:
-            return learned.heat_loss_covered_c_per_h
-        if learned.heat_loss_c_per_h is not None:
-            return learned.heat_loss_c_per_h
-        return self.pool_config.learning.initial_heat_loss_c_per_h
+            base = learned.heat_loss_covered_c_per_h
+        elif learned.heat_loss_c_per_h is not None:
+            base = learned.heat_loss_c_per_h
+        else:
+            base = self.pool_config.learning.initial_heat_loss_c_per_h
+
+        if (
+            self._forecast_air_temp is None
+            or not water_temp.available
+            or not air_temp.available
+        ):
+            return base
+
+        return learning.forecast_scaled_heat_loss_c_per_h(
+            base, water_temp.value, air_temp.value, self._forecast_air_temp
+        )
 
     # -- Flow baseline -----------------------------------------------------
 
