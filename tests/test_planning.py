@@ -298,3 +298,84 @@ def test_t112_irradiance_sensor_preferred_over_solar_power_estimate():
     assert irradiance_method.index("state.irradiance_w_m2") < irradiance_method.index(
         "state.solar_power_w"
     )
+
+
+# ---------------------------------------------------------------------------
+# T113 - a weather forecast scales the learned heat loss (closes #8)
+# ---------------------------------------------------------------------------
+
+def test_t113_colder_forecast_raises_scaled_loss():
+    """A forecast colder than today's air should raise the loss figure.
+
+    Water at 28, air at 18 today is a 10-degree gap; a forecast of 8 doubles
+    it to 20, so the scaled figure should be noticeably higher than the base.
+    """
+    scaled = learning.forecast_scaled_heat_loss_c_per_h(
+        base_c_per_h=0.1, water_temp=28.0, current_air_temp=18.0, forecast_air_temp=8.0
+    )
+    assert scaled > 0.1
+    # Bounded at the ceiling rather than growing without limit.
+    assert scaled <= 0.1 * learning.FORECAST_LOSS_CEILING + 1e-9
+
+
+def test_t113b_warmer_forecast_lowers_scaled_loss_but_floors():
+    """A forecast warmer than today's air lowers the figure, but not to zero.
+
+    Under-estimating loss is the failure that shows up as a cold pool at swim
+    time, so a warm forecast is trusted only down to the conservative floor.
+    """
+    scaled = learning.forecast_scaled_heat_loss_c_per_h(
+        base_c_per_h=0.2, water_temp=28.0, current_air_temp=18.0, forecast_air_temp=27.0
+    )
+    assert 0.0 < scaled < 0.2
+    assert scaled >= 0.2 * learning.FORECAST_LOSS_FLOOR - 1e-9
+
+
+def test_t113c_small_current_gap_returns_base_unchanged():
+    """A near-zero water/air gap today is too little baseline to scale from."""
+    scaled = learning.forecast_scaled_heat_loss_c_per_h(
+        base_c_per_h=0.15, water_temp=20.0, current_air_temp=19.8, forecast_air_temp=5.0
+    )
+    assert scaled == 0.15
+
+
+def test_t113d_seasonal_projection_reacts_to_a_colder_forecast():
+    """The same job takes longer, or becomes unreachable, on a colder forecast.
+
+    ``optimizer.plan`` takes a single ``heat_loss_c_per_h`` -- exactly what
+    :func:`learning.forecast_scaled_heat_loss_c_per_h` produces -- so scaling
+    it before the call is enough to make Seasonal mode's projection forecast
+    aware, with no change to the optimizer itself.
+    """
+    config = make_config()
+    now = datetime(2026, 1, 5, 9, 0, tzinfo=TZ)
+    est = heating.estimate(
+        config, water_temp=20.0, target_temp=28.0, air_temp=5.0, hours_available=4.0
+    )
+    slots = price_day(now, [0.20, 0.22, 0.21, 0.23])
+
+    mild_loss = learning.forecast_scaled_heat_loss_c_per_h(
+        base_c_per_h=0.1, water_temp=20.0, current_air_temp=5.0, forecast_air_temp=8.0
+    )
+    cold_loss = learning.forecast_scaled_heat_loss_c_per_h(
+        base_c_per_h=0.1, water_temp=20.0, current_air_temp=5.0, forecast_air_temp=-10.0
+    )
+    assert cold_loss > mild_loss
+
+    mild_plan = optimizer.plan(
+        now, config, est, slots, deadline=now + timedelta(hours=4),
+        heat_loss_c_per_h=mild_loss,
+    )
+    cold_plan = optimizer.plan(
+        now, config, est, slots, deadline=now + timedelta(hours=4),
+        heat_loss_c_per_h=cold_loss,
+    )
+
+    assert mild_plan.mode is PlanMode.SEASONAL
+    assert cold_plan.mode is PlanMode.SEASONAL
+    # A colder forecast means less net progress per day, so either a later
+    # ready date or an outright "cannot be reached" -- never an earlier one.
+    if cold_plan.ready_at is None:
+        assert "cannot be reached" in cold_plan.reason
+    elif mild_plan.ready_at is not None:
+        assert cold_plan.ready_at >= mild_plan.ready_at

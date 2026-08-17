@@ -29,7 +29,11 @@ temperature, the optimizer operates in one of two distinct modes:
 > **Thermal equilibrium warning:** If heat loss equals or exceeds the maximum
 > thermal output of your heat pump (e.g., during cold nights without a cover),
 > Seasonal mode will explicitly notify you that the temperature cannot be
-> reached instead of outputting an impossible target date.
+> reached instead of outputting an impossible target date. With a weather
+> entity mapped, this can now fire ahead of the cold snap itself: the heat
+> loss the projection uses is scaled by tomorrow's forecast (see
+> [Learning](learning.md)), so a cold front that has not arrived yet already
+> shows up in the plan rather than only once it is measured.
 
 ---
 

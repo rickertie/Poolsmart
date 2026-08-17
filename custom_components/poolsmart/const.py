@@ -208,6 +208,7 @@ CAPABILITY_BY_ENTITY = {
     CONF_CHEAP_PRICE_SENSOR: "cheap_period_signal",
     CONF_SOLAR_POWER_SENSOR: "solar_optimisation",
     CONF_SOLAR_FORECAST_SENSOR: "solar_forecast",
+    CONF_WEATHER_ENTITY: "weather_forecast_planning",
 }
 
 # -- Options ---------------------------------------------------------------

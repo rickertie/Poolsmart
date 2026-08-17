@@ -30,6 +30,19 @@ After each heating session, PoolSmart updates three core parameters:
    generous enough to invent heat loss that did not happen -- a strongly
    sunny period with neither sensor mapped is still set aside, exactly as
    before. See [Sensors](sensors.md) for where to map these.
+
+   The learned figure is a snapshot of whatever the water-to-air gap
+   typically was while it was being measured. With a weather entity mapped
+   under **Weer en prijs**, the planner (see [Planning](planning.md)) no
+   longer uses that figure unscaled: it is stretched or shrunk by how much
+   colder or warmer the forecast air temperature is than today's, on the
+   reasoning that twice the gap is roughly twice the loss. A forecast
+   suggesting less loss than usual is trusted only down to 60% of the
+   learned figure -- under-estimating loss is what actually shows up as a
+   cold pool at swim time -- while a colder forecast is allowed to scale it
+   up to 2.5x, since over-estimating only starts the plan early. Without a
+   weather entity mapped, or without both a water and an air reading
+   available, the learned figure is used exactly as measured.
 3. **COP curve (per 5 °C air band):** Thermal efficiency measured per 5 °C
    outdoor temperature bracket (e.g., 10–15 °C, 15–20 °C, 20–25 °C). Because
    non-inverter heat pumps operate at fixed output, one COP value per temperature
