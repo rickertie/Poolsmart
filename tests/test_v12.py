@@ -192,6 +192,7 @@ def test_t91_menu_has_no_general_bin():
     assert items == {
         "entities",
         "pool",
+        "weather_price",
         "heating",
         "when_to_heat",
         "filtration",
@@ -225,6 +226,7 @@ def test_t91c_every_menu_item_is_translated():
         for item in (
             "entities",
             "pool",
+            "weather_price",
             "heating",
             "when_to_heat",
             "filtration",

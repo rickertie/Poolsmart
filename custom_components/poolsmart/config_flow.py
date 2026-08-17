@@ -66,6 +66,18 @@ def _positive(minimum: float, maximum: float, step: float = 0.01):
     )
 
 
+def _entity_field(current: dict, key: str, required: bool = False):
+    """An entity-picker schema key that pre-fills with the current value.
+
+    Shared by every options-flow step that asks for an entity, so a value
+    saved on one step shows as already selected when its screen is reopened,
+    without becoming a hard-coded ``default=`` that could not be told apart
+    from a real choice.
+    """
+    marker = vol.Required if required else vol.Optional
+    return marker(key, description={"suggested_value": current.get(key) or None})
+
+
 async def async_load_defaults(hass) -> dict:
     """Starting values for the wizard.
 
@@ -740,6 +752,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
             menu_options=[
                 "entities",
                 "pool",
+                "weather_price",
                 "heating",
                 "when_to_heat",
                 "filtration",
@@ -765,6 +778,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
             menu_options=[
                 "entities",
                 "pool",
+                "weather_price",
                 "heating",
                 "when_to_heat",
                 "filtration",
@@ -774,34 +788,47 @@ class PoolSmartOptionsFlow(OptionsFlow):
             ],
         )
 
+    def _save_entities(self, user_input: dict) -> ConfigFlowResult:
+        """Persist a step's entity fields, explicitly clearing any left blank.
+
+        An emptied entity picker still posts its key with an empty value, it is
+        just falsy, so it disappears when blindly filtering for truthy values.
+        Only keys that were actually asked on this step are considered -- an
+        optional key that belongs to a different step must never be touched
+        here, or saving one screen would silently wipe an entity chosen on
+        another.
+        """
+        cleaned = {k: v for k, v in user_input.items() if v}
+        for key in user_input:
+            if key in c.OPTIONAL_ENTITY_KEYS and key not in cleaned:
+                cleaned[key] = ""
+        return self._save(cleaned)
+
     async def async_step_entities(self, user_input: dict | None = None) -> ConfigFlowResult:
-        """Change which entities the integration uses.
+        """Change the hardware the integration talks to.
 
         Picking the wrong temperature sensor during setup is easy to do and used
         to be permanent, which was a design error: entity choices belong in
         options, where they can be corrected, not locked into the entry data.
+        Only the pump, heat pump and flow-meter wiring lives here -- water
+        chemistry sensors are asked alongside the products they measure under
+        "Waterbehandeling", and weather/price/solar entities have their own
+        "Weer en prijs" step, so a wiring question is never mixed in with a
+        question about what the water contains or what the sky is doing.
         """
         if user_input is not None:
-            cleaned = {k: v for k, v in user_input.items() if v}
-            # Explicitly clear anything the user emptied, so an optional entity
-            # can be removed again and not merely replaced.
-            for key in c.OPTIONAL_ENTITY_KEYS:
-                if key not in cleaned:
-                    cleaned[key] = ""
-            return self._save(dict(user_input))
+            return self._save_entities(user_input)
 
         current = {**self.config_entry.data, **self.config_entry.options}
 
         def field(key, required=False):
-            marker = vol.Required if required else vol.Optional
-            return marker(key, description={"suggested_value": current.get(key) or None})
+            return _entity_field(current, key, required)
 
         fields = {
             field(c.CONF_PUMP_SWITCH, True): SWITCH,
-            field(c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
-            field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
             field(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
             field(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
+            field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
             field(c.CONF_FLOW_SENSOR): ANY_SENSOR,
             vol.Optional(
                 c.CONF_FLOW_UNIT,
@@ -812,25 +839,6 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     translation_key="flow_unit",
                 )
             ),
-            field(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
-            field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
-            field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
-            field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=["binary_sensor", "input_boolean"]
-                )
-            ),
-            field(c.CONF_IRRADIANCE_SENSOR): IRRADIANCE_SENSOR,
-            field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
-            field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
-            field(c.CONF_WEATHER_ENTITY): WEATHER,
             field(c.CONF_COVER_ENTITY): selector.EntitySelector(
                 selector.EntitySelectorConfig(
                     domain=["cover", "binary_sensor", "input_boolean"]
@@ -864,6 +872,40 @@ class PoolSmartOptionsFlow(OptionsFlow):
         schema = vol.Schema(fields)
         return self.async_show_form(step_id="entities", data_schema=schema)
 
+    async def async_step_weather_price(
+        self, user_input: dict | None = None
+    ) -> ConfigFlowResult:
+        """Everything read from outside the pool: sky, price, forecast.
+
+        None of these describe the installation itself -- they were previously
+        folded into "Sensoren en schakelaars" alongside the pump wiring, which
+        is what buried them. Grouped here, they read as one topic: what the
+        weather and the market are doing, not what is plumbed to what.
+        """
+        if user_input is not None:
+            return self._save_entities(user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+
+        def field(key, required=False):
+            return _entity_field(current, key, required)
+
+        fields = {
+            field(c.CONF_WEATHER_ENTITY): WEATHER,
+            field(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
+            field(c.CONF_PRICE_SENSOR): ANY_SENSOR,
+            field(c.CONF_CHEAP_PRICE_SENSOR): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=["binary_sensor", "input_boolean"]
+                )
+            ),
+            field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
+            field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
+            field(c.CONF_IRRADIANCE_SENSOR): IRRADIANCE_SENSOR,
+        }
+        schema = vol.Schema(fields)
+        return self.async_show_form(step_id="weather_price", data_schema=schema)
+
     async def async_step_pool(self, user_input: dict | None = None) -> ConfigFlowResult:
         """Correct the pool and pump figures after setup.
 
@@ -894,6 +936,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
         schema = vol.Schema(dict(pairs))
         schema = schema.extend(
             {
+                _entity_field(current, c.CONF_WATER_TEMP_SENSOR, True): TEMP_SENSOR,
                 vol.Optional(
                     c.CONF_PUMP_FLOW_MEASURED,
                     default=current.get(c.CONF_PUMP_FLOW_MEASURED, False),
@@ -1259,11 +1302,23 @@ class PoolSmartOptionsFlow(OptionsFlow):
     async def async_step_water(
         self, user_input: dict | None = None
     ) -> ConfigFlowResult:
-        """Which products are used, and how they are dosed."""
+        """Which products are used, and how they are dosed -- and what measures them.
+
+        The chemistry sensor pickers live here rather than under "Sensoren en
+        schakelaars", because the question they answer ("what measures your
+        free chlorine?") only makes sense next to the question this step
+        already asks about that same measurement ("what product do you dose
+        for it?"). Splitting them onto two different screens was what made the
+        options flow confusing to begin with.
+        """
         if user_input is not None:
-            return self._save(user_input)
+            return self._save_entities(user_input)
 
         current = {**self.config_entry.data, **self.config_entry.options}
+
+        def field(key, required=False):
+            return _entity_field(current, key, required)
+
         chem_select = selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=[
@@ -1314,6 +1369,14 @@ class PoolSmartOptionsFlow(OptionsFlow):
                             translation_key="filter_media",
                         )
                     ),
+                    field(c.CONF_PH_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_TOTAL_CHLORINE_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_BROMINE_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_ALKALINITY_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_CYANURIC_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_HARDNESS_SENSOR): MANUAL_OR_SENSOR,
+                    field(c.CONF_SALT_SENSOR): MANUAL_OR_SENSOR,
                 }
             ),
         )

@@ -370,6 +370,7 @@
         "menu_options": {
           "entities": "Sensors and switches",
           "pool": "Pool and pump",
+          "weather_price": "Weather and price",
           "heating": "Heating appliance",
           "when_to_heat": "When to heat",
           "filtration": "Filtration",
@@ -380,35 +381,19 @@
       },
       "entities": {
         "title": "Entities",
-        "description": "Change which entities the integration uses. Picking the wrong sensor at setup is easy; this is where you correct it. Clearing an optional field switches that feature off again.",
+        "description": "Change the wiring the integration uses: pump, heat pump and flow meter. Picking the wrong sensor at setup is easy; this is where you correct it. Clearing an optional field switches that feature off again.",
         "data": {
           "pump_switch": "Circulation pump switch",
           "heat_pump_switch": "Heat pump switch",
-          "water_temp_sensor": "Pool water temperature",
-          "air_temp_sensor": "Outdoor temperature",
           "hp_inlet_sensor": "Heat pump inlet temperature",
           "hp_outlet_sensor": "Heat pump outlet temperature",
           "flow_sensor": "Flow meter (m³/h)",
           "pump_power_sensor": "Pump power",
           "hp_power_sensor": "Heat pump power",
-          "price_sensor": "Electricity price (per kWh)",
-          "irradiance_sensor": "Solar irradiance (W/m²)",
-          "solar_power_sensor": "Current solar production",
-          "solar_forecast_sensor": "Solar forecast",
-          "weather_entity": "Weather",
           "cover_entity": "Pool cover",
           "flow_unit": "Flow meter unit",
-          "cheap_price_sensor": "Cheap price period signal",
           "pump_inlet_sensor": "Pump inlet temperature (optional)",
-          "ph_sensor": "pH reading",
-          "chlorine_sensor": "Free chlorine reading (mg/L)",
           "pump_outlet_sensor": "Pump outlet temperature",
-          "total_chlorine_sensor": "Total chlorine (mg/L)",
-          "bromine_sensor": "Bromine (mg/L)",
-          "alkalinity_sensor": "Total alkalinity (ppm)",
-          "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
-          "hardness_sensor": "Total hardness (ppm)",
-          "salt_sensor": "Salt (ppm)",
           "collector_sensor": "Solar collector temperature",
           "heating_source": "Heating source",
           "has_solar_collector": "Has a solar collector"
@@ -416,31 +401,15 @@
         "data_description": {
           "pump_switch": "The switch or smart plug that powers the circulation pump.",
           "heat_pump_switch": "The switch or smart plug that powers the heat pump.",
-          "water_temp_sensor": "The sensor measuring the pool water itself. Take care to pick the right one; it can be changed later under Configure.",
-          "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
           "hp_inlet_sensor": "Water going into the heat pump. If nothing sits between the pump and the heat pump in your plumbing, this is often the same physical point as \"Pump outlet temperature\" above — point both fields at that one entity in that case rather than leaving this blank.",
           "hp_outlet_sensor": "Water coming out of the heat pump. Together with the inlet this gives delta-T and COP.",
           "flow_sensor": "A flow meter in m³/h. Enables flow protection and makes the filtration blocks correct themselves as the filter fouls.",
           "pump_power_sensor": "Power draw of the pump, if your plug measures it.",
           "hp_power_sensor": "Power draw of the heat pump, if your plug measures it. Needed for cost and measured COP.",
-          "price_sensor": "A sensor whose state is the price per kWh. Dynamic tariff integrations provide this.",
-          "irradiance_sensor": "Direct sunlight reading in W/m² — a weather station's pyranometer, a KNMI-style solar-radiation entity, or similar. Preferred over the solar power sensor below when both are mapped: it needs no peak figure to scale against, and works whether or not this pool has solar panels of its own. Used to learn heat loss from sunny idle periods instead of discarding them.",
-          "solar_power_sensor": "Current solar production in watts.",
-          "solar_forecast_sensor": "A solar forecast, if you have one.",
-          "weather_entity": "Used as a fallback when no outdoor sensor is configured.",
           "cover_entity": "A cover sensor, a switch, or an input_boolean you flip yourself. Heat loss is then learned separately for covered and uncovered, because averaging the two produces a figure that is wrong in both states — a cover typically halves the loss or better.",
           "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
-          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
           "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong.",
-          "ph_sensor": "A sensor or input_number holding your last pH measurement. Used to work out how much to add, using the pool volume you entered.",
-          "chlorine_sensor": "A sensor or input_number holding your last free chlorine measurement in mg/L.",
           "pump_outlet_sensor": "Water leaving the circulation pump, on its way to the heat pump. Kept separate from the heat pump inlet below because that assumes only one plumbing layout: if there is a filter, a longer run, or anything else between the pump and the heat pump, these are two real points. If your plumbing runs pool → pump → heat pump → pool with nothing in between, and you only have one probe there, point this field and \"Heat pump inlet temperature\" at the same entity — the integration recognises they are one measurement and will not compare them against each other as if they were independent.",
-          "total_chlorine_sensor": "Total chlorine minus free chlorine gives combined chlorine — the part already used up by contamination. Above 0.5 mg/L, shocking does more than topping up. It is the one figure a strip gives you that answers 'should I shock', and it only exists if two columns are subtracted.",
-          "bromine_sensor": "Only if you sanitise with bromine instead of chlorine. The two are alternatives, not additions.",
-          "alkalinity_sensor": "The buffer that holds pH steady. Out of range, pH drifts on its own and correcting it is a weekly chore rather than a fix.",
-          "cyanuric_sensor": "Stabiliser, which shields chlorine from sunlight. Too little and chlorine burns off in hours; above about 100 ppm it holds chlorine hostage and adding more achieves nothing.",
-          "hardness_sensor": "Soft water pulls calcium out of grout and fittings; hard water scales the heat exchanger.",
-          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual.",
           "collector_sensor": "A probe at the collector outlet. Without it there is nothing to compare against the pool."
         }
       },
@@ -497,6 +466,7 @@
       "pool": {
         "title": "Pool and pump",
         "data": {
+          "water_temp_sensor": "Pool water temperature",
           "depth_m": "Water depth (m)",
           "filter_media": "Filter medium",
           "hp_air_temp_max": "Maximum air temperature (°C)",
@@ -520,6 +490,7 @@
           "hp_cop_ref": "Efficiency (COP) at the reference temperature"
         },
         "data_description": {
+          "water_temp_sensor": "The sensor measuring the pool water itself. Take care to pick the right one; it can be changed later under Configure.",
           "depth_m": "Actual water depth, not the wall height. Most pools are filled to about 80-90% of the wall.",
           "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
           "hp_air_temp_max": "Rarely relevant in this climate. 43 °C is a typical limit.",
@@ -541,6 +512,28 @@
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
           "volume_l": "On the box or in the manual. A round pool: diameter (m) x diameter x 0.785 x depth (m) x 1000. Example: Intex 300x200x75 cm filled to 66 cm is 3834 litres.",
           "hp_cop_ref": "How many kilowatts of heat you get per kilowatt of electricity, at the outdoor temperature below. From the datasheet — but the integration measures your own within a few sessions and prefers that, because a figure measured on your installation beats one measured on a test bench."
+        }
+      },
+      "weather_price": {
+        "title": "Weather and price",
+        "description": "Everything read from outside the pool: the weather, the electricity price, and the sun. Clearing an optional field switches that feature off again.",
+        "data": {
+          "weather_entity": "Weather",
+          "air_temp_sensor": "Outdoor temperature",
+          "price_sensor": "Electricity price (per kWh)",
+          "cheap_price_sensor": "Cheap price period signal",
+          "solar_power_sensor": "Current solar production",
+          "solar_forecast_sensor": "Solar forecast",
+          "irradiance_sensor": "Solar irradiance (W/m²)"
+        },
+        "data_description": {
+          "weather_entity": "A weather entity with a forecast. Used to scale the learned heat loss to the temperature ahead, so a cold front starts the heating plan earlier and a warm spell is not over-heated for.",
+          "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
+          "price_sensor": "A sensor whose state is the price per kWh. Dynamic tariff integrations provide this.",
+          "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
+          "solar_power_sensor": "Current solar production in watts.",
+          "solar_forecast_sensor": "A solar forecast, if you have one.",
+          "irradiance_sensor": "Direct sunlight reading in W/m² — a weather station's pyranometer, a KNMI-style solar-radiation entity, or similar. Preferred over the solar power sensor above when both are mapped: it needs no peak figure to scale against, and works whether or not this pool has solar panels of its own. Used to learn heat loss from sunny idle periods instead of discarding them."
         }
       },
       "heating": {
@@ -649,13 +642,29 @@
           "chlorine_product": "Chlorine product you use",
           "filter_media": "Filter medium",
           "sanitiser": "How the water is sanitised",
-          "tablet_grams": "Tablet size (grams)"
+          "tablet_grams": "Tablet size (grams)",
+          "ph_sensor": "pH reading",
+          "chlorine_sensor": "Free chlorine reading (mg/L)",
+          "total_chlorine_sensor": "Total chlorine (mg/L)",
+          "bromine_sensor": "Bromine (mg/L)",
+          "alkalinity_sensor": "Total alkalinity (ppm)",
+          "cyanuric_sensor": "Cyanuric acid / stabiliser (ppm)",
+          "hardness_sensor": "Total hardness (ppm)",
+          "salt_sensor": "Salt (ppm)"
         },
         "data_description": {
           "chemistry_cycle_minutes": "How long the pump runs when you press the chemistry button.",
           "filter_media": "Only used to estimate real flow when you have not measured it. Filter balls flow more freely than sand when fresh, but they compress over time and a matted bed chokes the flow badly — a sudden drop means it is time to pull them out and wash them.",
           "sanitiser": "Determines which readings are worth asking for. Showing a bromine field to a chlorine pool is a field you would wonder about, leave blank, and then see reported as missing.",
-          "tablet_grams": "The size your chlorine tablets actually come in — commonly 20 g, 200 g or 500 g. Tablets are counted rather than weighed out, so this is what turns a required weight into a number of tablets."
+          "tablet_grams": "The size your chlorine tablets actually come in — commonly 20 g, 200 g or 500 g. Tablets are counted rather than weighed out, so this is what turns a required weight into a number of tablets.",
+          "ph_sensor": "A sensor or input_number holding your last pH measurement. Used to work out how much to add, using the pool volume you entered.",
+          "chlorine_sensor": "A sensor or input_number holding your last free chlorine measurement in mg/L.",
+          "total_chlorine_sensor": "Total chlorine minus free chlorine gives combined chlorine — the part already used up by contamination. Above 0.5 mg/L, shocking does more than topping up. It is the one figure a strip gives you that answers 'should I shock', and it only exists if two columns are subtracted.",
+          "bromine_sensor": "Only if you sanitise with bromine instead of chlorine. The two are alternatives, not additions.",
+          "alkalinity_sensor": "The buffer that holds pH steady. Out of range, pH drifts on its own and correcting it is a weekly chore rather than a fix.",
+          "cyanuric_sensor": "Stabiliser, which shields chlorine from sunlight. Too little and chlorine burns off in hours; above about 100 ppm it holds chlorine hostage and adding more achieves nothing.",
+          "hardness_sensor": "Soft water pulls calcium out of grout and fittings; hard water scales the heat exchanger.",
+          "salt_sensor": "Only for a salt chlorinator. The ideal range depends on your cell, so check its manual."
         }
       },
       "advanced": {
