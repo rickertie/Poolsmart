@@ -370,6 +370,7 @@
         "menu_options": {
           "entities": "Sensoren en schakelaars",
           "pool": "Zwembad en pomp",
+          "weather_price": "Weer en prijs",
           "heating": "Verwarmingstoestel",
           "when_to_heat": "Wanneer verwarmen",
           "filtration": "Filtratie",
@@ -380,35 +381,19 @@
       },
       "entities": {
         "title": "Entiteiten",
-        "description": "Wijzig welke entiteiten de integratie gebruikt. Bij de installatie de verkeerde sensor kiezen is zo gebeurd; hier herstel je dat. Een optioneel veld leegmaken schakelt die functie weer uit.",
+        "description": "Wijzig de bedrading die de integratie gebruikt: pomp, warmtepomp en debietmeter. Bij de installatie de verkeerde sensor kiezen is zo gebeurd; hier herstel je dat. Een optioneel veld leegmaken schakelt die functie weer uit.",
         "data": {
           "pump_switch": "Schakelaar circulatiepomp",
           "heat_pump_switch": "Schakelaar warmtepomp",
-          "water_temp_sensor": "Zwembadwatertemperatuur",
-          "air_temp_sensor": "Buitentemperatuur",
           "hp_inlet_sensor": "Inlaattemperatuur warmtepomp",
           "hp_outlet_sensor": "Uitlaattemperatuur warmtepomp",
           "flow_sensor": "Debietmeter (m³/u)",
           "pump_power_sensor": "Vermogen pomp",
           "hp_power_sensor": "Vermogen warmtepomp",
-          "price_sensor": "Stroomprijs (per kWh)",
-          "irradiance_sensor": "Zoninstraling (W/m²)",
-          "solar_power_sensor": "Actuele zonneopbrengst",
-          "solar_forecast_sensor": "Zonneverwachting",
-          "weather_entity": "Weer",
           "cover_entity": "Afdekhoes",
           "flow_unit": "Eenheid debietmeter",
-          "cheap_price_sensor": "Signaal goedkope prijsperiode",
           "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)",
-          "ph_sensor": "pH-meting",
-          "chlorine_sensor": "Meting vrij chloor (mg/L)",
           "pump_outlet_sensor": "Uitlaattemperatuur circulatiepomp",
-          "total_chlorine_sensor": "Totaal chloor (mg/L)",
-          "bromine_sensor": "Broom (mg/L)",
-          "alkalinity_sensor": "Totale alkaliniteit (ppm)",
-          "cyanuric_sensor": "Cyanuurzuur / stabilisator (ppm)",
-          "hardness_sensor": "Totale hardheid (ppm)",
-          "salt_sensor": "Zout (ppm)",
           "collector_sensor": "Temperatuur zonnecollector",
           "heating_source": "Verwarmingsbron",
           "has_solar_collector": "Heeft een zonnecollector"
@@ -416,31 +401,15 @@
         "data_description": {
           "pump_switch": "De schakelaar of slimme stekker die de circulatiepomp voedt.",
           "heat_pump_switch": "De schakelaar of slimme stekker die de warmtepomp voedt.",
-          "water_temp_sensor": "De sensor die het zwembadwater zelf meet. Kies zorgvuldig; je kunt dit later aanpassen onder Configureren.",
-          "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
           "hp_inlet_sensor": "Water dat de warmtepomp in gaat. Zit er niets tussen de pomp en de warmtepomp in je leidingwerk, dan is dit vaak hetzelfde fysieke punt als “Uitlaattemperatuur circulatiepomp” hierboven — wijs in dat geval beide velden naar die ene entiteit in plaats van dit leeg te laten.",
           "hp_outlet_sensor": "Water dat de warmtepomp uit komt. Samen met de inlaat geeft dit delta-T en COP.",
           "flow_sensor": "Een debietmeter in m³/u. Maakt flowbeveiliging mogelijk en laat de filtratieblokken zichzelf corrigeren als het filter vervuilt.",
           "pump_power_sensor": "Opgenomen vermogen van de pomp, als je stekker dat meet.",
           "hp_power_sensor": "Opgenomen vermogen van de warmtepomp, als je stekker dat meet. Nodig voor kosten en gemeten COP.",
-          "price_sensor": "Een sensor waarvan de waarde de prijs per kWh is. Integraties voor dynamische tarieven leveren die.",
-          "irradiance_sensor": "Directe instraling in W/m² — bijvoorbeeld van een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de zonneopbrengst-sensor hieronder wanneer beide zijn ingesteld: hoeft niet geschaald te worden met een piekvermogen, en werkt ook zonder eigen zonnepanelen. Wordt gebruikt om warmteverlies te leren uit zonnige idle-periodes in plaats van die te negeren.",
-          "solar_power_sensor": "Actuele zonneopbrengst in watt.",
-          "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
-          "weather_entity": "Wordt gebruikt als terugval wanneer er geen buitensensor is ingesteld.",
           "cover_entity": "Een hoessensor, een schakelaar, of een input_boolean die je zelf omzet. Het warmteverlies wordt dan apart geleerd voor mét en zónder hoes, want die twee middelen geeft een getal dat in beide situaties fout is — een hoes halveert het verlies doorgaans of beter.",
           "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
-          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
           "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is.",
-          "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
-          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L.",
           "pump_outlet_sensor": "Water dat de circulatiepomp verlaat, op weg naar de warmtepomp. Apart gehouden van de warmtepompinlaat hieronder, want die aanname geldt maar voor één leidingopstelling: zit er een filter, een langer traject, of iets anders tussen pomp en warmtepomp, dan zijn dit twee echte meetpunten. Loopt je leiding bad → pomp → warmtepomp → bad zonder iets ertussen, en heb je daar maar één voeler hangen, wijs dit veld en “Inlaattemperatuur warmtepomp” dan naar dezelfde entiteit — de integratie herkent dat het één meting is en vergelijkt ze niet met elkaar alsof het twee losse metingen zijn.",
-          "total_chlorine_sensor": "Totaal chloor min vrij chloor geeft gebonden chloor — het deel dat al door verontreiniging is opgebruikt. Boven 0,5 mg/L helpt shocken meer dan bijvullen. Dit is het enige getal op de strook dat de vraag 'moet ik shocken' beantwoordt, en het bestaat alleen als je twee kolommen van elkaar aftrekt.",
-          "bromine_sensor": "Alleen als je met broom ontsmet in plaats van chloor. Die twee zijn alternatieven, geen aanvullingen.",
-          "alkalinity_sensor": "De buffer die je pH stabiel houdt. Buiten bereik zwerft de pH vanzelf en wordt corrigeren een wekelijkse klus in plaats van een oplossing.",
-          "cyanuric_sensor": "Stabilisator, die je chloor tegen zonlicht beschermt. Te weinig en chloor verdwijnt binnen uren; boven ongeveer 100 ppm houdt het je chloor gegijzeld en levert meer doseren niets op.",
-          "hardness_sensor": "Zacht water trekt kalk uit voegen en fittingen; hard water zet af op de warmtewisselaar.",
-          "salt_sensor": "Alleen bij een zoutelektrolyse-installatie. Het ideale bereik hangt af van je cel, dus raadpleeg de handleiding.",
           "collector_sensor": "Een voeler bij de uitlaat van de collector. Zonder die is er niets om met het bad te vergelijken."
         }
       },
@@ -497,6 +466,7 @@
       "pool": {
         "title": "Zwembad en pomp",
         "data": {
+          "water_temp_sensor": "Zwembadwatertemperatuur",
           "depth_m": "Waterdiepte (m)",
           "filter_media": "Filtermedium",
           "hp_air_temp_max": "Maximale luchttemperatuur (°C)",
@@ -520,6 +490,7 @@
           "hp_cop_ref": "Rendement (COP) bij de referentietemperatuur"
         },
         "data_description": {
+          "water_temp_sensor": "De sensor die het zwembadwater zelf meet. Kies zorgvuldig; je kunt dit later aanpassen onder Configureren.",
           "depth_m": "De werkelijke waterdiepte, niet de wandhoogte. De meeste baden staan tot ongeveer 80-90% van de wand.",
           "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
           "hp_air_temp_max": "In dit klimaat zelden relevant. 43 °C is een gebruikelijke grens.",
@@ -541,6 +512,28 @@
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "volume_l": "Staat op de doos of in de handleiding. Rond bad: diameter (m) x diameter x 0,785 x diepte (m) x 1000. Voorbeeld: Intex 300x200x75 cm tot 66 cm gevuld is 3834 liter.",
           "hp_cop_ref": "Hoeveel kilowatt warmte je krijgt per kilowatt stroom, bij de buitentemperatuur hieronder. Van het typeplaatje — maar de integratie meet binnen een paar sessies je eigen waarde en gebruikt die liever, want een meting op jouw installatie zegt meer dan een meting op een testbank."
+        }
+      },
+      "weather_price": {
+        "title": "Weer en prijs",
+        "description": "Alles wat van buiten het bad komt: het weer, de stroomprijs en de zon. Een optioneel veld leegmaken schakelt die functie weer uit.",
+        "data": {
+          "weather_entity": "Weer",
+          "air_temp_sensor": "Buitentemperatuur",
+          "price_sensor": "Stroomprijs (per kWh)",
+          "cheap_price_sensor": "Signaal goedkope prijsperiode",
+          "solar_power_sensor": "Actuele zonneopbrengst",
+          "solar_forecast_sensor": "Zonneverwachting",
+          "irradiance_sensor": "Zoninstraling (W/m²)"
+        },
+        "data_description": {
+          "weather_entity": "Een weer-entiteit met een weersverwachting. Wordt gebruikt om het geleerde warmteverlies te schalen naar de temperatuur die eraan komt, zodat een koudefront het verwarmplan eerder laat starten en een warme periode niet onnodig doorstookt.",
+          "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
+          "price_sensor": "Een sensor waarvan de waarde de prijs per kWh is. Integraties voor dynamische tarieven leveren die.",
+          "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
+          "solar_power_sensor": "Actuele zonneopbrengst in watt.",
+          "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
+          "irradiance_sensor": "Directe instraling in W/m² — bijvoorbeeld van een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de zonneopbrengst-sensor hierboven wanneer beide zijn ingesteld: hoeft niet geschaald te worden met een piekvermogen, en werkt ook zonder eigen zonnepanelen. Wordt gebruikt om warmteverlies te leren uit zonnige idle-periodes in plaats van die te negeren."
         }
       },
       "heating": {
@@ -649,13 +642,29 @@
           "chlorine_product": "Chloormiddel dat je gebruikt",
           "filter_media": "Filtermedium",
           "sanitiser": "Hoe het water ontsmet wordt",
-          "tablet_grams": "Tabletgrootte (gram)"
+          "tablet_grams": "Tabletgrootte (gram)",
+          "ph_sensor": "pH-meting",
+          "chlorine_sensor": "Meting vrij chloor (mg/L)",
+          "total_chlorine_sensor": "Totaal chloor (mg/L)",
+          "bromine_sensor": "Broom (mg/L)",
+          "alkalinity_sensor": "Totale alkaliniteit (ppm)",
+          "cyanuric_sensor": "Cyanuurzuur / stabilisator (ppm)",
+          "hardness_sensor": "Totale hardheid (ppm)",
+          "salt_sensor": "Zout (ppm)"
         },
         "data_description": {
           "chemistry_cycle_minutes": "Hoe lang de pomp draait als je op de chemieknop drukt.",
           "filter_media": "Wordt alleen gebruikt om de werkelijke doorstroming te schatten als je die niet hebt gemeten. Filterballen laten meer door dan zand als ze nieuw zijn, maar ze klitten samen na verloop van tijd en een samengeperst bed knijpt de doorstroming flink af — een plotselinge daling betekent dat het tijd is om ze eruit te halen en te wassen.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
-          "tablet_grams": "De grootte waarin je chloortabletten verkocht worden — meestal 20, 200 of 500 gram. Tabletten worden geteld en niet afgewogen, dus hiermee wordt een benodigd gewicht een aantal tabletten."
+          "tablet_grams": "De grootte waarin je chloortabletten verkocht worden — meestal 20, 200 of 500 gram. Tabletten worden geteld en niet afgewogen, dus hiermee wordt een benodigd gewicht een aantal tabletten.",
+          "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
+          "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L.",
+          "total_chlorine_sensor": "Totaal chloor min vrij chloor geeft gebonden chloor — het deel dat al door verontreiniging is opgebruikt. Boven 0,5 mg/L helpt shocken meer dan bijvullen. Dit is het enige getal op de strook dat de vraag 'moet ik shocken' beantwoordt, en het bestaat alleen als je twee kolommen van elkaar aftrekt.",
+          "bromine_sensor": "Alleen als je met broom ontsmet in plaats van chloor. Die twee zijn alternatieven, geen aanvullingen.",
+          "alkalinity_sensor": "De buffer die je pH stabiel houdt. Buiten bereik zwerft de pH vanzelf en wordt corrigeren een wekelijkse klus in plaats van een oplossing.",
+          "cyanuric_sensor": "Stabilisator, die je chloor tegen zonlicht beschermt. Te weinig en chloor verdwijnt binnen uren; boven ongeveer 100 ppm houdt het je chloor gegijzeld en levert meer doseren niets op.",
+          "hardness_sensor": "Zacht water trekt kalk uit voegen en fittingen; hard water zet af op de warmtewisselaar.",
+          "salt_sensor": "Alleen bij een zoutelektrolyse-installatie. Het ideale bereik hangt af van je cel, dus raadpleeg de handleiding."
         }
       },
       "advanced": {
