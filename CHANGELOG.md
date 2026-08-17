@@ -12,6 +12,40 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.9.2] — Rooms of Its Own, and a Look at Tomorrow
+
+### Fixed
+
+- **The options flow's "Sensoren en schakelaars" step was one flat list of
+  everything.** Pump and heat pump wiring, the eight water-chemistry sensors,
+  and every weather/price/solar entity all sat under one heading, with the
+  chemistry sensors duplicated in spirit against the product questions on a
+  completely different screen. The pool's own water-temperature sensor lived
+  there too, apart from every other pool figure. Addresses
+  [#15](https://github.com/rickertie/Poolsmart/issues/15): `water_temp_sensor`
+  moved to **Zwembad en pomp**, the chemistry sensors moved next to the
+  product questions under **Waterbehandeling**, and weather, price and solar
+  entities got a new **Weer en prijs** step of their own — "Sensoren en
+  schakelaars" is hardware wiring now, and nothing else. Clearing an optional
+  entity field back to blank, which silently did nothing, now actually clears
+  it.
+
+### Added
+
+- **The heating plan now looks at tomorrow's forecast, not just today's air.**
+  The learned heat-loss figure used to be applied unscaled regardless of what
+  was coming: a cold front started the plan too late, a warm spell over-heated
+  for no reason. Addresses
+  [#8](https://github.com/rickertie/Poolsmart/issues/8): with a weather entity
+  mapped under **Weer en prijs**, the learned figure is stretched or shrunk by
+  how the forecast air temperature ahead compares to today's, bounded so a
+  single forecast reading can move it down to 60% or up to 2.5x — asymmetric
+  on purpose, since starting a plan too late is the failure that actually
+  shows up as a cold pool at swim time. Both Maintenance mode's run-time
+  estimate and Seasonal mode's days-to-ready projection pick this up
+  automatically, including the thermal-equilibrium warning firing ahead of a
+  forecast cold snap rather than only once it arrives.
+
 ## [1.9.1] — The Sun Sensor Nobody Could Actually Configure
 
 v1.9.0's solar-gain-during-idle feature had a sensor pathway that could never
