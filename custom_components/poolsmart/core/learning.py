@@ -581,6 +581,8 @@ RESETTABLE = {
     "heat_loss_covered": ("heat_loss_covered_c_per_h", "heat_loss_covered_samples"),
     "measured_flow": ("measured_flow_m3h", None),
     "cop": ("cop_by_air_bucket", "cop_sessions_by_bucket"),
+    "ph_correction": ("ph_correction", "ph_correction_sessions"),
+    "chlorine_correction": ("chlorine_correction", "chlorine_correction_sessions"),
 }
 
 

@@ -605,6 +605,65 @@ def next_test_due(
     return due, now >= due, why
 
 
+#: Unit-conversion factors into the unit dose_for_ph/dose_for_chlorine
+#: actually compute in, so an amount recorded in a different (but compatible)
+#: unit can still be compared against the formula's own prediction.
+_ML_UNITS = {"ml": 1.0, "l": 1000.0, "L": 1000.0}
+_G_UNITS = {"g": 1.0, "kg": 1000.0}
+
+
+def expected_change_for_dose(
+    measured: float,
+    volume_l: float,
+    product: Product,
+    amount: float,
+    unit: str,
+    tablet_grams: float = 20.0,
+) -> float | None:
+    """What the uncorrected (table) formula predicts a dose of this size
+    should change the reading by -- the baseline a correction factor is
+    measured against.
+
+    Recomputes the formula at ``correction=1.0`` for ``measured`` and scales
+    its prediction to the amount actually administered, rather than assuming
+    the recommended amount was the one used: dosing is often eyeballed, not
+    measured to the millilitre, and comparing against what was actually
+    poured in is what makes the resulting correction factor trustworthy.
+
+    Tablets dissolve over days and are already documented (see
+    :func:`dose_for_chlorine`) as unsuited to a same-day correction, so no
+    expectation is set for them -- there is nothing a same-day test could
+    fairly hold them to.
+    """
+    if product is Product.TABLET:
+        return None
+
+    if product in (Product.ACID_15, Product.ACID_37, Product.PH_PLUS):
+        baseline = dose_for_ph(measured, volume_l, product)
+    else:
+        baseline = dose_for_chlorine(
+            measured, volume_l, product, tablet_grams=tablet_grams
+        )
+
+    if baseline is None or not baseline.amount:
+        return None
+
+    if baseline.unit in _ML_UNITS and unit in _ML_UNITS:
+        scale = (amount * _ML_UNITS[unit]) / (
+            baseline.amount * _ML_UNITS[baseline.unit]
+        )
+    elif baseline.unit in _G_UNITS and unit in _G_UNITS:
+        scale = (amount * _G_UNITS[unit]) / (
+            baseline.amount * _G_UNITS[baseline.unit]
+        )
+    else:
+        # Recorded in a unit the formula didn't produce (e.g. litres of
+        # granules) -- nothing sound to scale against.
+        return None
+
+    return (baseline.aiming_for - measured) * scale
+
+
 def learn_correction(records: list[DoseRecord], product: str) -> float:
     """How this pool responds compared with the table figures.
 

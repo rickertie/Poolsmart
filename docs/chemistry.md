@@ -53,12 +53,25 @@ Chemistry sits above the filtration branches in the ladder, so a day whose
 filtration quota is already met cannot suppress it. Dosing in the evening still
 gets its circulation.
 
-### A Dose Log That Learns (NOT implemented, yet :-))
+### A Dose Log That Learns
 
-Record what you added; the next test records what it achieved. After a few doses
-the recommendation is corrected for how your pool actually responds — alkalinity,
-stabiliser and the age of your chemicals all shift it, and none of them is
-modelled. Measuring beats pretending.
+Record what you added; the next test records what it achieved. Alkalinity,
+stabiliser and the age of your chemicals all shift how a pool actually
+responds, and none of them is modelled directly — so instead of pretending
+otherwise, PoolSmart measures it: each dose's actual effect is compared
+against what the formula predicted for the amount you poured in, and the
+result is blended into a per-pool correction factor (capped and
+outlier-guarded, the same update rule the heating model uses for heat loss
+and COP) that scales every future pH and chlorine recommendation.
+
+A tablet's dose is never used to correct the factor — it dissolves over
+days, so a same-day test cannot fairly be held against it. The correction
+starts at 1.0 ("matches the table") and only takes over once at least two
+usable dose-then-test pairs exist; until then the table figure is used
+as-is. Its current value, session count, and confidence ("provisional",
+"usable", "reliable") show up on the Learning tab alongside heat loss and
+COP, and can be reset independently of the rest of the learned history the
+same way those are.
 
 ---
 

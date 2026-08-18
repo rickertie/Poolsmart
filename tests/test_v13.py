@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components"
 
 import ha_stubs  # noqa: E402
 
+from core import chemistry as chem  # noqa: E402
 from core import learning  # noqa: E402
 
 
@@ -137,3 +138,77 @@ def test_corrupt_monthly_aggregates_do_not_touch_logs_or_learned():
     assert store.learned.heating_rate_sessions == 3
     assert len(store.session_log) == 1
     assert len(store.dose_log) == 1
+
+
+# ---------------------------------------------------------------------------
+# Issue #9 -- the dose-log learning loop
+# ---------------------------------------------------------------------------
+
+
+def test_expected_change_matches_uncorrected_formula_for_the_recommended_amount():
+    volume = 3834
+    baseline = chem.dose_for_ph(7.82, volume, chem.Product.ACID_15)
+
+    expected = chem.expected_change_for_dose(
+        7.82, volume, chem.Product.ACID_15, baseline.amount, baseline.unit
+    )
+
+    assert expected is not None
+    assert abs(expected - (baseline.aiming_for - 7.82)) < 1e-6
+
+
+def test_expected_change_scales_with_the_amount_actually_administered():
+    volume = 3834
+    baseline = chem.dose_for_ph(7.82, volume, chem.Product.ACID_15)
+    full = chem.expected_change_for_dose(
+        7.82, volume, chem.Product.ACID_15, baseline.amount, baseline.unit
+    )
+    half = chem.expected_change_for_dose(
+        7.82, volume, chem.Product.ACID_15, baseline.amount / 2, baseline.unit
+    )
+
+    assert abs(half - full / 2) < 1e-6
+
+
+def test_expected_change_is_none_for_a_tablet():
+    assert (
+        chem.expected_change_for_dose(0.6, 3834, chem.Product.TABLET, 1, "tablet")
+        is None
+    )
+
+
+def test_expected_change_is_none_for_a_mismatched_unit():
+    # Granules are dosed in grams; recording it in millilitres is a unit that
+    # doesn't correspond to what the formula produced, so nothing sound can
+    # be scaled against it.
+    assert (
+        chem.expected_change_for_dose(
+            0.6, 3834, chem.Product.CHLORINE_GRANULES_70, 50, "ml"
+        )
+        is None
+    )
+
+
+def test_correction_factor_converges_toward_the_true_response_via_capped_update():
+    """A pool that consistently moves half as far as the table predicts
+    should see its correction factor climb toward 2.0 (needs twice the
+    dose), moving by at most max_step_ratio each time -- never jumping
+    straight there off one measurement."""
+    max_step_ratio = 0.15
+    correction = 1.0
+    for _ in range(60):
+        # Effectiveness 0.5 -> proposed = 1/0.5 = 2.0, clamped to [0.5, 2.0].
+        proposed = max(0.5, min(2.0, 1 / 0.5))
+        next_value = learning.capped_update(correction, proposed, max_step_ratio)
+        assert abs(next_value - correction) <= abs(correction) * max_step_ratio + 1e-9
+        correction = next_value
+
+    assert abs(correction - 2.0) < 0.05
+
+
+def test_dose_amount_scales_with_the_correction_factor():
+    volume = 3834
+    uncorrected = chem.dose_for_ph(7.82, volume, chem.Product.ACID_15, 1.0)
+    corrected = chem.dose_for_ph(7.82, volume, chem.Product.ACID_15, 1.5)
+
+    assert abs(corrected.amount / uncorrected.amount - 1.5) < 0.01

@@ -1666,12 +1666,26 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             if band is not None
         ]
 
-        records = [chem.DoseRecord.from_dict(r) for r in self.store.dose_log]
         acid_product = chem.Product(self._conf(c.CONF_ACID_PRODUCT, "acid_15"))
         chlorine_product = chem.Product(
             self._conf(c.CONF_CHLORINE_PRODUCT, "chlorine_granules_70")
         )
         units = self._conf(c.CONF_UNIT_SYSTEM, "metric")
+
+        # The persisted, capped/decayed correction (learning.capped_update,
+        # blended in by _learn_dose_correction) rather than a fresh recompute
+        # from the raw log every call -- confidence-gated the same way
+        # chem.learn_correction's own minimum works, until enough dose/test
+        # pairs exist to trust it.
+        learned = self.store.learned
+        ph_correction = (
+            learned.ph_correction if learned.ph_correction_sessions >= 2 else 1.0
+        )
+        chlorine_correction = (
+            learned.chlorine_correction
+            if learned.chlorine_correction_sessions >= 2
+            else 1.0
+        )
 
         def present(dose):
             """Convert a dose into the units the user measures with."""
@@ -1691,7 +1705,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 readings["ph"],
                 config.pool.volume_l,
                 acid_product,
-                chem.learn_correction(records, acid_product.value),
+                ph_correction,
             )
             if readings.get("ph") is not None
             else None
@@ -1701,7 +1715,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 readings["free_chlorine"],
                 config.pool.volume_l,
                 chlorine_product,
-                chem.learn_correction(records, chlorine_product.value),
+                chlorine_correction,
                 float(self._conf(c.CONF_TABLET_GRAMS, 20)),
             )
             if readings.get("free_chlorine") is not None
@@ -1734,9 +1748,13 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             "test_overdue": overdue,
             "dose_log": list(reversed(self.store.dose_log)),
             "corrections": {
-                acid_product.value: chem.learn_correction(records, acid_product.value),
-                chlorine_product.value: chem.learn_correction(
-                    records, chlorine_product.value
+                acid_product.value: ph_correction,
+                chlorine_product.value: chlorine_correction,
+            },
+            "correction_confidence": {
+                "ph": learning.rate_confidence(learned.ph_correction_sessions),
+                "chlorine": learning.rate_confidence(
+                    learned.chlorine_correction_sessions
                 ),
             },
         }
@@ -1755,12 +1773,21 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         half an hour and chlorine shock wants a full night. Stopping early
         leaves undissolved product sitting on the floor bleaching the liner.
         """
+        expected_change = chem.expected_change_for_dose(
+            measured_before,
+            self.pool_config.pool.volume_l,
+            chem.Product(product),
+            amount,
+            unit,
+            float(self._conf(c.CONF_TABLET_GRAMS, 20)),
+        )
         record = chem.DoseRecord(
             at=dt_util.now(),
             product=product,
             amount=amount,
             unit=unit,
             measured_before=measured_before,
+            expected_change=expected_change,
         )
         self.store.log_dose(record.as_dict())
         self._invalidate_chemistry_cache()
@@ -1787,15 +1814,58 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if self.store.dose_log:
             latest = self.store.dose_log[-1]
             if latest.get("measured_after") is None:
-                reading = (
-                    chemistry["ph"]
-                    if "acid" in latest["product"] or "ph" in latest["product"]
-                    else chemistry["chlorine"]
+                is_ph_product = latest["product"] in (
+                    chem.Product.ACID_15.value,
+                    chem.Product.ACID_37.value,
+                    chem.Product.PH_PLUS.value,
                 )
+                reading = chemistry["ph"] if is_ph_product else chemistry["chlorine"]
                 if reading is not None:
                     latest["measured_after"] = reading
+                    self._learn_dose_correction(latest, is_ph_product, now)
         await self.store.async_save()
         self.async_update_listeners()
+
+    def _learn_dose_correction(
+        self, dose_dict: dict, is_ph_product: bool, now: datetime
+    ) -> None:
+        """Blend one dose's actual-vs-expected response into the persisted
+        pH/chlorine correction factor -- the same capped, decayed update
+        heating learning uses for heat loss and COP.
+        """
+        effectiveness = chem.DoseRecord.from_dict(dose_dict).effectiveness
+        if effectiveness is None or not (0.2 < effectiveness < 5):
+            return
+        # A pool that moved half as far as predicted needs twice the dose.
+        proposed = max(0.5, min(2.0, 1 / effectiveness))
+        learned = self.store.learned
+        max_step_ratio = self.pool_config.learning.max_step_ratio
+        if is_ph_product:
+            learned.ph_correction = round(
+                learning.capped_update(
+                    learned.ph_correction,
+                    proposed,
+                    max_step_ratio,
+                    learned.ph_correction_updated_at,
+                    now,
+                ),
+                3,
+            )
+            learned.ph_correction_sessions += 1
+            learned.ph_correction_updated_at = now
+        else:
+            learned.chlorine_correction = round(
+                learning.capped_update(
+                    learned.chlorine_correction,
+                    proposed,
+                    max_step_ratio,
+                    learned.chlorine_correction_updated_at,
+                    now,
+                ),
+                3,
+            )
+            learned.chlorine_correction_sessions += 1
+            learned.chlorine_correction_updated_at = now
 
     async def async_start_chemistry(self, minutes: int | None = None) -> None:
         """Circulate for a chemical treatment.

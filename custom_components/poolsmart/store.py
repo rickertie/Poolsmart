@@ -97,6 +97,15 @@ class LearnedValues:
     heat_loss_updated_at: datetime | None = None
     heat_loss_covered_updated_at: datetime | None = None
     cop_updated_at: dict[str, datetime] = field(default_factory=dict)
+    #: How this pool's pH actually responds to a dose, versus the table
+    #: figure -- 1.0 means "matches the table". See core.chemistry.
+    ph_correction: float = 1.0
+    ph_correction_sessions: int = 0
+    ph_correction_updated_at: datetime | None = None
+    #: Same, for chlorine.
+    chlorine_correction: float = 1.0
+    chlorine_correction_sessions: int = 0
+    chlorine_correction_updated_at: datetime | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -128,6 +137,20 @@ class LearnedValues:
             "cop_updated_at": {
                 k: v.isoformat() for k, v in self.cop_updated_at.items()
             },
+            "ph_correction": self.ph_correction,
+            "ph_correction_sessions": self.ph_correction_sessions,
+            "ph_correction_updated_at": (
+                self.ph_correction_updated_at.isoformat()
+                if self.ph_correction_updated_at
+                else None
+            ),
+            "chlorine_correction": self.chlorine_correction,
+            "chlorine_correction_sessions": self.chlorine_correction_sessions,
+            "chlorine_correction_updated_at": (
+                self.chlorine_correction_updated_at.isoformat()
+                if self.chlorine_correction_updated_at
+                else None
+            ),
         }
 
     @classmethod
@@ -163,6 +186,20 @@ class LearnedValues:
                 else None
             ),
             cop_updated_at=cop_updated_at,
+            ph_correction=raw.get("ph_correction", 1.0),
+            ph_correction_sessions=raw.get("ph_correction_sessions", 0),
+            ph_correction_updated_at=(
+                datetime.fromisoformat(raw["ph_correction_updated_at"])
+                if raw.get("ph_correction_updated_at")
+                else None
+            ),
+            chlorine_correction=raw.get("chlorine_correction", 1.0),
+            chlorine_correction_sessions=raw.get("chlorine_correction_sessions", 0),
+            chlorine_correction_updated_at=(
+                datetime.fromisoformat(raw["chlorine_correction_updated_at"])
+                if raw.get("chlorine_correction_updated_at")
+                else None
+            ),
         )
 
 
