@@ -664,6 +664,21 @@ views:
           - entity: sensor.pool_next_action_at
             name: Volgende actie
 
+      # LET OP: dit zijn JOUW eigen input_datetime/input_boolean-hulpmiddelen,
+      # niet entiteiten van de integratie zelf. Maak ze aan onder Instellingen
+      # → Apparaten en diensten → Hulpmiddelen, en koppel ze daarna bij
+      # "Wanneer verwarmen" aan swim_time_entity / swim_skip_entity (#17) —
+      # dan kan iedereen in huis de zwemtijd hier zetten zonder dat scherm te
+      # openen. Zonder deze koppeling blijft het vaste tijdstip uit de
+      # instellingen gelden.
+      - type: entities
+        title: 🏊 Zwemtijd vandaag
+        entities:
+          - entity: input_datetime.poolsmart_swim_time
+            name: Tijdstip
+          - entity: input_boolean.poolsmart_skip_swim_today
+            name: Vandaag niet zwemmen
+
       # ---- Wat is er gebeurd ----------------------------------------------
       - type: logbook
         title: 🕒 Laatste acties

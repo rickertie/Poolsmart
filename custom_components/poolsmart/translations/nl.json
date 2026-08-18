@@ -594,6 +594,8 @@
           "swim_time": "Op temperatuur om (UU:MM)",
           "swim_time_2": "Tweede tijdstip (optioneel)",
           "swim_days": "Dagen",
+          "swim_time_entity": "Dashboard-hulpmiddel zwemtijd (optioneel)",
+          "swim_skip_entity": "Hulpmiddel \"vandaag niet zwemmen\" (optioneel)",
           "target_temp": "Gewenste temperatuur (°C)"
         },
         "data_description": {
@@ -610,6 +612,8 @@
           "swim_time": "De planner rekent hiervandaan terug wanneer het verwarmen moet beginnen. Laat leeg als je geen vast tijdstip hebt; dan houdt hij het bad simpelweg op temperatuur.",
           "swim_time_2": "Een tweede tijdstip op dezelfde dagen, voor de uitzonderingen. De meeste mensen laten dit leeg.",
           "swim_days": "Op welke weekdagen bovenstaande tijden gelden.",
+          "swim_time_entity": "Een input_datetime-hulpmiddel op je dashboard, zodat iedereen in huis vandaag zonder dit scherm te openen het tijdstip kan instellen. Wordt vóór het vaste tijdstip hierboven gecontroleerd, en genegeerd als het leeg is.",
+          "swim_skip_entity": "Een input_boolean-hulpmiddel voor \"vandaag niet zwemmen\" — zet hem op het dashboard aan om vandaag over te slaan zonder het schema te wijzigen.",
           "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder."
         }
       },
