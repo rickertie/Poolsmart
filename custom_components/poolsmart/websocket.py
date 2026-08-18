@@ -322,6 +322,9 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
             "subsystem_errors": coordinator.subsystem_errors,
             "learned": coordinator.store.learned.as_dict(),
             "learning_insight": _learning_insight(coordinator),
+            "accepted_suggestions": list(
+                reversed(coordinator.store.accepted_suggestions)
+            ),
             "session": _live_session(coordinator),
             "heat_balance": _heat_balance_snapshot(coordinator),
             "chemistry": coordinator.water_chemistry,

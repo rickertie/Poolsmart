@@ -169,9 +169,15 @@ def read_history(path: str) -> dict:
     }
 
 
-#: What an export can contain. All four are opt-out: pass ``sections`` to
+#: What an export can contain. All are opt-out: pass ``sections`` to
 #: :func:`export_payload` to carry only some of them across.
-EXPORT_SECTIONS = ("learned", "session_log", "dose_log", "last_water_test")
+EXPORT_SECTIONS = (
+    "learned",
+    "session_log",
+    "dose_log",
+    "last_water_test",
+    "accepted_suggestions",
+)
 
 
 def export_payload(store, sections: "list[str] | None" = None) -> dict:
@@ -198,6 +204,8 @@ def export_payload(store, sections: "list[str] | None" = None) -> dict:
         payload["last_water_test"] = (
             store.last_water_test.isoformat() if store.last_water_test else None
         )
+    if "accepted_suggestions" in chosen:
+        payload["accepted_suggestions"] = list(store.accepted_suggestions)
     return payload
 
 
@@ -216,7 +224,7 @@ def validate_import(payload: dict) -> tuple[bool, str]:
         return False, "the export contains none of: " + ", ".join(EXPORT_SECTIONS)
     if "learned" in payload and not isinstance(payload["learned"], dict):
         return False, "learned is not an object"
-    for key in ("session_log", "dose_log"):
+    for key in ("session_log", "dose_log", "accepted_suggestions"):
         if key in payload and not isinstance(payload[key], list):
             return False, f"{key} is not a list"
 

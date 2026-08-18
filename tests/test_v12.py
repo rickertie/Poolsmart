@@ -289,6 +289,7 @@ def test_t93_orphan_detection_and_adoption():
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     store.learned = store_module.LearnedValues()
     store.session_log, store.dose_log, store.last_water_test = [], [], None
+    store.accepted_suggestions = []
 
     taken = store.adopt(
         {
@@ -323,6 +324,7 @@ def test_t93b_locally_measured_values_win():
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     store.learned = store_module.LearnedValues(heat_loss_c_per_h=0.19)
     store.session_log, store.dose_log, store.last_water_test = [], [], None
+    store.accepted_suggestions = []
 
     store.adopt({"learned": {"heat_loss_c_per_h": 0.23, "measured_flow_m3h": 1.07}})
     assert store.learned.heat_loss_c_per_h == 0.19, "local measurement overwritten"

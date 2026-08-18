@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from .core.config import PoolConfig
 
 from .const import (
+    ACCEPTED_SUGGESTIONS_LOG_SIZE,
     DAILY_SUMMARY_MAX_DAYS,
     DATA_VERSION,
     DECISION_LOG_SIZE,
@@ -233,6 +234,11 @@ class PoolStore:
         self.decision_log: deque[dict] = deque(maxlen=DECISION_LOG_SIZE)
         self.session_log: deque[dict] = deque(maxlen=SESSION_LOG_SIZE)
         self.dose_log: deque[dict] = deque(maxlen=DOSE_LOG_SIZE)
+        #: Accepted AI suggestions, each with a "before" snapshot and, once
+        #: the outcome window has passed, an outcome. See ai.advisor and #10.
+        self.accepted_suggestions: deque[dict] = deque(
+            maxlen=ACCEPTED_SUGGESTIONS_LOG_SIZE
+        )
         self.last_water_test: datetime | None = None
         self.energy_today_kwh: float = 0.0
         self.cost_today: float = 0.0
@@ -334,6 +340,16 @@ class PoolStore:
         except (ValueError, KeyError, TypeError):
             _LOGGER.warning(
                 "Stored session/dose/decision logs were unreadable and have been reset"
+            )
+
+        try:
+            self.accepted_suggestions = deque(
+                raw.get("accepted_suggestions", []),
+                maxlen=ACCEPTED_SUGGESTIONS_LOG_SIZE,
+            )
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning(
+                "Stored accepted AI suggestions were unreadable and have been reset"
             )
 
         try:
@@ -498,6 +514,7 @@ class PoolStore:
             "decision_log": list(self.decision_log),
             "session_log": list(self.session_log),
             "dose_log": list(self.dose_log),
+            "accepted_suggestions": list(self.accepted_suggestions),
             "last_water_test": (
                 self.last_water_test.isoformat() if self.last_water_test else None
             ),
@@ -593,6 +610,10 @@ class PoolStore:
     def log_dose(self, payload: dict) -> None:
         """Record a dose that was applied."""
         self.dose_log.append(payload)
+
+    def log_accepted_suggestion(self, payload: dict) -> None:
+        """Record an AI suggestion that was accepted, for the outcome check."""
+        self.accepted_suggestions.append(payload)
 
     def log_session(self, payload: dict) -> None:
         """Record a finished heating session, usable or not.
@@ -717,6 +738,11 @@ class PoolStore:
         if not self.dose_log and history.get("dose_log"):
             self.dose_log = deque(history["dose_log"], maxlen=DOSE_LOG_SIZE)
             taken.append("dose_log")
+        if not self.accepted_suggestions and history.get("accepted_suggestions"):
+            self.accepted_suggestions = deque(
+                history["accepted_suggestions"], maxlen=ACCEPTED_SUGGESTIONS_LOG_SIZE
+            )
+            taken.append("accepted_suggestions")
         if self.last_water_test is None and history.get("last_water_test"):
             try:
                 self.last_water_test = datetime.fromisoformat(
@@ -752,6 +778,11 @@ class PoolStore:
         if "dose_log" in chosen and "dose_log" in history:
             self.dose_log = deque(history["dose_log"], maxlen=DOSE_LOG_SIZE)
             replaced.append("dose_log")
+        if "accepted_suggestions" in chosen and "accepted_suggestions" in history:
+            self.accepted_suggestions = deque(
+                history["accepted_suggestions"], maxlen=ACCEPTED_SUGGESTIONS_LOG_SIZE
+            )
+            replaced.append("accepted_suggestions")
         if "last_water_test" in chosen and "last_water_test" in history:
             raw = history.get("last_water_test")
             try:

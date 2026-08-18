@@ -2074,6 +2074,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     async def async_run_advisor(self) -> None:
         """Ask the advisory layer for a review. Never blocks control."""
+        await self.advisor.async_check_outcomes()
         result = await self.advisor.async_review()
         if result.summary and not result.error:
             await self.notifier.async_send_recommendation(result.summary)

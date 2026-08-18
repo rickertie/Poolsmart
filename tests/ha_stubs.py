@@ -23,7 +23,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import types
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"
@@ -109,7 +109,11 @@ def install() -> None:
 
     util_dt = _module("homeassistant.util.dt")
     util_dt.utcnow = datetime.utcnow
-    util_dt.now = datetime.now
+    # Real Home Assistant's dt_util.now() always returns a timezone-aware
+    # datetime (in the configured local timezone); a naive stand-in silently
+    # breaks any code comparing it against an aware timestamp the code itself
+    # produced and stored earlier via .isoformat().
+    util_dt.now = lambda: datetime.now(timezone.utc)
     util_dt.parse_datetime = lambda value: None
 
     coordinator = _module("homeassistant.helpers.update_coordinator")

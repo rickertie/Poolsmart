@@ -266,6 +266,9 @@ CONF_TABLET_GRAMS = "tablet_grams"
 #: Dose records kept, which is plenty to learn a correction factor from.
 DOSE_LOG_SIZE = 40
 
+#: Accepted AI suggestions kept, with their outcome once judged. See #10.
+ACCEPTED_SUGGESTIONS_LOG_SIZE = 40
+
 DEFAULT_CHEMISTRY_MINUTES = 30
 
 #: Starting price ceiling for heating, in the local currency per kWh.
