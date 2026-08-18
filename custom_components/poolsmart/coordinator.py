@@ -57,6 +57,10 @@ UNAVAILABLE = ("unknown", "unavailable", "none", "")
 #: is still far closer to tomorrow's weather than none at all.
 _WEATHER_FORECAST_REFRESH = timedelta(minutes=30)
 
+#: How long after rain was last observed chemistry advice and the test
+#: interval keep treating the water as recently rained-on.
+_RECENT_RAIN_WINDOW = timedelta(hours=12)
+
 #: How far ahead the forecast is averaged into one figure: about a day of
 #: hourly entries, or a couple of days when only a daily forecast is on offer.
 _WEATHER_FORECAST_HOURLY_HORIZON = 24
@@ -108,6 +112,20 @@ FLOW_UNIT_FACTORS = {
     "l_h": 0.001,
     "l_s": 3.6,
 }
+
+
+#: HA weather-entity `state.state` values that mean active precipitation.
+#: See https://www.home-assistant.io/integrations/weather/ for the full set
+#: of standard condition strings.
+_RAINY_CONDITIONS = {"rainy", "pouring", "lightning-rainy", "snowy", "snowy-rainy", "hail"}
+
+
+def _condition_is_rainy(condition: str | None) -> bool:
+    return condition in _RAINY_CONDITIONS
+
+
+def _positive_number(value) -> bool:
+    return isinstance(value, (int, float)) and value > 0
 
 
 def _parse_time(raw: str | None, fallback: time) -> time:
@@ -171,12 +189,26 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._idle_covered: bool | None = None
         self._idle_irradiance_samples: list[float] = []
         self._idle_daylight: bool = False
+        #: Whether rain was observed at any point during the current idle
+        #: period, so the resulting heat-loss sample can be excluded rather
+        #: than attributing weather-driven loss to the pool itself. See #7.
+        self._idle_rain_seen: bool = False
         self._session_cost: float = 0.0
         self._price_slots: tuple = ()
         #: Air temperature the weather forecast expects over the coming day,
         #: averaged into one figure. ``None`` when no weather entity is
         #: mapped, or the last fetch failed.
         self._forecast_air_temp: float | None = None
+        #: Highest precipitation probability (0-100) seen across the same
+        #: forecast window, or None when the weather integration does not
+        #: report one. See issue #7.
+        self._forecast_rain_probability: float | None = None
+        #: Whether the mapped weather entity currently reports a rainy
+        #: condition or active precipitation. None when no entity is mapped.
+        self._is_raining_now: bool | None = None
+        #: Last time rain was actually observed, for the "recent rain" window
+        #: chemistry advice and the test interval use. See #7.
+        self._last_rain_seen_at: datetime | None = None
         self._forecast_fetched_at: datetime | None = None
         self._last_obstacle: tuple | None = None
         self._last_obstacle_at: datetime | None = None
@@ -884,7 +916,19 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         entity_id = self._conf(c.CONF_WEATHER_ENTITY)
         if not entity_id:
             self._forecast_air_temp = None
+            self._forecast_rain_probability = None
+            self._is_raining_now = None
             return
+
+        current = self.hass.states.get(entity_id)
+        self._is_raining_now = (
+            _condition_is_rainy(current.state)
+            or _positive_number(current.attributes.get("precipitation"))
+            if current is not None
+            else None
+        )
+        if self._is_raining_now:
+            self._last_rain_seen_at = now
 
         if (
             self._forecast_fetched_at is not None
@@ -914,6 +958,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 break
 
         temps = []
+        rain_probs = []
         for entry in entries:
             temp = entry.get("temperature")
             templow = entry.get("templow")
@@ -921,8 +966,29 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 temps.append((temp + templow) / 2)
             elif isinstance(temp, (int, float)):
                 temps.append(float(temp))
+            prob = entry.get("precipitation_probability")
+            if isinstance(prob, (int, float)):
+                rain_probs.append(float(prob))
+            elif _positive_number(entry.get("precipitation")):
+                # Some integrations report an amount instead of a
+                # probability; treat any forecast rain as worth flagging.
+                rain_probs.append(100.0)
 
         self._forecast_air_temp = sum(temps) / len(temps) if temps else None
+        self._forecast_rain_probability = max(rain_probs) if rain_probs else None
+
+    def _recent_rain(self, now: datetime) -> bool:
+        """Whether rain was observed within the last :data:`_RECENT_RAIN_WINDOW`.
+
+        A snapshot of "is it raining right this tick" would miss a shower
+        that passed between ticks; remembering the last time rain was seen
+        gives chemistry advice and the test interval a window to react in
+        instead of only the exact minute it started.
+        """
+        return (
+            self._last_rain_seen_at is not None
+            and now - self._last_rain_seen_at < _RECENT_RAIN_WINDOW
+        )
 
     def _irradiance(self, state: PoolState) -> float | None:
         """Sunlight per square metre, if anything can tell us.
@@ -1224,6 +1290,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._idle_water_temp = None
             self._idle_irradiance_samples = []
             self._idle_daylight = False
+            self._idle_rain_seen = False
             return
 
         if self._idle_since is None:
@@ -1231,6 +1298,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._idle_water_temp = state.water_temp.value
             self._idle_irradiance_samples = []
             self._idle_daylight = False
+            self._idle_rain_seen = False
             return
 
         # Sampled on every idle tick, not only at the boundary, for the same
@@ -1242,6 +1310,8 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             self._idle_irradiance_samples.append(irradiance)
         if 7 <= state.now.hour < 20:
             self._idle_daylight = True
+        if self._is_raining_now:
+            self._idle_rain_seen = True
 
         hours = (now - self._idle_since).total_seconds() / 3600.0
         if hours < 6:
@@ -1261,6 +1331,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             covered=bool(covered),
             irradiance_w_m2=irradiance_avg,
             daytime=self._idle_daylight,
+            rain_flag=self._idle_rain_seen,
         )
         started_covered = self._idle_covered
         self._idle_since = now
@@ -1268,6 +1339,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         self._idle_covered = covered
         self._idle_irradiance_samples = []
         self._idle_daylight = False
+        self._idle_rain_seen = False
 
         if rate is None or not config.learning.enabled:
             return
@@ -1722,10 +1794,12 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             else None
         )
 
+        recent_rain = self._recent_rain(dt_util.now())
         due_at, overdue, why = chem.next_test_due(
-            self.store.last_water_test, water_temp, dt_util.now()
+            self.store.last_water_test, water_temp, dt_util.now(), recent_rain
         )
         interval, _ = chem.test_interval_days(water_temp)
+        interval = chem.rain_adjusted_test_interval(interval, recent_rain)
 
         result = {
             "sanitiser": sanitiser.value,
@@ -1736,7 +1810,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             "combined_chlorine": chem.combined_chlorine(
                 readings.get("free_chlorine"), readings.get("total_chlorine")
             ),
-            "advice": chem.water_advice(readings),
+            "advice": chem.water_advice(readings) + chem.rain_advice(recent_rain),
             # Kept for the older cards that read these directly.
             "ph": readings.get("ph"),
             "chlorine": readings.get("free_chlorine"),

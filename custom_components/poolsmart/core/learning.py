@@ -448,6 +448,7 @@ def heat_loss_from_idle(
     covered: bool = False,
     irradiance_w_m2: float | None = None,
     daytime: bool = False,
+    rain_flag: bool = False,
 ) -> float | None:
     """Heat loss in degrees per hour, measured over an idle period.
 
@@ -464,8 +465,16 @@ def heat_loss_from_idle(
     comes through as long as it exceeds what the sun can plausibly explain.
     Passing neither ``irradiance_w_m2`` nor ``daytime=True`` reproduces the old
     behaviour exactly, since the estimate is then zero.
+
+    ``rain_flag`` excludes the period outright, the same way the duration and
+    net-warming guards below do. Rain drives extra evaporative and convective
+    loss this model does not account for, so a rained-on period would teach
+    the baseline a number that belongs to the weather, not the pool -- see
+    issue #7.
     """
     if duration_h * 60 < MIN_IDLE_MINUTES:
+        return None
+    if rain_flag:
         return None
     solar = idle_solar_gain_c(config, duration_h, irradiance_w_m2, daytime)
     drop = (water_start - water_end) + solar

@@ -832,6 +832,9 @@
       "solar_surplus": {
         "name": "Zonoverschot"
       },
+      "solar_collector_advice": {
+        "name": "Advies zonnecollector"
+      },
       "flow_adequacy": {
         "name": "Doorstroming toereikend"
       },

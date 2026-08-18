@@ -832,6 +832,9 @@
       "solar_surplus": {
         "name": "Solar surplus"
       },
+      "solar_collector_advice": {
+        "name": "Solar collector advice"
+      },
       "flow_adequacy": {
         "name": "Flow adequacy"
       },

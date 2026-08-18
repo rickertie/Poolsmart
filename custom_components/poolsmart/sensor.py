@@ -262,6 +262,14 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
         },
     ),
     PoolSensorDescription(
+        key="solar_collector_advice",
+        value_fn=lambda c: _collector_advice(c)[0],
+        attributes_fn=lambda c: {
+            "explanation": _collector_advice(c)[1],
+            **_collector_advice(c)[2],
+        },
+    ),
+    PoolSensorDescription(
         key="solar_surplus",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -702,6 +710,23 @@ def _flow_adequacy(coordinator: PoolSmartCoordinator):
     if state is None:
         return "unknown", "No measurement yet.", {}
     return safety.flow_adequacy(state, coordinator.pool_config)
+
+
+def _collector_advice(coordinator: PoolSmartCoordinator):
+    """Whether opening the solar collector valve is worth the walk outside.
+
+    ``core.safety.solar_collector_advice`` existed since the collector-margin
+    setting was added but was never actually wired to anything -- see #7,
+    which needed a live hook to suppress "open the valve" advice while it is
+    raining and found the function sitting unused.
+    """
+    state = coordinator.data.get("state") if coordinator.data else None
+    if state is None:
+        return "unknown", "No measurement yet.", {}
+    worth_it, why, numbers = safety.solar_collector_advice(
+        state, coordinator.pool_config, raining=bool(coordinator._is_raining_now)
+    )
+    return ("open" if worth_it else "closed"), why, numbers
 
 
 def _solar_attributes(coordinator: PoolSmartCoordinator) -> dict:
