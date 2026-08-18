@@ -449,6 +449,25 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     # -- Reading entities --------------------------------------------------
 
+    def _weather_current_temp(self) -> float | None:
+        """The mapped weather entity's own current temperature.
+
+        Distinct from ``_forecast_air_temp``: that is a forward-looking
+        average built from forecast entries via ``weather.get_forecasts``
+        (see ``_refresh_weather_forecast``), while this reads the entity's
+        own ``state.attributes["temperature"]`` -- standard on every HA
+        ``weather.*`` entity -- for right now. Used only as a fallback when
+        no ``air_temp_sensor`` is mapped or available. See issue #16.
+        """
+        entity_id = self._conf(c.CONF_WEATHER_ENTITY)
+        if not entity_id:
+            return None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in UNAVAILABLE:
+            return None
+        temp = state.attributes.get("temperature")
+        return float(temp) if isinstance(temp, (int, float)) else None
+
     def _read(self, key: str, role: str) -> SensorReading:
         entity_id = self._conf(key)
         if not entity_id:
@@ -716,6 +735,17 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         water_temp = self._read(c.CONF_WATER_TEMP_SENSOR, "water")
         air_temp = self._read(c.CONF_AIR_TEMP_SENSOR, "air")
+        if not air_temp.available:
+            # Documented since before this existed: "falls back to the
+            # weather entity" (docs/configuration.md, both translation
+            # files). air_temp_sensor still wins whenever it has a value --
+            # this only fills the gap when there is truly nothing else, so
+            # the operating-envelope check and frost protection stop going
+            # dark for a pool with no outdoor sensor of its own. See #16.
+            fallback_temp = self._weather_current_temp()
+            if fallback_temp is not None:
+                air_temp = SensorReading(fallback_temp, 0.0, "air")
+                self.disabled_capabilities.discard("operating_envelope")
 
         return PoolState(
             now=now,
