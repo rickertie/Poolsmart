@@ -186,6 +186,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = PoolSmartCoordinator(hass, entry)
     await coordinator.async_restore()
+    await _async_warn_about_orphaned_history(hass, entry)
     await _async_adopt_history(hass, entry, coordinator)
     await coordinator.async_config_entry_first_refresh()
 
@@ -450,6 +451,34 @@ def _async_register_services(hass: HomeAssistant) -> None:
         _LOGGER.warning("Cleared all learned history, sessions, doses, and logs")
 
     hass.services.async_register(DOMAIN, "clear_all_history", _clear_all_history)
+
+
+async def _async_warn_about_orphaned_history(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Surface storage files an old, removed-and-re-added entry left behind.
+
+    A plain in-place update never regenerates ``entry.entry_id``, so it never
+    orphans anything -- but a remove/re-add (troubleshooting a broken update,
+    or reinstalling) does, and the old ``poolsmart.state.<entry_id>`` file
+    then sits on disk under a key nothing reads any more, looking exactly like
+    "options and history lost after updating" (issue #18) unless the adopt
+    flow at setup happens to catch it. This only logs -- adopting still goes
+    through the existing setup-time flow -- so it costs nothing when nothing
+    is orphaned.
+    """
+    from .recovery import find_orphans
+
+    active = {e.entry_id for e in hass.config_entries.async_entries(DOMAIN)}
+    orphans = await hass.async_add_executor_job(find_orphans, hass, active)
+    if orphans:
+        _LOGGER.warning(
+            "Found %d orphaned PoolSmart storage file(s) from a previous "
+            "install that no current config entry reads: %s. If this "
+            "pool's options or learned history look reset after an update, "
+            "this is likely why -- remove and re-add the integration to be "
+            "offered adoption of one of these files, or restore it manually.",
+            len(orphans),
+            ", ".join(o.path for o in orphans),
+        )
 
 
 async def _async_adopt_history(hass, entry, coordinator) -> None:

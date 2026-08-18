@@ -246,39 +246,87 @@ class PoolStore:
                 synced_at = datetime.fromisoformat(raw["synced_at"])
             except (TypeError, ValueError):
                 synced_at = None
+        # Each group below is parsed and committed independently. A single
+        # malformed field (e.g. a corrupt timestamp) must only reset that
+        # group -- it must never abort the rest of the load and leave later
+        # groups (in particular the session/dose logs) silently stuck at
+        # their fresh __init__ defaults while earlier groups (like `learned`)
+        # keep the value already assigned. See issues #20 and #18: a single
+        # swallowed exception here used to look like a full reset but was
+        # actually only a partial one, desyncing session/dose counts from
+        # the learned counters and losing mode/target_temp along with it.
         try:
             if raw.get("quota_date"):
                 self.quota_date = date.fromisoformat(raw["quota_date"])
             self.intervals = [
                 RuntimeInterval.from_dict(item) for item in raw.get("intervals", [])
             ]
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning(
+                "Stored filtration intervals were unreadable and have been reset"
+            )
+
+        try:
             self.learned = LearnedValues.from_dict(raw.get("learned", {}))
-            self.active_block = raw.get("active_block")
-            self.active_session = raw.get("active_session")
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning("Stored learned values were unreadable and have been reset")
+
+        self.active_block = raw.get("active_block")
+        self.active_session = raw.get("active_session")
+
+        try:
             if raw.get("heat_pump_stopped_at"):
                 self.heat_pump_stopped_at = datetime.fromisoformat(raw["heat_pump_stopped_at"])
             if raw.get("heat_pump_started_at"):
                 self.heat_pump_started_at = datetime.fromisoformat(raw["heat_pump_started_at"])
             if raw.get("chemistry_until"):
                 self.chemistry_until = datetime.fromisoformat(raw["chemistry_until"])
-            self.mode = raw.get("mode")
-            self.target_temp = raw.get("target_temp")
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning(
+                "Stored heat-pump/chemistry timestamps were unreadable and have "
+                "been reset"
+            )
+
+        self.mode = raw.get("mode")
+        self.target_temp = raw.get("target_temp")
+
+        try:
             self.decision_log = deque(raw.get("decision_log", []), maxlen=DECISION_LOG_SIZE)
             self.session_log = deque(raw.get("session_log", []), maxlen=SESSION_LOG_SIZE)
             self.dose_log = deque(raw.get("dose_log", []), maxlen=DOSE_LOG_SIZE)
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning(
+                "Stored session/dose/decision logs were unreadable and have been reset"
+            )
+
+        try:
             if raw.get("last_water_test"):
                 self.last_water_test = datetime.fromisoformat(raw["last_water_test"])
-            self.energy_today_kwh = raw.get("energy_today_kwh", 0.0)
-            self.cost_today = raw.get("cost_today", 0.0)
-            self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning(
+                "Stored last water-test timestamp was unreadable and has been reset"
+            )
+
+        self.energy_today_kwh = raw.get("energy_today_kwh", 0.0)
+        self.cost_today = raw.get("cost_today", 0.0)
+        self.cost_baseline_today = raw.get("cost_baseline_today", 0.0)
+
+        try:
             self.near_miss_log = NearMissLog.from_dict(raw.get("near_miss_log", {}))
-            self.daily_summaries = raw.get("daily_summaries", [])
+        except (ValueError, KeyError, TypeError):
+            _LOGGER.warning("Stored near-miss log was unreadable and has been reset")
+
+        self.daily_summaries = raw.get("daily_summaries", [])
+
+        try:
             self.monthly_aggregates = {
                 key: MonthlyAggregate.from_dict(value)
                 for key, value in raw.get("monthly_aggregates", {}).items()
             }
-        except (ValueError, KeyError, TypeError):
-            _LOGGER.warning("Stored PoolSmart state was unreadable and has been reset")
+        except (ValueError, KeyError, TypeError, AttributeError):
+            _LOGGER.warning(
+                "Stored monthly aggregates were unreadable and have been reset"
+            )
 
         self._close_open_interval(synced_at)
         self._open_interval = None
