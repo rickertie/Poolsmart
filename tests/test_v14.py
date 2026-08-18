@@ -184,3 +184,45 @@ def test_swim_skip_entity_excludes_today_even_before_the_time_has_passed():
 
     assert deadline.date() > now.date()
     assert deadline.time() == time(20, 0)
+
+
+# ---------------------------------------------------------------------------
+# Issue #16 -- weather_entity as an outdoor-temperature fallback
+# ---------------------------------------------------------------------------
+
+
+def test_weather_current_temp_reads_the_entitys_own_temperature_attribute():
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    fake = _fake_coordinator(
+        mod,
+        options={const.CONF_WEATHER_ENTITY: "weather.home"},
+        entity_states={
+            "weather.home": types.SimpleNamespace(
+                state="cloudy", attributes={"temperature": 12.5}
+            )
+        },
+    )
+
+    assert mod.PoolSmartCoordinator._weather_current_temp(fake) == 12.5
+
+
+def test_weather_current_temp_is_none_without_a_mapped_entity():
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    fake = _fake_coordinator(mod, options={}, entity_states={})
+
+    assert mod.PoolSmartCoordinator._weather_current_temp(fake) is None
+
+
+def test_weather_current_temp_is_none_when_the_entity_is_unavailable():
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    fake = _fake_coordinator(
+        mod,
+        options={const.CONF_WEATHER_ENTITY: "weather.home"},
+        entity_states={
+            "weather.home": types.SimpleNamespace(state="unavailable", attributes={})
+        },
+    )
+
+    assert mod.PoolSmartCoordinator._weather_current_temp(fake) is None
