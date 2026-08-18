@@ -13,9 +13,6 @@
   <a href="https://github.com/rickertie/Poolsmart/releases">
     <img src="https://img.shields.io/github/v/release/rickertie/Poolsmart?style=flat-square&color=blue" alt="Version">
   </a>
-  <a href="https://github.com/rickertie/Poolsmart/releases">
-    <img src="https://img.shields.io/github/downloads/rickertie/Poolsmart/total?style=flat-square&color=brightgreen" alt="Downloads">
-  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-orange?style=flat-square" alt="License">
   </a>
