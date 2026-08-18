@@ -11,6 +11,7 @@ MODULES = [
     "test_v1",
     "test_v11",
     "test_v12",
+    "test_v13",
     "test_trends",
 ]
 
