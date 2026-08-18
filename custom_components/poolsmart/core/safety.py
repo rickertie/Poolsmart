@@ -444,7 +444,7 @@ def heat_pump_available(
 
 
 def solar_collector_advice(
-    state: PoolState, config: PoolConfig
+    state: PoolState, config: PoolConfig, raining: bool = False
 ) -> tuple[bool, str, dict]:
     """Whether water should be going through the solar collector.
 
@@ -453,6 +453,10 @@ def solar_collector_advice(
     collector against the pool and say when turning the valve is worth the walk
     outside -- and, just as usefully, when it is not, because water pushed
     through a cold collector loses heat rather than gaining it.
+
+    ``raining`` overrides an otherwise-favourable reading: a collector reading
+    warm from residual heat while rain is actively falling on it is about to
+    cool fast, and the walk outside is not worth it. See issue #7.
     """
     if not (config.has_solar_collector or config.heating_source == "solar"):
         return False, "", {}
@@ -475,6 +479,17 @@ def solar_collector_advice(
         "margin": config.collector_margin,
     }
 
+    if difference >= config.collector_margin and raining:
+        return (
+            False,
+            (
+                f"The collector is at {collector.value:.1f} C against "
+                f"{state.water_temp.value:.1f} C in the pool, but it is "
+                "raining -- that reading will not last, so keep the valve "
+                "closed."
+            ),
+            numbers,
+        )
     if difference >= config.collector_margin:
         return (
             True,

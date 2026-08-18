@@ -29,7 +29,11 @@ After each heating session, PoolSmart updates three core parameters:
    voids the observation, and the estimate used without a sensor is never
    generous enough to invent heat loss that did not happen -- a strongly
    sunny period with neither sensor mapped is still set aside, exactly as
-   before. See [Sensors](sensors.md) for where to map these.
+   before. An idle period during which rain was observed (with a weather
+   entity mapped) is voided the same way a cover change is: rain drives extra
+   evaporative and convective loss this model does not account for, and
+   without excluding it that loss would be attributed to the pool itself
+   rather than the weather. See [Sensors](sensors.md) for where to map these.
 
    The learned figure is a snapshot of whatever the water-to-air gap
    typically was while it was being measured. With a weather entity mapped

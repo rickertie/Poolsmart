@@ -594,11 +594,40 @@ def test_interval_days(water_temp: float | None) -> tuple[int, str]:
     return 1, f"at {water_temp:.0f} °C consumption is high and algae grow fast"
 
 
+def rain_adjusted_test_interval(days: int, recent_rain: bool) -> int:
+    """Shorten the test interval after rain.
+
+    Rain dilutes chlorine, shifts pH, and washes in debris and algae spores --
+    all of it invisible until the next test, which the temperature-only
+    interval has no way to know arrived early. See issue #7.
+    """
+    if not recent_rain:
+        return days
+    return max(1, days // 2)
+
+
+def rain_advice(recent_rain: bool) -> list[str]:
+    """A "test soon" nudge after rain, in the same voice as water_advice."""
+    if not recent_rain:
+        return []
+    return [
+        "Rain has diluted the water and may have washed in debris or algae "
+        "spores. Test sooner than usual, and expect to need more chlorine "
+        "than a normal dose."
+    ]
+
+
 def next_test_due(
-    last_test: datetime | None, water_temp: float | None, now: datetime
+    last_test: datetime | None,
+    water_temp: float | None,
+    now: datetime,
+    recent_rain: bool = False,
 ) -> tuple[datetime | None, bool, str]:
     """When the next test is due, and whether it is overdue."""
     days, why = test_interval_days(water_temp)
+    if recent_rain:
+        days = rain_adjusted_test_interval(days, recent_rain)
+        why = f"{why}; shortened after rain"
     if last_test is None:
         return None, True, "no test has been recorded yet"
     due = last_test + timedelta(days=days)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"))
@@ -17,7 +18,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components"
 import ha_stubs  # noqa: E402
 
 from core import chemistry as chem  # noqa: E402
-from core import learning  # noqa: E402
+from core import learning, safety  # noqa: E402
+from core.models import SensorReading  # noqa: E402
+
+from test_acceptance import TZ, make_config, make_state  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -212,3 +216,57 @@ def test_dose_amount_scales_with_the_correction_factor():
     corrected = chem.dose_for_ph(7.82, volume, chem.Product.ACID_15, 1.5)
 
     assert abs(corrected.amount / uncorrected.amount - 1.5) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# Issue #7 -- rain & weather awareness
+# ---------------------------------------------------------------------------
+
+
+def test_a_rained_on_idle_period_is_excluded_from_heat_loss_learning():
+    # Without the rain flag this would be a normal, learnable drop.
+    assert (
+        learning.heat_loss_from_idle(28.0, 27.0, 8.0, rain_flag=False) is not None
+    )
+    assert learning.heat_loss_from_idle(28.0, 27.0, 8.0, rain_flag=True) is None
+
+
+def test_rain_adjusted_test_interval_halves_and_floors_at_one_day():
+    assert chem.rain_adjusted_test_interval(5, recent_rain=False) == 5
+    assert chem.rain_adjusted_test_interval(5, recent_rain=True) == 2
+    assert chem.rain_adjusted_test_interval(1, recent_rain=True) == 1
+
+
+def test_rain_advice_only_appears_after_rain():
+    assert chem.rain_advice(recent_rain=False) == []
+    advice = chem.rain_advice(recent_rain=True)
+    assert len(advice) == 1
+    assert "rain" in advice[0].lower()
+
+
+def test_next_test_due_is_sooner_after_rain():
+    tested = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    now = datetime(2026, 6, 2, 12, 0, tzinfo=TZ)
+
+    due_dry, _, _ = chem.next_test_due(tested, 22.0, now, recent_rain=False)
+    due_after_rain, _, why = chem.next_test_due(tested, 22.0, now, recent_rain=True)
+
+    assert due_after_rain < due_dry
+    assert "rain" in why
+
+
+def test_solar_collector_advice_closes_the_valve_while_it_is_raining():
+    config = make_config(has_solar_collector=True, collector_margin=3.0)
+    now = datetime(2026, 8, 1, 13, 0, tzinfo=TZ)
+    warm = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        collector_temp=SensorReading(32.0, 10, "collector"),
+    )
+
+    dry_worth_it, _, _ = safety.solar_collector_advice(warm, config, raining=False)
+    rainy_worth_it, why, _ = safety.solar_collector_advice(warm, config, raining=True)
+
+    assert dry_worth_it is True
+    assert rainy_worth_it is False
+    assert "raining" in why

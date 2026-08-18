@@ -35,6 +35,12 @@ three-day reminder is too often in spring and not often enough in a heatwave.
 The pool already knows its own temperature: five days below 20 °C, down to
 daily above 30 °C.
 
+Rain shortens whatever that interval would otherwise be: it dilutes chlorine,
+shifts pH, and washes in debris and algae spores, all invisible until the
+next test. With a weather entity mapped under **Weer en prijs**, the interval
+halves (never below one day) for twelve hours after rain was last observed,
+and the water tab shows a "test soon" nudge for the same window.
+
 <p align="center">
   <img src="images/chemistry-intervals.svg" width="500" alt="Chemistry test intervals based on water temperature">
 </p>
