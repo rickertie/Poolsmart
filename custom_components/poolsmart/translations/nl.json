@@ -524,7 +524,8 @@
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
           "solar_power_sensor": "Actuele zonneopbrengst",
           "solar_forecast_sensor": "Zonneverwachting",
-          "irradiance_sensor": "Zoninstraling (W/m²)"
+          "irradiance_sensor": "Zoninstraling (W/m²)",
+          "grid_power_sensor": "Totaal huisverbruik (W)"
         },
         "data_description": {
           "weather_entity": "Een weer-entiteit met een weersverwachting. Wordt gebruikt om het geleerde warmteverlies te schalen naar de temperatuur die eraan komt, zodat een koudefront het verwarmplan eerder laat starten en een warme periode niet onnodig doorstookt.",
@@ -533,7 +534,8 @@
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Hij gaat vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen.",
           "solar_power_sensor": "Actuele zonneopbrengst in watt.",
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
-          "irradiance_sensor": "Directe instraling in W/m² — bijvoorbeeld van een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de zonneopbrengst-sensor hierboven wanneer beide zijn ingesteld: hoeft niet geschaald te worden met een piekvermogen, en werkt ook zonder eigen zonnepanelen. Wordt gebruikt om warmteverlies te leren uit zonnige idle-periodes in plaats van die te negeren."
+          "irradiance_sensor": "Directe instraling in W/m² — bijvoorbeeld van een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de zonneopbrengst-sensor hierboven wanneer beide zijn ingesteld: hoeft niet geschaald te worden met een piekvermogen, en werkt ook zonder eigen zonnepanelen. Wordt gebruikt om warmteverlies te leren uit zonnige idle-periodes in plaats van die te negeren.",
+          "grid_power_sensor": "Een slimme-meter- of energiedashboard-sensor die het totale huisverbruik in watt meet, los van de eigen apparatuur van het bad. Wordt gecombineerd met de huisverbruikslimiet onder Wanneer verwarmen om verwarmen te pauzeren boven een grens — handig bij piektarieven of een netaansluitings-/contractlimiet. Laat leeg en de begrenzer is simpelweg afwezig."
         }
       },
       "heating": {
@@ -591,6 +593,7 @@
           "solar_margin_w": "Marge boven het verbruik van de apparatuur (W)",
           "solar_peak_w": "Piekvermogen zonnepanelen (W)",
           "solar_threshold_w": "Zonoverschot voor gratis verwarmen (W)",
+          "power_limit_w": "Huisverbruikslimiet (W)",
           "swim_time": "Op temperatuur om (UU:MM)",
           "swim_time_2": "Tweede tijdstip (optioneel)",
           "swim_days": "Dagen",
@@ -609,6 +612,7 @@
           "solar_margin_w": "Wordt bij het verbruik van de apparatuur opgeteld als de drempel berekend wordt. Een marge voorkomt dat een overtrekkende wolk een sessie start en stopt.",
           "solar_peak_w": "Het opgegeven piekvermogen van je zonnepanelen. Wordt gebruikt om de zonneopbrengst-sensor te schalen naar een geschatte instraling in W/m² wanneer er bij Entiteiten geen directe instralingssensor is ingesteld. Laat leeg als je geen zonnepanelen hebt, of als de instralingssensor dit al afdekt.",
           "solar_threshold_w": "Hierboven geldt verwarmen als gratis en wordt de prijslimiet genegeerd. Laat leeg, dan wordt hij berekend uit wat de warmtepomp en de pomp samen verbruiken, plus de marge hieronder. Lager dan dat verbruik betekent dat je meer gebruikt dan je opwekt; veel hoger betekent zonnige middagen missen.",
+          "power_limit_w": "Verwarmen pauzeert zodra het totale huisverbruik (plus de eigen apparatuur van het bad, als die nog niet draait) hierboven zou uitkomen. Vereist een huisverbruikssensor bij Weer en prijs. Zelfs Boost respecteert dit, omdat het een harde elektrische of contractuele limiet beschermt. Laat leeg en er is geen limiet.",
           "swim_time": "De planner rekent hiervandaan terug wanneer het verwarmen moet beginnen. Laat leeg als je geen vast tijdstip hebt; dan houdt hij het bad simpelweg op temperatuur.",
           "swim_time_2": "Een tweede tijdstip op dezelfde dagen, voor de uitzonderingen. De meeste mensen laten dit leeg.",
           "swim_days": "Op welke weekdagen bovenstaande tijden gelden.",
@@ -912,6 +916,9 @@
       },
       "solar_threshold": {
         "name": "Zonnedrempel"
+      },
+      "power_limit": {
+        "name": "Huisverbruikslimiet"
       }
     },
     "switch": {

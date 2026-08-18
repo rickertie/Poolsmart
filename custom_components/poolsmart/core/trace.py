@@ -31,6 +31,8 @@ class Verdict(str, Enum):
     ENVELOPE = "envelope"
     #: Electricity is too expensive right now.
     PRICE = "price"
+    #: The house-power cap leaves no room for the heat pump. See issue #13.
+    DEMAND = "demand"
     #: A higher branch already won, so this was never evaluated.
     NOT_REACHED = "not_reached"
 
@@ -38,7 +40,9 @@ class Verdict(str, Enum):
 #: Verdicts that mean the branch would otherwise have run. These are the ones
 #: worth surfacing: "not applicable" is usually just noise, but "the mode
 #: excludes it" or "the price is too high" is an answer.
-INFORMATIVE = frozenset({Verdict.MODE, Verdict.NIGHT, Verdict.ENVELOPE, Verdict.PRICE})
+INFORMATIVE = frozenset(
+    {Verdict.MODE, Verdict.NIGHT, Verdict.ENVELOPE, Verdict.PRICE, Verdict.DEMAND}
+)
 
 
 @dataclass(frozen=True)

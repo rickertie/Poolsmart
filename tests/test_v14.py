@@ -15,7 +15,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components"
 
 import ha_stubs  # noqa: E402
 
-TZ = timezone.utc
+from core import ladder  # noqa: E402
+from core.config import EnergySettings  # noqa: E402
+from core.models import Branch, SensorReading  # noqa: E402
+
+from test_acceptance import TZ, make_config, make_state, run_tick  # noqa: E402
+
+UTC = timezone.utc
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +114,7 @@ def _fake_coordinator(mod, options, entity_states):
 def test_swim_time_entity_replaces_the_static_fields_when_set():
     mod = ha_stubs.load("coordinator", "coordinator.py")
     const = ha_stubs.load("const", "const.py")
-    now = datetime(2026, 6, 1, 8, 0, tzinfo=TZ)  # a Monday, before both times
+    now = datetime(2026, 6, 1, 8, 0, tzinfo=UTC)  # a Monday, before both times
     fake = _fake_coordinator(
         mod,
         options={
@@ -131,7 +137,7 @@ def test_swim_time_entity_replaces_the_static_fields_when_set():
 def test_swim_time_falls_back_to_static_when_entity_unset():
     mod = ha_stubs.load("coordinator", "coordinator.py")
     const = ha_stubs.load("const", "const.py")
-    now = datetime(2026, 6, 1, 8, 0, tzinfo=TZ)
+    now = datetime(2026, 6, 1, 8, 0, tzinfo=UTC)
     fake = _fake_coordinator(
         mod, options={const.CONF_SWIM_TIME: "17:00"}, entity_states={}
     )
@@ -144,7 +150,7 @@ def test_swim_time_falls_back_to_static_when_entity_unset():
 def test_swim_time_falls_back_to_static_when_entity_is_unavailable():
     mod = ha_stubs.load("coordinator", "coordinator.py")
     const = ha_stubs.load("const", "const.py")
-    now = datetime(2026, 6, 1, 8, 0, tzinfo=TZ)
+    now = datetime(2026, 6, 1, 8, 0, tzinfo=UTC)
     fake = _fake_coordinator(
         mod,
         options={
@@ -166,7 +172,7 @@ def test_swim_time_falls_back_to_static_when_entity_is_unavailable():
 def test_swim_skip_entity_excludes_today_even_before_the_time_has_passed():
     mod = ha_stubs.load("coordinator", "coordinator.py")
     const = ha_stubs.load("const", "const.py")
-    now = datetime(2026, 6, 1, 8, 0, tzinfo=TZ)  # Monday, 20:00 has not passed
+    now = datetime(2026, 6, 1, 8, 0, tzinfo=UTC)  # Monday, 20:00 has not passed
     fake = _fake_coordinator(
         mod,
         options={
@@ -226,3 +232,86 @@ def test_weather_current_temp_is_none_when_the_entity_is_unavailable():
     )
 
     assert mod.PoolSmartCoordinator._weather_current_temp(fake) is None
+
+
+# ---------------------------------------------------------------------------
+# Issue #13 -- demand/power limiter
+# ---------------------------------------------------------------------------
+
+
+def test_demand_allows_heating_without_a_configured_limit():
+    config = make_config()  # power_limit_w defaults to None -- absent
+    now = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    state = make_state(now, grid_power_w=999999.0)
+
+    allowed, _why = ladder._demand_allows_heating(state, config)
+
+    assert allowed is True
+
+
+def test_demand_allows_heating_without_a_grid_power_reading():
+    config = make_config(energy=EnergySettings(max_price=0.25, power_limit_w=5000.0))
+    now = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    state = make_state(now, grid_power_w=None)
+
+    allowed, _why = ladder._demand_allows_heating(state, config)
+
+    assert allowed is True
+
+
+def test_demand_blocks_when_starting_the_heat_pump_would_exceed_the_cap():
+    config = make_config(energy=EnergySettings(max_price=0.25, power_limit_w=5000.0))
+    now = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    # 4500 W already, plus the ~680 W the heat pump + pump would add.
+    state = make_state(now, grid_power_w=4500.0, heat_pump_on=False, pump_on=False)
+
+    allowed, why = ladder._demand_allows_heating(state, config)
+
+    assert allowed is False
+    assert "5000" in why
+
+
+def test_demand_allows_heating_with_headroom():
+    config = make_config(energy=EnergySettings(max_price=0.25, power_limit_w=5000.0))
+    now = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    state = make_state(now, grid_power_w=4000.0, heat_pump_on=False, pump_on=False)
+
+    allowed, _why = ladder._demand_allows_heating(state, config)
+
+    assert allowed is True
+
+
+def test_demand_pauses_an_already_running_session_over_the_cap():
+    """Once running, the meter's own figure is used as-is (no equipment draw
+    added again), which is what lets the rest of the house pushing the total
+    over the cap pause an already-active session."""
+    config = make_config(energy=EnergySettings(max_price=0.25, power_limit_w=5000.0))
+    now = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    state = make_state(now, grid_power_w=5200.0, heat_pump_on=True, pump_on=True)
+
+    allowed, _why = ladder._demand_allows_heating(state, config)
+
+    assert allowed is False
+
+
+def test_heating_branch_is_blocked_by_the_demand_limiter_despite_a_cheap_price():
+    """The ladder must not fall back to Heating (or Free Power) when the
+    demand gate fails, even though price alone would otherwise say yes."""
+    config = make_config(energy=EnergySettings(max_price=0.25, power_limit_w=1000.0))
+    now = datetime(2026, 6, 1, 12, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(25.0, 10, "water"),
+        air_temp=SensorReading(20.0, 10, "air"),
+        target_temp=28.0,
+        price_total=0.05,  # well under the price limit
+        grid_power_w=990.0,  # + ~680 W equipment draw blows the 1000 W cap
+        heat_pump_on=False,
+        pump_on=False,
+    )
+
+    decision = run_tick(state, config, done_h=0.0)
+
+    assert decision.branch is not Branch.HEATING
+    assert decision.branch is not Branch.FREE_POWER
+    assert decision.heat_pump is False

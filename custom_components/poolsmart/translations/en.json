@@ -524,7 +524,8 @@
           "cheap_price_sensor": "Cheap price period signal",
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
-          "irradiance_sensor": "Solar irradiance (W/m²)"
+          "irradiance_sensor": "Solar irradiance (W/m²)",
+          "grid_power_sensor": "Total house power (W)"
         },
         "data_description": {
           "weather_entity": "A weather entity with a forecast. Used to scale the learned heat loss to the temperature ahead, so a cold front starts the heating plan earlier and a warm spell is not over-heated for.",
@@ -533,7 +534,8 @@
           "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. It outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed.",
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
-          "irradiance_sensor": "Direct sunlight reading in W/m² — a weather station's pyranometer, a KNMI-style solar-radiation entity, or similar. Preferred over the solar power sensor above when both are mapped: it needs no peak figure to scale against, and works whether or not this pool has solar panels of its own. Used to learn heat loss from sunny idle periods instead of discarding them."
+          "irradiance_sensor": "Direct sunlight reading in W/m² — a weather station's pyranometer, a KNMI-style solar-radiation entity, or similar. Preferred over the solar power sensor above when both are mapped: it needs no peak figure to scale against, and works whether or not this pool has solar panels of its own. Used to learn heat loss from sunny idle periods instead of discarding them.",
+          "grid_power_sensor": "A smart-meter or energy-dashboard sensor reading total household power in watts, independent of the pool's own equipment. Paired with the house power limit under When to heat to pause heating above a cap — useful for peak tariffs or a grid/contract limit. Leave blank and the limiter is simply absent."
         }
       },
       "heating": {
@@ -591,6 +593,7 @@
           "solar_margin_w": "Margin above the equipment draw (W)",
           "solar_peak_w": "Solar panel peak power (W)",
           "solar_threshold_w": "Solar surplus for free heating (W)",
+          "power_limit_w": "House power limit (W)",
           "swim_time": "Wanted at temperature by (HH:MM)",
           "swim_time_2": "Second time (optional)",
           "swim_days": "Days",
@@ -609,6 +612,7 @@
           "solar_margin_w": "Added to the equipment draw when the threshold is calculated. A margin stops a passing cloud from starting and stopping a session.",
           "solar_peak_w": "The panel array's rated peak output. Used to scale the solar production sensor into an estimated W/m² irradiance when no direct irradiance sensor is mapped under Entities. Leave blank if you have no solar panels, or if the irradiance sensor already covers it.",
           "solar_threshold_w": "Above this, heating is treated as free and the price limit is ignored. Leave empty and it is calculated from what the heat pump and pump draw together, plus the margin below. A figure lower than the equipment draw means exporting less than you use; much higher means missing sunny afternoons.",
+          "power_limit_w": "Heating pauses whenever the house's total draw (plus the pool's own equipment, if not already running) would exceed this. Requires a house power sensor under Weather and price. Even Boost respects it, since it exists to protect a hard electrical or contract limit. Leave blank and there is no cap.",
           "swim_time": "The planner works backwards from this to decide when heating must start. Leave blank if you have no fixed time; heating then simply keeps the pool at target.",
           "swim_time_2": "A second time on the same days, for the exceptions. Most people leave this empty.",
           "swim_days": "Which weekdays the times above apply to.",
@@ -912,6 +916,9 @@
       },
       "solar_threshold": {
         "name": "Solar threshold"
+      },
+      "power_limit": {
+        "name": "House power limit"
       }
     },
     "switch": {

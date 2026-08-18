@@ -122,6 +122,9 @@ CONF_PRICE_SENSOR = "price_sensor"
 CONF_CHEAP_PRICE_SENSOR = "cheap_price_sensor"
 CONF_SOLAR_POWER_SENSOR = "solar_power_sensor"
 CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
+#: Total household power draw -- a smart-meter/energy-dashboard sensor,
+#: independent of the pool's own equipment. See issue #13.
+CONF_GRID_POWER_SENSOR = "grid_power_sensor"
 #: A sensor already reading in W/m2 -- a weather station's pyranometer, a
 #: KNMI-style solar-radiation entity, and so on. Preferred over the solar
 #: power sensor below wherever both are mapped, because it needs no peak
@@ -198,6 +201,7 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_COLLECTOR_SENSOR,
     CONF_SWIM_TIME_ENTITY,
     CONF_SWIM_SKIP_ENTITY,
+    CONF_GRID_POWER_SENSOR,
 )
 
 #: Which capability each optional entity unlocks. Used to tell the user exactly
@@ -216,6 +220,7 @@ CAPABILITY_BY_ENTITY = {
     CONF_SOLAR_POWER_SENSOR: "solar_optimisation",
     CONF_SOLAR_FORECAST_SENSOR: "solar_forecast",
     CONF_WEATHER_ENTITY: "weather_forecast_planning",
+    CONF_GRID_POWER_SENSOR: "demand_limiting",
 }
 
 # -- Options ---------------------------------------------------------------
@@ -237,6 +242,8 @@ CONF_FROST_AIR_TEMP = "frost_air_temp"
 CONF_MAX_PRICE = "max_price"
 CONF_NEGATIVE_PRICE_BASIS = "negative_price_basis"
 CONF_SOLAR_THRESHOLD_W = "solar_threshold_w"
+#: House-power cap above which heating pauses. See issue #13.
+CONF_POWER_LIMIT_W = "power_limit_w"
 CONF_SOLAR_PEAK_W = "solar_peak_w"
 CONF_SOLAR_MARGIN_W = "solar_margin_w"
 CONF_SOLAR_HYSTERESIS_W = "solar_hysteresis_w"

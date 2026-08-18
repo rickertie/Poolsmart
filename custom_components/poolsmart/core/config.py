@@ -400,6 +400,10 @@ class EnergySettings:
     solar_hysteresis_w: float = 300.0
     #: Stricter multiplier applied to price limits in ECO mode.
     eco_price_factor: float = 0.7
+    #: House-power cap in watts above which heating pauses, regardless of
+    #: price or solar surplus. None when no grid power sensor is mapped or
+    #: no cap was set -- the limiter is then simply absent. See issue #13.
+    power_limit_w: float | None = None
 
 
 @dataclass(frozen=True)

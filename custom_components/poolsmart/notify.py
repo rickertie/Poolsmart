@@ -56,6 +56,11 @@ EVENT_ACTIONS: dict[str, tuple[tuple[str, str], ...]] = {
     "ai_recommendation": (("ACCEPT_SUGGESTION", "Apply"),),
     "heating_started": (),
     "chemistry_alarm": (),
+    #: No override action offered on purpose: the demand limiter exists to
+    #: protect a hard electrical/contract limit, and even Boost does not
+    #: bypass it (core.ladder._demand_allows_heating). See issue #13.
+    "demand_limited": (),
+    "demand_resumed": (),
 }
 
 
@@ -294,6 +299,12 @@ class NotificationManager:
 
     async def async_send_chemistry(self, message: str) -> None:
         await self._send("chemistry_alarm", "Pool: chemistry", message)
+
+    async def async_send_demand_limited(self, message: str) -> None:
+        await self._send("demand_limited", "Pool: heating paused", message)
+
+    async def async_send_demand_resumed(self, message: str) -> None:
+        await self._send("demand_resumed", "Pool: heating resumed", message)
 
 
 class ActionHandler:

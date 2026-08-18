@@ -189,6 +189,9 @@ class PoolState:
     #: that unit. ``None`` when no such sensor is configured, in which case
     #: the solar power sensor above (scaled by its peak) stands in instead.
     irradiance_w_m2: float | None = None
+    #: Total household power draw from a smart-meter/energy sensor, watts.
+    #: ``None`` when no grid power sensor is configured. See issue #13.
+    grid_power_w: float | None = None
     #: Whether the cover is on. ``None`` when no cover entity is configured.
     covered: bool | None = None
 
