@@ -152,15 +152,24 @@ class NotificationManager:
                     )
                 )
             elif entity_exists:
+                call_data = {
+                    "entity_id": target,
+                    "title": payload.get("title", ""),
+                    "message": payload.get("message", ""),
+                }
+                if payload.get("data"):
+                    # Action buttons (data.actions/tag) were being built and
+                    # then silently dropped on this path -- the entity-based
+                    # notify.send_message call never forwarded them, unlike
+                    # the legacy per-device service call below. That is what
+                    # actually made action buttons disappear on any device
+                    # reached through a notify entity. See #19.
+                    call_data["data"] = payload["data"]
                 self.hass.async_create_task(
                     self.hass.services.async_call(
                         "notify",
                         "send_message",
-                        {
-                            "entity_id": target,
-                            "title": payload.get("title", ""),
-                            "message": payload.get("message", ""),
-                        },
+                        call_data,
                         blocking=False,
                     )
                 )

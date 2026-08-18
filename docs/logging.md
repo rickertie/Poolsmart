@@ -48,6 +48,13 @@ everything off*; the weekly review offers *Apply the suggestion*. Tapping one
 acts immediately. Other notify platforms ignore the extra data and receive the
 text as normal.
 
+On iOS, the Companion app sometimes shows action buttons only after a
+long-press or swipe on the notification, rather than directly under it --
+that is standard iOS behaviour for actionable notifications, not a PoolSmart
+bug. If buttons do not appear at all, check that Companion app's
+notification permissions are enabled and that critical-alert settings are
+not suppressing them.
+
 ---
 
 ## The Full Trace
