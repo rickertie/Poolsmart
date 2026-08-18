@@ -12,6 +12,51 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.11.0] — A Dashboard Tile, a Hard Limit, and a Model That Remembers
+
+### Fixed
+
+- **Notification action buttons could silently vanish.** `notify.py` built
+  the `data.actions`/`tag` payload for every event that carries buttons, but
+  the entity-based `notify.send_message` dispatch path — what current-
+  generation Companion app registrations use — never forwarded it, unlike
+  the legacy per-device service call. Addresses
+  [#19](https://github.com/rickertie/Poolsmart/issues/19): buttons now reach
+  every target either path can reach. (On iOS specifically, a long-press or
+  swipe to reveal them is separate, standard platform behaviour, now
+  documented alongside this fix.)
+
+### Added
+
+- **Swim time, as a dashboard tile.** Addresses
+  [#17](https://github.com/rickertie/Poolsmart/issues/17): an
+  `input_datetime` helper and an `input_boolean` "not swimming today"
+  helper, checked ahead of the static swim-time fields under **When to
+  heat** and falling back to them cleanly when unset, so anyone in the
+  house can set today's time from the existing Lovelace dashboard instead
+  of opening this integration's options flow.
+- **`weather_entity` now actually is the documented outdoor-temperature
+  fallback.** Addresses [#16](https://github.com/rickertie/Poolsmart/issues/16):
+  the docs and both translation files promised this since before it was
+  ever wired up. A pool with only a weather entity mapped stops silently
+  losing its operating-envelope check and frost protection.
+- **A demand/power limiter.** Addresses
+  [#13](https://github.com/rickertie/Poolsmart/issues/13): map a
+  smart-meter or energy-dashboard sensor and set a house-power cap under
+  **When to heat**, and heating pauses whenever current draw would exceed
+  it — a ceiling independent of price or solar surplus, respected even by
+  Boost, since it exists to protect a hard electrical or contract limit
+  rather than to optimise cost. Pauses an already-running session just as
+  readily as it blocks a new one, with a notification on both the pause and
+  the resume.
+- **The AI advisor now follows up on what it suggested.** Addresses
+  [#10](https://github.com/rickertie/Poolsmart/issues/10): accepting a
+  suggestion snapshots a few current metrics; a week later the same
+  snapshot is compared and turned into a plain-language outcome, shown in
+  the panel and fed into the next review — so a suggestion that did not
+  help is visible instead of quietly repeated. Still suggests only; nothing
+  is ever applied automatically.
+
 ## [1.10.0] — Trusting the Whole File, and Watching the Sky
 
 ### Fixed
