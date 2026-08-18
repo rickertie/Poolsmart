@@ -1244,16 +1244,34 @@ class PoolSmartPanel extends HTMLElement {
 
   _advisorCard(s) {
     const a = s.advisor;
-    if (!a) return "";
+    const accepted = s.accepted_suggestions || [];
+    const history = accepted.length
+      ? `<div class="card">
+          <strong>Accepted suggestions</strong>
+          <div class="reason muted">What was applied, and what happened after --
+            so a suggestion that did not help is visible, not just repeated.</div>
+          ${accepted
+            .map(
+              (x) => `<div class="row">
+                <span>${esc(x.setting)} &rarr; ${esc(x.new_value)}
+                  <span class="muted">(${fmtDateTime(x.accepted_at)})</span></span>
+                <span class="muted">${esc(x.outcome || "outcome pending")}</span>
+              </div>`
+            )
+            .join("")}
+        </div>`
+      : "";
+
+    if (!a) return history;
     if (a.error)
       return `<div class="card"><strong>Review</strong>
         <div class="reason warn">${esc(a.error)}</div>
         <div class="reason muted">Suggestions are advisory only; nothing is applied
-          without pressing accept, and the pool runs the same either way.</div></div>`;
+          without pressing accept, and the pool runs the same either way.</div></div>${history}`;
     if (!a.summary && !(a.suggestions || []).length)
       return `<div class="card"><strong>Review</strong>
         <div class="reason muted">No review has been run yet. Press "Ask for a review"
-          to have the past week looked over.</div></div>`;
+          to have the past week looked over.</div></div>${history}`;
     return `<div class="card">
       <strong>Review${a.last_run ? ` &middot; ${fmtDateTime(a.last_run)}` : ""}</strong>
       <div class="reason">${esc(a.summary)}</div>
@@ -1265,7 +1283,7 @@ class PoolSmartPanel extends HTMLElement {
              <span class="muted">${esc(x.why)}</span></div>`
         )
         .join("")}
-    </div>`;
+    </div>${history}`;
   }
 
   _settings(s) {

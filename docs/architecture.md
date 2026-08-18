@@ -127,6 +127,14 @@ The optional AI layer acts strictly as a **non-blocking advisor**:
 If the AI is unavailable the pool behaves exactly as it otherwise would, because
 this layer sits outside the control tick entirely.
 
+**Accepted suggestions are followed up.** Accepting one snapshots a small set
+of current metrics (recent average COP, cost today); once seven days have
+passed, the same metrics are recomputed and compared into a plain-language
+outcome ("COP improved from 3.50 to 3.80"), shown in the panel and fed into
+the next review's prompt -- so a suggestion that did not help is visible
+rather than quietly repeated. The check runs whenever a review is requested,
+piggybacking on that cadence rather than a separate timer.
+
 ---
 
 ## Compressor Protection

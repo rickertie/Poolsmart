@@ -25,6 +25,21 @@ from ..core import safety
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _parse_iso(value: str | None) -> datetime | None:
+    """Parse a timestamp this module wrote itself (always via ``.isoformat()``).
+
+    ``datetime.fromisoformat`` rather than ``dt_util.parse_datetime``: the
+    latter is built for arbitrary/loosely-formatted strings from outside
+    sources, which is not what is being parsed here.
+    """
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
 #: Settings the advisor is allowed to suggest changes to. Anything outside this
 #: list is dropped, so a confused model cannot propose altering a safety limit.
 ADJUSTABLE = {
@@ -87,6 +102,65 @@ class Suggestion:
             "why": self.why,
             "created": self.created.isoformat(),
         }
+
+
+#: How long to wait after acceptance before judging a suggestion's outcome.
+#: Long enough for a representative handful of sessions, short enough that
+#: the next weekly review can plausibly see the result. See issue #10.
+OUTCOME_WINDOW_DAYS = 7
+
+
+@dataclass
+class AcceptedSuggestion:
+    """A suggestion that was accepted, with what it was measured against.
+
+    ``before`` is a snapshot of :meth:`Advisor._recent_metrics` taken at
+    acceptance time; the same snapshot taken again once
+    :data:`OUTCOME_WINDOW_DAYS` has passed becomes ``outcome`` -- a plain
+    sentence, not a second metrics blob, since the whole point is something a
+    human (and the next prompt) can read at a glance.
+    """
+
+    id: str
+    setting: str
+    old_value: float | None
+    new_value: float
+    why: str
+    accepted_at: datetime
+    before: dict = field(default_factory=dict)
+    outcome: str | None = None
+    outcome_at: datetime | None = None
+
+    def as_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "setting": self.setting,
+            "old_value": self.old_value,
+            "new_value": self.new_value,
+            "why": self.why,
+            "accepted_at": self.accepted_at.isoformat(),
+            "before": self.before,
+            "outcome": self.outcome,
+            "outcome_at": self.outcome_at.isoformat() if self.outcome_at else None,
+        }
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> AcceptedSuggestion:
+        return cls(
+            id=raw["id"],
+            setting=raw["setting"],
+            old_value=raw.get("old_value"),
+            new_value=raw["new_value"],
+            why=raw.get("why", ""),
+            accepted_at=datetime.fromisoformat(raw["accepted_at"]),
+            before=raw.get("before") or {},
+            outcome=raw.get("outcome"),
+            outcome_at=(
+                datetime.fromisoformat(raw["outcome_at"])
+                if raw.get("outcome_at")
+                else None
+            ),
+        )
 
 
 @dataclass
@@ -189,6 +263,13 @@ class Advisor:
             # rate -- sent at every privacy level, the same as `learned`.
             payload["trends"] = trends
 
+        outcomes = self._recent_outcomes()
+        if outcomes:
+            # So the model can see what it recommended before and what
+            # actually happened, instead of repeating the same suggestion
+            # every week regardless of whether it helped. See issue #10.
+            payload["past_suggestion_outcomes"] = outcomes
+
         sessions = recent(store.session_log)[-20:]
         decisions = recent(store.decision_log)[-40:]
 
@@ -231,6 +312,86 @@ class Advisor:
                 }
             )
         return out
+
+    def _recent_metrics(self) -> dict:
+        """A small snapshot of how things are going right now.
+
+        Used both as the "before" figure recorded at acceptance time and, once
+        :data:`OUTCOME_WINDOW_DAYS` has passed, recomputed as "after" to judge
+        the outcome -- the same figures, the same window, so the two are
+        actually comparable. Deliberately small: this is a v1 comparison, not
+        a full metrics export.
+        """
+        store = self.coordinator.store
+        cutoff = dt_util.now() - timedelta(days=7)
+        sessions = []
+        for entry in store.session_log:
+            parsed = _parse_iso(entry.get("start"))
+            if parsed and parsed >= cutoff:
+                sessions.append(entry)
+        cops = [e.get("measured_cop") for e in sessions if e.get("measured_cop") is not None]
+        return {
+            "average_cop": round(sum(cops) / len(cops), 3) if cops else None,
+            "sessions": len(sessions),
+            "cost_today": round(store.cost_today, 2),
+            "energy_today_kwh": round(store.energy_today_kwh, 2),
+        }
+
+    def _recent_outcomes(self, within_days: int = 14) -> list[dict]:
+        """Accepted suggestions whose outcome was judged recently."""
+        cutoff = dt_util.now() - timedelta(days=within_days)
+        out = []
+        for entry in self.coordinator.store.accepted_suggestions:
+            outcome = entry.get("outcome")
+            outcome_at = entry.get("outcome_at")
+            if not outcome or not outcome_at:
+                continue
+            parsed = _parse_iso(outcome_at)
+            if not parsed or parsed < cutoff:
+                continue
+            out.append(
+                {
+                    "setting": entry.get("setting"),
+                    "value": entry.get("new_value"),
+                    "outcome": outcome,
+                }
+            )
+        return out[-5:]
+
+    def _describe_outcome(self, before: dict, after: dict) -> str:
+        """A plain sentence a human (and the next prompt) can act on."""
+        before_cop = before.get("average_cop")
+        after_cop = after.get("average_cop")
+        if before_cop is None or after_cop is None:
+            return "Not enough sessions in the window to judge the outcome."
+        delta = after_cop - before_cop
+        if abs(delta) < 0.05:
+            return f"COP essentially unchanged (was {before_cop:.2f}, now {after_cop:.2f})."
+        direction = "improved" if delta > 0 else "worsened"
+        return f"COP {direction} from {before_cop:.2f} to {after_cop:.2f}."
+
+    async def async_check_outcomes(self) -> None:
+        """Fill in the outcome for any accepted suggestion whose window has
+        passed, so the next review can see what actually happened.
+
+        Cheap to call on every review: entries with an outcome already, or
+        not yet past the window, are skipped without recomputing anything.
+        """
+        store = self.coordinator.store
+        now = dt_util.now()
+        changed = False
+        for entry in store.accepted_suggestions:
+            if entry.get("outcome"):
+                continue
+            accepted_at = _parse_iso(entry.get("accepted_at"))
+            if not accepted_at or now - accepted_at < timedelta(days=OUTCOME_WINDOW_DAYS):
+                continue
+            after = self._recent_metrics()
+            entry["outcome"] = self._describe_outcome(entry.get("before") or {}, after)
+            entry["outcome_at"] = now.isoformat()
+            changed = True
+        if changed:
+            await store.async_save()
 
     # -- Running -----------------------------------------------------------
 
@@ -329,6 +490,7 @@ class Advisor:
             return False
         suggestion = self.last_result.suggestions[index]
         options = dict(self.coordinator.entry.options)
+        old_value = options.get(suggestion.setting)
         options[suggestion.setting] = suggestion.value
         self.hass.config_entries.async_update_entry(
             self.coordinator.entry, options=options
@@ -338,5 +500,19 @@ class Advisor:
             suggestion.setting,
             suggestion.value,
         )
+
+        accepted_at = dt_util.now()
+        record = AcceptedSuggestion(
+            id=accepted_at.isoformat(),
+            setting=suggestion.setting,
+            old_value=old_value,
+            new_value=suggestion.value,
+            why=suggestion.why,
+            accepted_at=accepted_at,
+            before=self._recent_metrics(),
+        )
+        self.coordinator.store.log_accepted_suggestion(record.as_dict())
+        await self.coordinator.store.async_save()
+
         self.last_result.suggestions.pop(index)
         return True

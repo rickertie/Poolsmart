@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import types
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"))
@@ -315,3 +315,173 @@ def test_heating_branch_is_blocked_by_the_demand_limiter_despite_a_cheap_price()
     assert decision.branch is not Branch.HEATING
     assert decision.branch is not Branch.FREE_POWER
     assert decision.heat_pump is False
+
+
+# ---------------------------------------------------------------------------
+# Issue #10 -- AI feedback loop
+# ---------------------------------------------------------------------------
+
+
+class _FakeAdvisorConfigEntries:
+    def async_update_entry(self, entry, options):
+        entry.options = options
+
+
+class _FakeAdvisorHass:
+    def __init__(self):
+        self.config_entries = _FakeAdvisorConfigEntries()
+
+
+class _FakeAdvisorStore:
+    def __init__(self):
+        self.session_log = []
+        self.accepted_suggestions = []
+        self.cost_today = 1.23
+        self.energy_today_kwh = 4.56
+        self.saved = 0
+
+    def log_accepted_suggestion(self, payload):
+        self.accepted_suggestions.append(payload)
+
+    async def async_save(self, force: bool = False):
+        self.saved += 1
+
+
+def _fake_advisor_coordinator():
+    store = _FakeAdvisorStore()
+    return types.SimpleNamespace(store=store, entry=types.SimpleNamespace(options={}))
+
+
+def _load_advisor():
+    ha_stubs.load("const", "const.py")
+    ha_stubs.load("core", "core/__init__.py")
+    ha_stubs.load("core.safety", "core/safety.py")
+    ha_stubs.load("ai", "ai/__init__.py")
+    return ha_stubs.load("ai.advisor", "ai/advisor.py")
+
+
+def test_accepting_a_suggestion_persists_a_before_snapshot():
+    ai_advisor = _load_advisor()
+    hass = _FakeAdvisorHass()
+    coordinator = _fake_advisor_coordinator()
+    advisor = ai_advisor.Advisor(hass, coordinator)
+    advisor.last_result = ai_advisor.AdvisorResult(
+        suggestions=[
+            ai_advisor.Suggestion(
+                setting="max_price", value=0.3, why="test", created=datetime.now(UTC)
+            )
+        ]
+    )
+
+    accepted = asyncio.run(advisor.async_accept(0))
+
+    assert accepted is True
+    assert coordinator.entry.options["max_price"] == 0.3
+    assert len(coordinator.store.accepted_suggestions) == 1
+    record = coordinator.store.accepted_suggestions[0]
+    assert record["setting"] == "max_price"
+    assert record["new_value"] == 0.3
+    assert record["before"]["cost_today"] == 1.23
+    assert record["outcome"] is None
+    assert coordinator.store.saved == 1
+    # The suggestion is consumed once acted on.
+    assert advisor.last_result.suggestions == []
+
+
+def test_check_outcomes_fills_in_the_outcome_once_the_window_has_passed():
+    ai_advisor = _load_advisor()
+    hass = _FakeAdvisorHass()
+    coordinator = _fake_advisor_coordinator()
+    advisor = ai_advisor.Advisor(hass, coordinator)
+
+    old_accepted_at = datetime.now(UTC) - timedelta(
+        days=ai_advisor.OUTCOME_WINDOW_DAYS + 1
+    )
+    coordinator.store.accepted_suggestions.append(
+        {
+            "id": old_accepted_at.isoformat(),
+            "setting": "max_price",
+            "old_value": 0.25,
+            "new_value": 0.30,
+            "why": "test",
+            "accepted_at": old_accepted_at.isoformat(),
+            "before": {"average_cop": 3.5},
+            "outcome": None,
+            "outcome_at": None,
+        }
+    )
+    recent_session_start = datetime.now(UTC) - timedelta(days=1)
+    coordinator.store.session_log.append(
+        {"start": recent_session_start.isoformat(), "measured_cop": 3.0}
+    )
+
+    asyncio.run(advisor.async_check_outcomes())
+
+    entry = coordinator.store.accepted_suggestions[0]
+    assert entry["outcome"] is not None
+    assert "COP" in entry["outcome"]
+    assert entry["outcome_at"] is not None
+    assert coordinator.store.saved == 1
+
+
+def test_check_outcomes_skips_entries_still_inside_the_window():
+    ai_advisor = _load_advisor()
+    hass = _FakeAdvisorHass()
+    coordinator = _fake_advisor_coordinator()
+    advisor = ai_advisor.Advisor(hass, coordinator)
+
+    recent_accepted_at = datetime.now(UTC) - timedelta(days=1)
+    coordinator.store.accepted_suggestions.append(
+        {
+            "id": recent_accepted_at.isoformat(),
+            "setting": "max_price",
+            "old_value": 0.25,
+            "new_value": 0.30,
+            "why": "test",
+            "accepted_at": recent_accepted_at.isoformat(),
+            "before": {},
+            "outcome": None,
+            "outcome_at": None,
+        }
+    )
+
+    asyncio.run(advisor.async_check_outcomes())
+
+    assert coordinator.store.accepted_suggestions[0]["outcome"] is None
+    assert coordinator.store.saved == 0
+
+
+def test_recent_outcomes_only_returns_resolved_entries_within_the_window():
+    ai_advisor = _load_advisor()
+    hass = _FakeAdvisorHass()
+    coordinator = _fake_advisor_coordinator()
+    advisor = ai_advisor.Advisor(hass, coordinator)
+
+    now = datetime.now(UTC)
+    coordinator.store.accepted_suggestions.extend(
+        [
+            {
+                "setting": "max_price",
+                "new_value": 0.3,
+                "outcome": "COP improved from 3.50 to 3.80.",
+                "outcome_at": (now - timedelta(days=2)).isoformat(),
+            },
+            {
+                "setting": "solar_threshold_w",
+                "new_value": 1000,
+                "outcome": None,
+                "outcome_at": None,
+            },
+            {
+                "setting": "temp_hysteresis",
+                "new_value": 0.5,
+                "outcome": "COP essentially unchanged (was 3.50, now 3.52).",
+                "outcome_at": (now - timedelta(days=30)).isoformat(),
+            },
+        ]
+    )
+
+    outcomes = advisor._recent_outcomes(within_days=14)
+
+    assert len(outcomes) == 1
+    assert outcomes[0]["setting"] == "max_price"
