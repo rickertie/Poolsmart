@@ -130,6 +130,11 @@ CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
 CONF_IRRADIANCE_SENSOR = "irradiance_sensor"
 CONF_WEATHER_ENTITY = "weather_entity"
 CONF_COVER_ENTITY = "cover_entity"
+#: An input_datetime helper the dashboard can set directly, checked before
+#: the static swim_time/swim_time_2 fields defined below. See issue #17.
+CONF_SWIM_TIME_ENTITY = "swim_time_entity"
+#: An input_boolean helper for "not swimming today", checked the same way.
+CONF_SWIM_SKIP_ENTITY = "swim_skip_entity"
 
 # -- Water chemistry readings ---------------------------------------------
 #
@@ -191,6 +196,8 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_WEATHER_ENTITY,
     CONF_COVER_ENTITY,
     CONF_COLLECTOR_SENSOR,
+    CONF_SWIM_TIME_ENTITY,
+    CONF_SWIM_SKIP_ENTITY,
 )
 
 #: Which capability each optional entity unlocks. Used to tell the user exactly

@@ -594,6 +594,8 @@
           "swim_time": "Wanted at temperature by (HH:MM)",
           "swim_time_2": "Second time (optional)",
           "swim_days": "Days",
+          "swim_time_entity": "Swim time dashboard helper (optional)",
+          "swim_skip_entity": "\"Not swimming today\" helper (optional)",
           "target_temp": "Desired temperature (°C)"
         },
         "data_description": {
@@ -610,6 +612,8 @@
           "swim_time": "The planner works backwards from this to decide when heating must start. Leave blank if you have no fixed time; heating then simply keeps the pool at target.",
           "swim_time_2": "A second time on the same days, for the exceptions. Most people leave this empty.",
           "swim_days": "Which weekdays the times above apply to.",
+          "swim_time_entity": "An input_datetime helper you put on your dashboard, so anyone in the house can set today's time without opening this screen. Checked before the fixed time above, and ignored when left blank.",
+          "swim_skip_entity": "An input_boolean helper for \"not swimming today\" — flip it on the dashboard to skip today without changing the schedule.",
           "target_temp": "28 °C is comfortable for most people. 26 is brisk, 30 is bath-like and noticeably more expensive."
         }
       },

@@ -49,6 +49,11 @@ SWITCH = selector.EntitySelector(
     selector.EntitySelectorConfig(domain=["switch", "input_boolean"])
 )
 WEATHER = selector.EntitySelector(selector.EntitySelectorConfig(domain="weather"))
+#: The dashboard tile issue #17 asks for: an input_datetime helper anyone in
+#: the house can set without opening this config flow at all.
+SWIM_TIME_SELECTOR = selector.EntitySelector(
+    selector.EntitySelectorConfig(domain="input_datetime")
+)
 
 OPTIONAL_MENU_ITEMS = [
     "optional_sensors",
@@ -1295,6 +1300,12 @@ class PoolSmartOptionsFlow(OptionsFlow):
                             mode=selector.SelectSelectorMode.LIST,
                         )
                     ),
+                    #: A dashboard tile beats reopening this flow every time
+                    #: swim time changes -- see issue #17. Falls back to
+                    #: swim_time/swim_time_2 above when left unset, so this
+                    #: is additive rather than a replacement for them.
+                    _entity_field(current, c.CONF_SWIM_TIME_ENTITY): SWIM_TIME_SELECTOR,
+                    _entity_field(current, c.CONF_SWIM_SKIP_ENTITY): SWITCH,
                 }
             ),
         )

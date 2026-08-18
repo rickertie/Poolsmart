@@ -115,6 +115,7 @@ def install() -> None:
     coordinator = _module("homeassistant.helpers.update_coordinator")
     coordinator.DataUpdateCoordinator = object
     coordinator.CoordinatorEntity = object
+    coordinator.UpdateFailed = type("UpdateFailed", (Exception,), {})
 
 
 def load(module_name: str, relative_path: str):

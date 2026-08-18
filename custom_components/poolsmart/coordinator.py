@@ -138,6 +138,19 @@ def _parse_time(raw: str | None, fallback: time) -> time:
         return fallback
 
 
+def _parse_time_optional(raw: str | None) -> time | None:
+    """Same as :func:`_parse_time`, but None on failure rather than a
+    fallback -- used where "nothing usable here" has to stay distinguishable
+    from a genuine value."""
+    if not raw:
+        return None
+    try:
+        hour, minute = str(raw).split(":")[:2]
+        return time(int(hour), int(minute))
+    except (ValueError, TypeError):
+        return None
+
+
 class PoolSmartCoordinator(DataUpdateCoordinator):
     """Runs the decision engine and drives the two switches."""
 
@@ -557,15 +570,42 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         One window per weekday covers nearly every household; a second is
         supported for the exceptions and costs almost nothing because the planner
         works from a list either way.
+
+        A configured swim_time_entity (an input_datetime dashboard helper,
+        issue #17) is checked first and, when it holds a usable time, replaces
+        both static swim_time/swim_time_2 fields rather than adding to them --
+        the point is to answer "when today" from one place, not two. Falling
+        back to the static fields when the entity is unset or unreadable keeps
+        this purely additive. A configured swim_skip_entity ("not swimming
+        today") excludes today's date from every source, entity or static.
         """
-        candidates: list[datetime] = []
         days = self._conf(c.CONF_SWIM_DAYS, [0, 1, 2, 3, 4, 5, 6]) or []
-        for key in (c.CONF_SWIM_TIME, c.CONF_SWIM_TIME_2):
-            raw = self._conf(key)
-            if not raw:
-                continue
-            wanted = _parse_time(raw, time(17, 0))
+        skip_today = bool(self._read_binary(c.CONF_SWIM_SKIP_ENTITY))
+
+        entity_time: time | None = None
+        entity_id = self._conf(c.CONF_SWIM_TIME_ENTITY)
+        if entity_id:
+            state = self.hass.states.get(entity_id)
+            if state is not None and state.state not in UNAVAILABLE:
+                entity_time = _parse_time_optional(state.state)
+
+        if entity_time is not None:
+            wanted_times = [entity_time]
+        else:
+            wanted_times = [
+                parsed
+                for parsed in (
+                    _parse_time_optional(self._conf(key))
+                    for key in (c.CONF_SWIM_TIME, c.CONF_SWIM_TIME_2)
+                )
+                if parsed is not None
+            ]
+
+        candidates: list[datetime] = []
+        for wanted in wanted_times:
             for offset in range(0, 8):
+                if skip_today and offset == 0:
+                    continue
                 day = now.date() + timedelta(days=offset)
                 if days and day.weekday() not in [int(d) for d in days]:
                     continue
