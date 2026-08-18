@@ -12,6 +12,50 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.10.0] — Trusting the Whole File, and Watching the Sky
+
+### Fixed
+
+- **A single bad timestamp in the storage file could silently wipe
+  sessions, doses and mode/target_temp while learned values survived.**
+  `PoolStore.async_load` parsed every field inside one `try`, so hitting a
+  malformed value partway through left later fields (Sessions/Doses, the
+  active mode) stuck at their fresh defaults while earlier ones (heat
+  loss, COP, heating rate) kept whatever they had already been assigned —
+  the log even claimed a full reset when it was only ever a partial one.
+  Addresses [#20](https://github.com/rickertie/Poolsmart/issues/20): the
+  Storage card no longer disagrees with the learned counters above it.
+  Addresses [#18](https://github.com/rickertie/Poolsmart/issues/18): each
+  field group now parses and commits independently, so one corrupt value
+  resets only itself and says so. Setup now also warns when an orphaned
+  storage file from a removed-and-re-added install is sitting unread, since
+  that is a second, distinct way options and history can look lost after
+  an update.
+
+### Added
+
+- **The dose log finally learns.** `docs/CHEMISTRY.MD` promised it since
+  before 1.0; the missing piece was that a dose's *expected* effect was
+  never actually recorded, so the correction factor had nothing to learn
+  from. Addresses [#9](https://github.com/rickertie/Poolsmart/issues/9):
+  each dose now carries what the uncorrected formula predicted for the
+  amount actually administered, and once the next test closes it off, the
+  result blends into a persisted per-pool pH/chlorine correction — capped
+  and outlier-guarded, the same update rule heating learning already uses
+  for heat loss and COP. Shows up on the Learning tab with a confidence
+  label and its own reset, and starts scaling every dose recommendation
+  once two dose-then-test pairs exist.
+- **PoolSmart notices rain, with an existing weather entity.** Addresses
+  [#7](https://github.com/rickertie/Poolsmart/issues/7): the water tab
+  gets a "test soon" nudge and a shortened test interval for twelve hours
+  after rain was last observed; an idle period rained on during it is
+  excluded from heat-loss learning the same way a cover change already
+  voids one, instead of teaching the baseline a number that belonged to
+  the weather; and the solar-collector advice — wired up as a sensor for
+  the first time, having existed unused since the collector-margin setting
+  was added — now stops recommending the valve be opened while it's
+  raining on it.
+
 ## [1.9.2] — Rooms of Its Own, and a Look at Tomorrow
 
 ### Fixed
