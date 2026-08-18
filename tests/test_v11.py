@@ -359,6 +359,8 @@ def test_t75_reset_one_value():
         "heat_loss_covered",
         "measured_flow",
         "cop",
+        "ph_correction",
+        "chlorine_correction",
     }
 
     # Each entry names a value and, where one exists, its session counter --

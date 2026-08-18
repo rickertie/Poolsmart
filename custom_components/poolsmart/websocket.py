@@ -100,6 +100,26 @@ def _learning_insight(coordinator) -> list[dict]:
             "used_for": "the heating time estimate, ahead of any COP calculation",
             "confidence": learning.rate_confidence(rate_sessions),
         },
+        {
+            "key": "ph_correction",
+            "value": learned.ph_correction,
+            "unit": "×",
+            "sessions": learned.ph_correction_sessions,
+            "in_use": learned.ph_correction_sessions >= 2,
+            "used_for": "the pH-minus/pH-plus dose recommendation",
+            "fallback": 1.0,
+            "confidence": learning.rate_confidence(learned.ph_correction_sessions),
+        },
+        {
+            "key": "chlorine_correction",
+            "value": learned.chlorine_correction,
+            "unit": "×",
+            "sessions": learned.chlorine_correction_sessions,
+            "in_use": learned.chlorine_correction_sessions >= 2,
+            "used_for": "the chlorine dose recommendation",
+            "fallback": 1.0,
+            "confidence": learning.rate_confidence(learned.chlorine_correction_sessions),
+        },
     ]
 
 
