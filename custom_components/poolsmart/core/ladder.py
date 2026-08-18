@@ -79,6 +79,43 @@ def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
     return False, f"price {state.price_total:.3f}/kWh exceeds the limit of {limit:.3f}"
 
 
+def _demand_allows_heating(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
+    """Whether current house draw leaves room for the heat pump.
+
+    Independent of price and solar surplus, and checked the same way the
+    operating envelope is: an unconditional gate, not folded into
+    :func:`_price_acceptable`'s OR-logic. Solar surplus is a floor that
+    allows heating regardless of price; this is a ceiling that forbids it
+    regardless of anything else -- including Boost, since it exists to
+    protect a hard electrical/contract limit a user's override should not be
+    able to blow through. See issue #13.
+
+    When the pump and/or heat pump are not already running, their rated draw
+    is added to the current reading before comparing against the cap, since a
+    whole-house meter cannot yet reflect a load that has not started; once
+    running, the meter's own figure is used as-is, which is what lets this
+    also pause an already-active session if the rest of the house's draw
+    climbs over the cap.
+    """
+    limit = config.energy.power_limit_w
+    if limit is None or state.grid_power_w is None:
+        return True, "no demand limiter configured"
+
+    additional = 0.0
+    if not state.heat_pump_on:
+        additional += config.heat_pump.input_kw * 1000.0
+    if not state.pump_on:
+        additional += config.pump.power_kw * 1000.0
+    projected = state.grid_power_w + additional
+
+    if projected <= limit:
+        return True, f"house draw would be {projected:.0f} W, within the {limit:.0f} W cap"
+    return (
+        False,
+        f"house draw would reach {projected:.0f} W against a {limit:.0f} W cap",
+    )
+
+
 def _plan_justifies_price(state: PoolState) -> bool:
     """Whether the plan is grounds for heating above the price limit.
 
@@ -164,6 +201,9 @@ def _augment_with_heating(
     if decision.branch not in CIRCULATION_ONLY or decision.heat_pump:
         return decision
     if not hp_available or not _needs_heat(state, config):
+        return decision
+    demand_ok, _demand_why = _demand_allows_heating(state, config)
+    if not demand_ok:
         return decision
     if Branch.HEATING not in MODE_BRANCHES[state.mode]:
         return decision
@@ -303,10 +343,13 @@ def _walk(
 
     # -- 4. Free electricity ----------------------------------------------
     if permitted(Branch.FREE_POWER):
+        demand_ok, demand_why = _demand_allows_heating(state, config)
         if not _needs_heat(state, config):
             skip(Branch.FREE_POWER, "the pool is already at target")
         elif not hp_available:
             trace.record(Branch.FREE_POWER, Verdict.ENVELOPE, hp_gate_reason)
+        elif not demand_ok:
+            trace.record(Branch.FREE_POWER, Verdict.DEMAND, demand_why)
         else:
             negative, price = _negative_price(state, config)
             if negative:
@@ -334,6 +377,7 @@ def _walk(
 
     # -- 5. Heating session ------------------------------------------------
     if permitted(Branch.HEATING):
+        demand_ok, demand_why = _demand_allows_heating(state, config)
         if not _needs_heat(state, config):
             skip(
                 Branch.HEATING,
@@ -344,6 +388,8 @@ def _walk(
             )
         elif not hp_available:
             trace.record(Branch.HEATING, Verdict.ENVELOPE, hp_gate_reason)
+        elif not demand_ok:
+            trace.record(Branch.HEATING, Verdict.DEMAND, demand_why)
         elif state.mode is Mode.BOOST:
             return win(
                 Decision(

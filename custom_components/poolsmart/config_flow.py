@@ -907,6 +907,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
             field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
             field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
             field(c.CONF_IRRADIANCE_SENSOR): IRRADIANCE_SENSOR,
+            field(c.CONF_GRID_POWER_SENSOR): POWER_SENSOR,
         }
         schema = vol.Schema(fields)
         return self.async_show_form(step_id="weather_price", data_schema=schema)
@@ -1279,6 +1280,12 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         c.CONF_SOLAR_HYSTERESIS_W,
                         default=current.get(c.CONF_SOLAR_HYSTERESIS_W, 300),
                     ): _positive(0, 5000, 50),
+                    vol.Optional(
+                        c.CONF_POWER_LIMIT_W,
+                        description={
+                            "suggested_value": current.get(c.CONF_POWER_LIMIT_W)
+                        },
+                    ): _positive(0, 30000, 50),
                     vol.Optional(
                         c.CONF_SWIM_TIME,
                         default=current.get(c.CONF_SWIM_TIME, "16:00"),

@@ -81,6 +81,25 @@ answer.
 
 ---
 
+## Demand / Power Limiter
+
+The complementary gate to the solar threshold above: a house-power cap above
+which heating pauses, regardless of price or solar surplus. Map a smart-meter
+or energy-dashboard sensor reading total household power under **Weather and
+price**, and set a cap in watts under **When to heat** — leave either blank
+and the limiter is simply absent.
+
+Where solar surplus is a floor that allows heating regardless of price, the
+limiter is a ceiling that forbids it regardless of anything else, including
+Boost: it exists to protect a hard electrical or contract limit (a peak
+tariff, a kWh contract, a 3-phase breaker), not to optimise cost, so a
+manual override should not be able to blow through it. It pauses a session
+that is already running just as readily as it blocks one from starting, if
+the rest of the house's draw climbs over the cap mid-session — a
+notification fires on both the pause and the resume.
+
+---
+
 ## See Also
 
 - [Architecture](architecture.md) — How the heat pump's operating envelope

@@ -53,6 +53,21 @@ pump's minimum operating limit (e.g., < 11 °C), heating is disabled. In this
 state, Frost Protection (Branch 1) will only trigger simple **water circulation**,
 which is sufficient to prevent freezing.
 
+### Demand/Power Limiter
+
+A second, independent gate sits alongside the operating envelope in front of
+branches **4** and **5**: with a house power sensor and a cap configured
+(`core.ladder._demand_allows_heating`), heating is refused whenever current
+house draw — plus the pool's own equipment, if not already running — would
+exceed the cap. It is a ceiling, the mirror of the solar-surplus floor: solar
+surplus allows heating regardless of price; the demand limiter forbids it
+regardless of anything else, including Boost, since it exists to protect a
+hard electrical or contract limit rather than to optimise cost. Once the
+heat pump is already running, the meter's own reading is used as-is, which
+is what lets the same gate pause an already-active session if the rest of
+the house's draw climbs over the cap mid-session, not just block a new one
+from starting.
+
 ---
 
 ## Filtration Calculation

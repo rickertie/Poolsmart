@@ -24,7 +24,7 @@ from . import const as c
 from .core import chemistry as chem
 from .core import filtration as filt
 from .core import heating, ladder, learning, optimizer, safety
-from .core.trace import NearMissLog, Trace
+from .core.trace import NearMissLog, Trace, Verdict
 from .core.config import (
     INITIAL_HEAT_LOSS,
     PoolKind,
@@ -82,6 +82,11 @@ _PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "hp_power": (0.0, 10000.0),
     "solar": (0.0, 1500.0),
     "irradiance": (0.0, 1500.0),
+    #: A whole house can draw far more than the pool's own equipment -- an EV
+    #: charger or an electric oven alone can exceed the pool's own sensors'
+    #: range -- so this stays wide; it exists to catch negative/garbage
+    #: readings, not to model a specific installation.
+    "grid_power": (0.0, 50000.0),
 }
 
 #: Conversion to cubic metres per hour.
@@ -222,6 +227,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         #: Last time rain was actually observed, for the "recent rain" window
         #: chemistry advice and the test interval use. See #7.
         self._last_rain_seen_at: datetime | None = None
+        #: Whether the demand limiter was blocking heating as of the last
+        #: tick, so pause/resume is only notified on the transition. See #13.
+        self._demand_limited: bool = False
         self._forecast_fetched_at: datetime | None = None
         self._last_obstacle: tuple | None = None
         self._last_obstacle_at: datetime | None = None
@@ -417,6 +425,11 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                 ),
                 solar_hysteresis_w=float(self._conf(c.CONF_SOLAR_HYSTERESIS_W, 300.0)),
                 eco_price_factor=float(self._conf(c.CONF_ECO_PRICE_FACTOR, 0.7)),
+                power_limit_w=(
+                    float(self._conf(c.CONF_POWER_LIMIT_W))
+                    if self._conf(c.CONF_POWER_LIMIT_W) is not None
+                    else None
+                ),
             ),
             safety=SafetySettings(
                 calibration_tolerance=float(
@@ -695,6 +708,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
         solar = self._read(c.CONF_SOLAR_POWER_SENSOR, "solar")
         irradiance = self._read(c.CONF_IRRADIANCE_SENSOR, "irradiance")
+        grid_power = self._read(c.CONF_GRID_POWER_SENSOR, "grid_power")
         cheap_now = self._read_binary(c.CONF_CHEAP_PRICE_SENSOR)
         covered = self._read_binary(c.CONF_COVER_ENTITY)
         pump_on = self._switch_is_on(c.CONF_PUMP_SWITCH)
@@ -766,6 +780,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             price_energy=price_energy,
             solar_power_w=solar.value,
             irradiance_w_m2=irradiance.value,
+            grid_power_w=grid_power.value,
             cheap_price_now=cheap_now,
             covered=covered,
             target_temp=self._target_temp,
@@ -897,7 +912,36 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Notification handling failed")
 
+        await self._notify_demand_limit_transition(state)
+
         return {"decision": decision, "state": state}
+
+    async def _notify_demand_limit_transition(self, state: PoolState) -> None:
+        """Notify only on the pause/resume edge, not on every blocked tick."""
+        demand_entry = next(
+            (
+                e
+                for e in self.trace.entries
+                if e.branch is Branch.HEATING and e.verdict is Verdict.DEMAND
+            ),
+            None,
+        )
+        limited_now = demand_entry is not None
+        if limited_now == self._demand_limited:
+            return
+        self._demand_limited = limited_now
+        try:
+            if limited_now:
+                await self.notifier.async_send_demand_limited(
+                    f"Heating paused — {demand_entry.detail}."
+                )
+            else:
+                draw = f"{state.grid_power_w:.0f} W" if state.grid_power_w else "lower"
+                await self.notifier.async_send_demand_resumed(
+                    f"House draw is back down to {draw}; heating can resume."
+                )
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Notification handling failed")
 
     def _guard(self, name: str, func, *args):
         """Run an optional subsystem without letting it break the tick."""
@@ -1729,6 +1773,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     async def async_set_solar_threshold(self, value: float) -> None:
         await self._async_set_option_live(c.CONF_SOLAR_THRESHOLD_W, value)
+
+    async def async_set_power_limit(self, value: float) -> None:
+        await self._async_set_option_live(c.CONF_POWER_LIMIT_W, value)
 
     async def async_set_session_review(self, session_start: str, review: str) -> bool:
         """Override whether one logged session counts toward learning.

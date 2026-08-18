@@ -23,6 +23,7 @@ async def async_setup_entry(
             PoolSmartTargetTemperature(coordinator),
             PoolSmartMaxPrice(coordinator),
             PoolSmartSolarThreshold(coordinator),
+            PoolSmartPowerLimit(coordinator),
         ]
     )
 
@@ -114,3 +115,32 @@ class PoolSmartSolarThreshold(PoolSmartEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         await self.coordinator.async_set_solar_threshold(value)
+
+
+class PoolSmartPowerLimit(PoolSmartEntity, NumberEntity):
+    """House-power cap above which heating pauses.
+
+    Unlike the solar threshold, there is no sensible computed default here --
+    a cap is either something the household's contract/breaker actually
+    needs, or it is absent, and 0 W would misleadingly read as "never heat".
+    Left unset, ``native_value`` reports unknown rather than a number that
+    is not really a limit. See issue #13.
+    """
+
+    _entity_domain = "number"
+    _attr_device_class = NumberDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.WATT
+    _attr_native_step = 50
+    _attr_native_min_value = 0
+    _attr_native_max_value = 30000
+    _attr_mode = NumberMode.BOX
+
+    def __init__(self, coordinator: PoolSmartCoordinator) -> None:
+        super().__init__(coordinator, "power_limit")
+
+    @property
+    def native_value(self) -> float | None:
+        return self.coordinator.pool_config.energy.power_limit_w
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self.coordinator.async_set_power_limit(value)
