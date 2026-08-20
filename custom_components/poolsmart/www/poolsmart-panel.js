@@ -63,6 +63,18 @@ const STRINGS = {
       "Auto leaves the automatic verdict in charge. Include/Exclude override " +
       "it and take effect immediately -- the heating rate and COP curve are " +
       "recomputed from every session that currently counts.",
+    quickSettings: "Quick settings",
+    quickSettingsNote:
+      "The values adjusted most often, right here. Everything else still " +
+      "lives under Configure.",
+    targetTemperature: "Desired temperature (°C)",
+    maxPrice: "Maximum price for heating (per kWh)",
+    solarThreshold: "Solar surplus for free heating (W)",
+    houseLimit: "House power limit (W)",
+    notSet: "not set",
+    save: "Save",
+    saved: "Saved.",
+    saveFailed: "Could not save that value.",
   },
   nl: {
     overview: "Overzicht", planning: "Planning", water: "Water",
@@ -105,6 +117,18 @@ const STRINGS = {
       "Auto laat het automatische oordeel gelden. Meetellen/Uitsluiten overrulen " +
       "dat en gelden meteen -- de stijgsnelheid en COP-curve worden herberekend " +
       "uit alle sessies die op dat moment meetellen.",
+    quickSettings: "Snelle instellingen",
+    quickSettingsNote:
+      "De vaakst aangepaste waarden, rechtstreeks hier. Al het andere blijft " +
+      "onder Configureren staan.",
+    targetTemperature: "Gewenste temperatuur (°C)",
+    maxPrice: "Maximale prijs voor verwarmen (per kWh)",
+    solarThreshold: "Zonoverschot voor gratis verwarmen (W)",
+    houseLimit: "Huisverbruikslimiet (W)",
+    notSet: "niet ingesteld",
+    save: "Opslaan",
+    saved: "Opgeslagen.",
+    saveFailed: "Opslaan is niet gelukt.",
   },
 };
 
@@ -449,6 +473,39 @@ class PoolSmartPanel extends HTMLElement {
       this._loadStorageStats();
     }
     this._wireMaintenance();
+    this._wireSettings();
+  }
+
+  _wireSettings() {
+    const root = this.shadowRoot;
+    const status = root.querySelector("#settings-status");
+    const setStatus = (msg) => {
+      if (status) status.textContent = msg;
+    };
+
+    root.querySelectorAll(".quick-setting-save").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        const key = btn.dataset.key;
+        const input = root.querySelector(`.quick-setting[data-key="${key}"]`);
+        const raw = input?.value;
+        if (raw === undefined || raw === "") {
+          setStatus(this.t("saveFailed"));
+          return;
+        }
+        const value = Number(raw);
+        if (Number.isNaN(value)) {
+          setStatus(this.t("saveFailed"));
+          return;
+        }
+        try {
+          await this._hass.callService("poolsmart", "set_setting", { key, value });
+          setStatus(this.t("saved"));
+          setTimeout(() => this._refresh(), 800);
+        } catch (err) {
+          setStatus(this.t("saveFailed"));
+        }
+      })
+    );
   }
 
   _wireMaintenance() {
@@ -1286,9 +1343,51 @@ class PoolSmartPanel extends HTMLElement {
     </div>${history}`;
   }
 
+  _settingField(key, label, value, opts = {}) {
+    const step = opts.step ?? 1;
+    const min = opts.min ?? 0;
+    const val = value === null || value === undefined ? "" : value;
+    return `
+      <div class="row" style="align-items:center;">
+        <span>${esc(label)}</span>
+        <span style="display:flex;gap:6px;align-items:center;">
+          <input type="number" class="quick-setting" data-key="${key}"
+            step="${step}" min="${min}" value="${esc(val)}"
+            placeholder="${esc(this.t("notSet"))}"
+            style="width:100px;padding:5px 8px;border-radius:6px;
+            border:1px solid var(--divider-color);background:transparent;
+            color:var(--primary-text-color);box-sizing:border-box;font-size:13px;">
+          <button class="action quick-setting-save" data-key="${key}"
+            style="padding:5px 10px;">${esc(this.t("save"))}</button>
+        </span>
+      </div>`;
+  }
+
   _settings(s) {
     const d = s.derived;
+    const set = s.settings || {};
     return `
+      <div class="card">
+        <strong>${esc(this.t("quickSettings"))}</strong>
+        <div class="reason muted">${esc(this.t("quickSettingsNote"))}</div>
+        ${this._settingField("target_temp", this.t("targetTemperature"), set.target_temp, {
+          step: 0.5,
+          min: 10,
+        })}
+        ${this._settingField("max_price", this.t("maxPrice"), set.max_price, {
+          step: 0.01,
+          min: 0,
+        })}
+        ${this._settingField("solar_threshold", this.t("solarThreshold"), set.solar_threshold_w, {
+          step: 50,
+          min: 0,
+        })}
+        ${this._settingField("power_limit", this.t("houseLimit"), set.power_limit_w, {
+          step: 50,
+          min: 0,
+        })}
+        <div class="reason muted" id="settings-status"></div>
+      </div>
       <div class="card">
         <strong>Derived from your setup</strong>
         <div class="row"><span>Pool volume</span><span>${d.volume_l} L</span></div>
@@ -1309,8 +1408,8 @@ class PoolSmartPanel extends HTMLElement {
         <div class="row"><span>Energy per degree</span><span>${d.kwh_thermal_per_degree} kWh</span></div>
       </div>
       <div class="card">
-        <strong>Changing settings</strong>
-        <div class="reason">Settings live in the integration itself, under
+        <strong>Changing other settings</strong>
+        <div class="reason">Everything else lives in the integration itself, under
           Settings → Devices &amp; Services → PoolSmart → Configure. Keeping them in one
           place avoids a second copy that can drift out of step.</div>
       </div>

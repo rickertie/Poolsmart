@@ -192,6 +192,33 @@ class NegativePriceBasis:
     TOTAL = "total"
 
 
+class CheapPriceMode:
+    """How an external cheap-period signal relates to ``max_price``.
+
+    ``CHEAP_WINS`` treats the signal as authoritative, because it knows
+    something a fixed ceiling cannot: where this moment sits within today's
+    prices. A day whose cheapest hour is above the ceiling would otherwise
+    never heat, and a cheap hour on an expensive day would be missed. This is
+    the original behaviour, kept as the default so installations already
+    tuned around it are unaffected.
+
+    ``MAX_PRICE_HARD`` treats ``max_price`` as a limit nothing may cross: the
+    signal only ever brings a price within that ceiling forward, never
+    around it. Chosen by anyone who reads ``max_price`` as a hard promise
+    about the most they will ever pay, rather than a starting point the
+    tariff integration is allowed to override.
+
+    ``CHEAP_WINS_CAPPED`` keeps the signal authoritative but adds its own,
+    separate ceiling (``cheap_price_ceiling``) as a backstop -- for someone
+    who wants the signal to win on an ordinary expensive day, but not on a
+    day so expensive that even its "cheap" hour is unacceptable.
+    """
+
+    CHEAP_WINS = "cheap_wins"
+    MAX_PRICE_HARD = "max_price_hard"
+    CHEAP_WINS_CAPPED = "cheap_wins_capped"
+
+
 @dataclass(frozen=True)
 class PoolSpec:
     """Physical properties of the pool itself."""
@@ -392,6 +419,13 @@ class EnergySettings:
 
     #: Do not heat above this all-in price, except in BOOST.
     max_price: float | None = None
+    #: How a cheap_price_sensor signal relates to max_price. See
+    #: CheapPriceMode. See issue #22.
+    cheap_price_mode: str = CheapPriceMode.CHEAP_WINS
+    #: Absolute ceiling the cheap-period signal may not cross. Only read in
+    #: CheapPriceMode.CHEAP_WINS_CAPPED; None there behaves like CHEAP_WINS,
+    #: since there is then no separate backstop to apply. See issue #22.
+    cheap_price_ceiling: float | None = None
     #: Which price is compared against zero for the FREE_POWER branch.
     negative_price_basis: str = NegativePriceBasis.TOTAL
     #: Solar surplus in watts above which heating is considered free.

@@ -15,13 +15,14 @@ from pathlib import Path
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify
 
 from . import websocket as poolsmart_ws
 from .const import CONF_ADOPT_FROM as MIGRATION_ADOPT
-from .const import DOMAIN, MIGRATION_FLAG, PANEL_URL
+from .const import DOMAIN, MAX_PRICE_BOUNDS, MIGRATION_FLAG, PANEL_URL
 from .coordinator import PoolSmartCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -293,6 +294,62 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.info("Reset learned value: %s", call.data["value"])
 
     hass.services.async_register(DOMAIN, "reset_learned", _reset)
+
+    async def _set_setting(call) -> None:
+        """Change one of the values also exposed as a number entity.
+
+        A domain service rather than a call to the number entity directly,
+        because the panel that calls this has no reliable way to know the
+        entity_id -- it depends on the pool's name, which the panel does not
+        assume. See issue #23.
+
+        Unlike this integration's other services, invalid input is raised
+        rather than logged and swallowed: the panel calls this synchronously
+        and shows its own "Saved"/"failed" status from whether the call
+        succeeded, so a silent no-op here would have it claim success for a
+        value that was actually rejected.
+        """
+        key = str(call.data["key"])
+        try:
+            value = float(call.data["value"])
+        except (TypeError, ValueError):
+            raise ServiceValidationError(
+                f"Setting value {call.data.get('value')!r} is not a number"
+            ) from None
+
+        coordinator = _target_coordinator(hass, "change a setting")
+        if coordinator is None:
+            raise ServiceValidationError(
+                "Cannot change a setting: no PoolSmart pool is set up, or more "
+                "than one is and this service cannot yet target one specifically"
+            )
+
+        bounds = {
+            "target_temp": (10.0, coordinator.pool_config.comfort.max_temp),
+            # Shared with the options flow, number.py and the AI advisor's
+            # whitelist -- see const.MAX_PRICE_BOUNDS.
+            "max_price": MAX_PRICE_BOUNDS,
+            "solar_threshold": (0.0, 20000.0),
+            "power_limit": (0.0, 30000.0),
+        }
+        limits = bounds.get(key)
+        if limits is None:
+            raise ServiceValidationError(f"Unknown setting {key!r}")
+        low, high = limits
+        if not (low <= value <= high):
+            raise ServiceValidationError(
+                f"{value} is outside the {low}-{high} range for {key}"
+            )
+
+        setters = {
+            "target_temp": coordinator.async_set_target,
+            "max_price": coordinator.async_set_max_price,
+            "solar_threshold": coordinator.async_set_solar_threshold,
+            "power_limit": coordinator.async_set_power_limit,
+        }
+        await setters[key](value)
+
+    hass.services.async_register(DOMAIN, "set_setting", _set_setting)
 
     async def _set_session_review(call) -> None:
         from .core.learning import SESSION_REVIEW_STATES

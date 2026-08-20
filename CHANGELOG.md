@@ -12,6 +12,30 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.12.0] — Who Actually Wins: the Price or the Signal
+
+### Added
+
+- **Whether the cheap-price signal is allowed to overrule your maximum
+  price is now your choice, not a fixed rule.** Addresses
+  [#22](https://github.com/rickertie/Poolsmart/issues/22): a
+  `cheap_price_sensor` always won over `max_price`, so a tariff integration
+  marking an hour "cheap" could heat well above the ceiling you had set —
+  on a genuinely expensive day, its cheapest hour is still expensive. A new
+  **cheap-price mode** under **When to heat** makes that choice explicit:
+  the signal can still always win (the original behaviour, kept as the
+  default so nobody's setup changes underfoot), treat `max_price` as a hard
+  ceiling nothing crosses — including the swim-deadline planner's own
+  "nothing cheaper was available" fallback — or win only up to its own
+  separate, usually higher, ceiling.
+- **Quick settings in the panel itself.** Addresses
+  [#23](https://github.com/rickertie/Poolsmart/issues/23): the Settings tab
+  used to do nothing but point at Configure, so changing the desired
+  temperature, maximum price, solar threshold or house power limit meant
+  leaving the panel every time. Those four now have their own editable
+  fields right there, backed by a new `poolsmart.set_setting` service.
+  Everything else still lives under Configure.
+
 ## [1.11.0] — A Dashboard Tile, a Hard Limit, and a Model That Remembers
 
 ### Fixed

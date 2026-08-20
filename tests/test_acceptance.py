@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components"
 from core import filtration as filt  # noqa: E402
 from core import heating, ladder, safety  # noqa: E402
 from core.config import (  # noqa: E402
+    CheapPriceMode,
     ComfortSettings,
     EnergySettings,
     FiltrationSettings,
@@ -1161,6 +1162,101 @@ def test_t50_cheap_period_signal():
     marked_off = base.replace(cheap_price_now=False)
     decision = run_tick(marked_off, config, done_h=20.0)
     assert decision.heat_pump is False
+
+
+def test_t50b_max_price_hard_mode_still_waits_above_the_ceiling():
+    """With max_price_hard, a 'cheap' hour above max_price does not heat.
+
+    Same day as T50 -- cheapest hour is 0.2484, above the 0.20 ceiling -- but
+    the installation has opted into treating max_price as a promise nothing
+    crosses. See issue #22.
+    """
+    config = make_config(
+        energy=EnergySettings(
+            max_price=0.20, cheap_price_mode=CheapPriceMode.MAX_PRICE_HARD
+        )
+    )
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    base = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.2484,
+        solar_power_w=0.0,
+        measured_flow_m3h=1.02,
+    )
+
+    marked = base.replace(cheap_price_now=True)
+    decision = run_tick(marked, config, done_h=20.0)
+    assert decision.heat_pump is False, decision.reason
+
+    # Below the ceiling, the signal still applies as normal.
+    cheaper = base.replace(cheap_price_now=True, price_total=0.18)
+    decision = run_tick(cheaper, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+
+
+def test_t50c_cheap_wins_capped_mode_respects_its_own_ceiling():
+    """With cheap_wins_capped, the signal wins below its own ceiling only.
+
+    A separate, usually higher, price is the backstop -- below it the signal
+    is trusted as in the default mode; above it, heating is judged the
+    normal way. See issue #22.
+    """
+    config = make_config(
+        energy=EnergySettings(
+            max_price=0.20,
+            cheap_price_mode=CheapPriceMode.CHEAP_WINS_CAPPED,
+            cheap_price_ceiling=0.30,
+        )
+    )
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    base = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        solar_power_w=0.0,
+        measured_flow_m3h=1.02,
+    )
+
+    # Under the ceiling of 0.30: the signal wins, same as CHEAP_WINS.
+    under_ceiling = base.replace(cheap_price_now=True, price_total=0.2484)
+    decision = run_tick(under_ceiling, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+
+    # Over the ceiling: even a "cheap" hour does not heat.
+    over_ceiling = base.replace(cheap_price_now=True, price_total=0.338)
+    decision = run_tick(over_ceiling, config, done_h=20.0)
+    assert decision.heat_pump is False, decision.reason
+
+
+def test_t50d_max_price_hard_mode_also_blocks_the_plan_fallback():
+    """max_price_hard's promise covers the planner's own escape hatch too.
+
+    Without a cheap-period signal at all, a price-informed plan may still
+    heat above max_price when nothing cheaper was available before the swim
+    deadline (see T48). That fallback is a second way past the ceiling, so
+    max_price_hard has to close it as well, or "hard ceiling" would not
+    actually be one. See issue #22.
+    """
+    config = make_config(
+        energy=EnergySettings(
+            max_price=0.20, cheap_price_mode=CheapPriceMode.MAX_PRICE_HARD
+        )
+    )
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.248,
+        solar_power_w=0.0,
+        heating_session_active=True,  # the planner chose this interval
+        plan_price_informed=True,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is False, decision.reason
 
 
 # ---------------------------------------------------------------------------

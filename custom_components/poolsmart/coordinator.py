@@ -30,6 +30,7 @@ from .core.config import (
     PoolKind,
     display_amount,
     FILTER_MEDIA_DERATE,
+    CheapPriceMode,
     ComfortSettings,
     EnergySettings,
     FiltrationSettings,
@@ -418,6 +419,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             ),
             energy=EnergySettings(
                 max_price=float(self._conf(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE)),
+                cheap_price_mode=self._conf(
+                    c.CONF_CHEAP_PRICE_MODE, CheapPriceMode.CHEAP_WINS
+                ),
+                cheap_price_ceiling=(
+                    float(self._conf(c.CONF_CHEAP_PRICE_CEILING))
+                    if self._conf(c.CONF_CHEAP_PRICE_CEILING) is not None
+                    else None
+                ),
                 negative_price_basis=self._conf(c.CONF_NEGATIVE_PRICE_BASIS, "total"),
                 solar_threshold_w=float(
                     self._conf(c.CONF_SOLAR_THRESHOLD_W)
