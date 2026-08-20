@@ -1,0 +1,99 @@
+
+onder sensor en schakelaar zitten nu:
+
+-Entiteiten
+
+Schakelaar circulatiepomp
+Zwembadwatertemperatuur
+Buitentemperatuur
+Temperatuur
+Achtertuin
+Temperatuur pompaanvoer (optioneel)
+
+Pump inlet temperature
+Uitlaattemperatuur circulatiepomp
+
+Debietmeter (m³/u)
+Vermogen pomp
+Stroomprijs (per kWh)
+pH-meting
+
+Zwembad Meting ph
+Meting vrij chloor (mg/L)
+Totaal chloor (mg/L)
+Broom (mg/L)
+Bromine (mg/L)
+Totale alkaliniteit (ppm)
+Cyanuurzuur / stabilisator (ppm)
+Totale hardheid (ppm)
+Zout (ppm)
+
+Signaal goedkope prijsperiode
+Actuele zonneopbrengst
+Zonneverwachting
+Weer
+
+Afdekhoes
+
+Schakelaar warmtepomp
+Inlaattemperatuur warmtepomp
+
+Pump inlet temperature
+Uitlaattemperatuur warmtepomp
+Vermogen warmtepomp
+
+
+////dit is mega verwarrend zou meer moeten zijn :
+
+Schakelaar circulatiepomp
+Temperatuur pompaanvoer (optioneel)
+Pump inlet temperature
+Uitlaattemperatuur circulatiepomp
+Vermogen pomp
+
+
+Schakelaar warmtepomp
+Inlaattemperatuur warmtepomp
+Uitlaattemperatuur warmtepomp
+Vermogen warmtepomp
+
+Debietmeter (m³/u)
+Afdekhoes
+
+Zwembadwatertemperatuur (onder Zwembad en pomp )
+
+
+deze onder Waterbehandeling:
+	pH-meting
+	Zwembad Meting ph
+	Meting vrij chloor (mg/L)
+	Totaal chloor (mg/L)
+	Broom (mg/L)
+	Bromine (mg/L)
+	Totale alkaliniteit (ppm)
+	Cyanuurzuur / stabilisator (ppm)
+	Totale hardheid (ppm)
+	Zout (ppm)
+
+onder nieuwe kop iets van (mnaar gebruik niet) weer/prijs)
+
+	Actuele zonneopbrengst (onder nieuwe kop iets van 
+	Zonneverwachting onder nieuwe kop iets van 
+	Weer (onder nieuwe kop iets van 
+	Buitentemperatuur 
+	Stroomprijs 
+	Signaal goedkope prijsperiode
+
+
+-Zwembad en pomp
+
+
+-Verwarmingstoestel
+-Wanneer verwarmen
+-Filtratie
+
+-Waterbehandeling
+
+-Meldingen
+
+-Gevorderd

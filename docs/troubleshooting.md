@@ -47,6 +47,57 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Configuration changes have no effect | Options not saved | Click "Submit" and reload the integration |
 | Entities disappeared after upgrade | Entity ID migration | Check the log for rename messages; update automations |
 
+### Single-Pool Limitation for Services
+
+All PoolSmart services (`record_dose`, `reset_learned`, `export_learning`,
+`import_learning`, `replace_learning`, `rebuild_learning`,
+`set_session_review`, `clear_debug_log`, `clear_all_history`) only work when
+**exactly one** PoolSmart config entry is loaded.
+
+If you set up two or more pools and call a service, it is refused with an error
+like:
+
+> Cannot record a dose: 2 PoolSmart pools are set up and this service cannot
+> yet target one of them specifically.
+
+This is a safety measure. The services were written for a single pool, and
+running them against every coordinator would, for example, log a dose recorded
+for one pool against all of them, or let an export overwrite itself once per pool
+— leaving only the last pool's history on disk.
+
+**Workaround:** Use only one PoolSmart config entry for now. Multi-pool service
+targeting is planned for a future release.
+
+### House Power Limit Notifications
+
+If you see notifications like:
+
+> Heating paused — house draw 2500 W + 1000 W for pump/heat pump = 3500 W,
+> above the 3000 W limit.
+
+but the heat pump is **not currently running**, this is expected behaviour. The
+demand limiter uses a **look-ahead** to prevent exceeding your household
+electrical cap:
+
+- When the pool pump and/or heat pump are **off**, their rated power draw is
+  **added** to the current household reading before comparing against the limit.
+- This prevents the meter from briefly showing a spike the moment the equipment
+  switches on — at which point it is too late to prevent tripping a breaker or
+  exceeding a contract cap.
+- Once the equipment is **running**, the meter reading already includes it, so
+  no extra is added and the system uses the real figure.
+
+**Common causes of false positives:**
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| Heating paused while everything else is off | Limit set too low | Raise `power_limit_w` — see [Configuration](configuration.md#house-power-limit) for how to calculate a realistic value |
+| Notifications during peak household usage | House draw legitimately high | Normal — the limiter is protecting your electrical cap; raise the limit or wait for usage to drop |
+| No `grid_power_sensor` configured | Sensor not mapped | Map your smart meter sensor in Configure → Sensors |
+
+See [Configuration — House Power Limit](configuration.md#house-power-limit) for
+details on choosing the right sensor and setting a realistic limit.
+
 ---
 
 ## Fault Isolation

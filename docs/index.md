@@ -110,7 +110,7 @@ Start here: [Getting Started Guide](getting_started.md) — first-time setup, ve
 | Hardware & wiring | [Hardware](hardware.md) | Bill of materials, pinouts, voltage divider |
 | ESPHome setup | [ESPHome](esphome.md) | Board configuration, probe calibration |
 | Sensor mapping | [Sensors](sensors.md) | Sensor placement, calibration procedures |
-| Configuration | [Configuration](configuration.md) | Options flow, entity reassignment |
+| Configuration | [Configuration](configuration.md) | Options flow, entity reassignment, house power limit |
 | Pre-filling the wizard | [Defaults](defaults.md) | Starting the wizard with your own figures |
 
 ### Reference
@@ -147,6 +147,18 @@ is also provided.
     - 💡 **Dynamic Prices:** Learn how [Price-Aware Heating](planning.md) works
     - 🧪 **Water Quality:** Review [Automated Dosing Math](chemistry.md)
     - 📊 **UI Layout:** Set up your [Lovelace Dashboards](lovelace/README.md)
+
+---
+
+## Known Limitations
+
+- **Services require a single pool.** All PoolSmart services (dose recording,
+  history import/export, learning reset, etc.) only work when exactly one
+  PoolSmart pool is configured. With two or more pools, service calls are refused.
+  See [Troubleshooting](troubleshooting.md#single-pool-limitation-for-services).
+- **House power limit needs the right sensor.** The demand limiter expects a
+  whole-house power sensor (e.g. from your smart meter), not the pool's own
+  consumption. See [Configuration](configuration.md#house-power-limit).
 
 ---
 

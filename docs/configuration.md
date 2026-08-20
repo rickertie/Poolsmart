@@ -57,6 +57,82 @@ with your own numbers filled in.
 
 ---
 
+## House Power Limit
+
+PoolSmart can pause heating when your total household power draw approaches a
+cap you set. This protects a hard electrical limit or contract cap from being
+exceeded by the combined draw of the pool equipment and the rest of the house.
+
+### Setting it up
+
+You need two settings, both in **Configure → Sensors and switches** or
+**Configure → When to heat**:
+
+| Setting | Where | What to enter |
+|---|---|---|
+| `grid_power_sensor` | Sensors and switches | Your **total household power** sensor (e.g. from a smart meter or the Home Assistant energy dashboard). This must be the whole-house reading, **not** the pool's own consumption. |
+| `power_limit_w` | When to heat | The maximum total household draw in watts. |
+
+### How the limit works
+
+PoolSmart compares the current household draw against your limit. When the
+pool pump and/or heat pump are **off**, their rated power draw is added to
+the current reading first — a **look-ahead** that prevents a brief spike the
+moment the equipment starts. Once running, the meter reading already includes
+them, so no extra is added.
+
+This is why you may see "heating paused" notifications even when the heat
+pump is off: the combined household draw plus the pool equipment's rated
+power would exceed the cap once the equipment starts.
+
+### Choosing a realistic limit
+
+Use this rule of thumb:
+
+```
+power_limit_w = (your electrical cap) − (comfort margin)
+```
+
+**Example:**
+
+| | Value |
+|---|---|
+| Electrical cap (breaker or contract) | 5 000 W |
+| Comfort margin | 500 W |
+| → Set `power_limit_w` to | 4 500 W |
+
+Then check against your actual peak usage:
+
+1. Note your highest typical household draw (washing machine + oven + kettle
+   running at once — look at your smart meter history).
+2. Add the pool pump power (`pump_power_kw`) and heat pump rated input
+   (`hp_input_kw`), both in watts.
+3. If the sum exceeds your cap, the limiter will keep the heat pump off during
+   those peaks — which is the intended behaviour.
+
+If the notification still seems too aggressive, raise the limit. If the pool
+never heats because the limit is too generous, lower it.
+
+### Notification format
+
+When the limit blocks heating, the notification shows the breakdown:
+
+> Heating paused — house draw **2 500 W** + **1 000 W** for pump/heat pump =
+> **3 500 W**, above the **3 000 W** limit.
+
+- The first number is the current household draw from your `grid_power_sensor`.
+- The second number is the rated power of the pool equipment that is currently
+  off and would need to start.
+- The third number is the projected total, compared against your configured
+  limit.
+
+### Troubleshooting
+
+See [Troubleshooting — House Power Limit Notifications](troubleshooting.md#house-power-limit-notifications)
+for common causes of unexpected pausing.
+
+---
+
 ## See Also
 
 - [Sensors](sensors.md) — Mapping your sensors to the right fields

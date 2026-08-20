@@ -108,11 +108,21 @@ def _demand_allows_heating(state: PoolState, config: PoolConfig) -> tuple[bool, 
         additional += config.pump.power_kw * 1000.0
     projected = state.grid_power_w + additional
 
+    pool_part = (
+        f" + {additional:.0f} W for pump/heat pump"
+        if additional
+        else ""
+    )
     if projected <= limit:
-        return True, f"house draw would be {projected:.0f} W, within the {limit:.0f} W cap"
+        return (
+            True,
+            f"house draw {state.grid_power_w:.0f} W{pool_part} = "
+            f"{projected:.0f} W, within the {limit:.0f} W limit",
+        )
     return (
         False,
-        f"house draw would reach {projected:.0f} W against a {limit:.0f} W cap",
+        f"house draw {state.grid_power_w:.0f} W{pool_part} = "
+        f"{projected:.0f} W, above the {limit:.0f} W limit",
     )
 
 

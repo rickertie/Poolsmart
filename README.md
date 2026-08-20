@@ -154,6 +154,18 @@ balancing energy costs, swim schedules, and equipment protection.
 
 ---
 
+## Known Limitations
+
+- **Services require a single pool.** All PoolSmart services (dose recording,
+  history import/export, learning reset, etc.) only work when exactly one
+  PoolSmart pool is configured. With two or more pools, service calls are refused.
+  See [Troubleshooting](docs/troubleshooting.md#single-pool-limitation-for-services).
+- **House power limit needs the right sensor.** The demand limiter expects a
+  whole-house power sensor (e.g. from your smart meter), not the pool's own
+  consumption. See [Configuration](docs/configuration.md#house-power-limit).
+
+---
+
 ## License
 
 AGPL-3.0-or-later
