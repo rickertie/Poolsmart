@@ -18,6 +18,14 @@ Setup asks three things before anything else: how the pool is built, what heats
 it, and whether there is a solar collector alongside. Those answers decide which
 of the later questions make sense at all.
 
+<p align="center">
+  <img src="images/HeatPump.svg" width="220" alt="An installed pool heat pump unit">
+</p>
+
+A heat pump is the source everything else in this document is written against —
+the efficiency curve, the operating envelope, and the compressor protection all
+exist because a heat pump has weather-dependent limits the other sources don't.
+
 | Source | What it has |
 |---|---|
 | Heat pump | Efficiency curve, minimum air temperature, compressor protection |
@@ -39,7 +47,18 @@ field they have to guess at, and a guess is worse than a default.
 ## Solar Collectors
 
 A solar collector is advised, not controlled. Almost every one is plumbed
-through a manual three-way valve. The integration compares the collector against
+through a manual three-way valve: one position sends the return flow through the
+collector loop, the other bypasses it straight back to the pool. Nothing in
+PoolSmart operates that valve — it only tells you which position is currently
+worth having.
+
+<p align="center">
+  <img src="images/3wayValve.svg" width="260" alt="Manual three-way valve installed in the solar collector return line">
+  <img src="images/3wayValve-schema.svg" width="320" alt="Wiring and plumbing schema for the three-way valve routing flow between the pool and the solar collector">
+</p>
+<p align="center"><em>The valve itself, and how it routes flow between the pool and the collector loop.</em></p>
+
+The integration compares the collector against
 the pool and says when opening it is free heat — and, just as usefully, when the
 collector is colder than the pool and water sent through it would lose heat
 rather than gain it.

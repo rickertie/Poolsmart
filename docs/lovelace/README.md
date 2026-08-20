@@ -14,6 +14,11 @@ sidebar), see the [README section on the management panel](../index.md#the-manag
 `dashboard.yaml` is a complete dashboard: three tabs, in Dutch, in a style close
 to what most Home Assistant pool dashboards end up looking like.
 
+<p align="center">
+  <img src="../images/dashboard-mockup.svg" width="650" alt="PoolSmart three-tab household dashboard alongside the separate maintainer panel at /poolsmart">
+</p>
+<p align="center"><em>The household dashboard on the left, the maintainer panel on the right — deliberately two different things. See "What Is Deliberately Missing" below.</em></p>
+
 ## Installing It
 
 Open the dashboard, click the pencil at the top right, then the three dots, then

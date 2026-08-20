@@ -14,7 +14,12 @@ the wizard with your own figures, see [Defaults](defaults.md).
 ## Changing Things Afterwards
 
 Nothing is locked in. Settings → Devices & Services → PoolSmart → **Configure**
-opens a menu of subjects:
+opens a menu of subjects. All eight branch from the same hub — none depends on
+another being filled in first, so there is no "right order" to work through them:
+
+<p align="center">
+  <img src="images/options-flow-map.svg" width="650" alt="Configure menu map: eight settings sections branching from one central Configure hub">
+</p>
 
 | Section | Contains |
 |---|---|

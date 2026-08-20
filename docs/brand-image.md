@@ -17,6 +17,10 @@ the CDN, and no submission anywhere is required — the `home-assistant/brands`
 repository now auto-closes pull requests for custom integrations and points
 contributors at this mechanism instead.
 
+<p align="center">
+  <img src="assets/logo.png" width="320" alt="PoolSmart logo, 927×256, as served from custom_components/poolsmart/brand/logo.png">
+</p>
+
 ## What Ships
 
 | File | Size | Used for |
