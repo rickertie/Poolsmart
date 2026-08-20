@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime, timedelta
 
-from .config import NegativePriceBasis, PoolConfig
+from .config import CheapPriceMode, NegativePriceBasis, PoolConfig
 from .filtration import FiltrationStatus
 from .trace import Trace, Verdict
 from .models import (
@@ -53,13 +53,40 @@ def _negative_price(state: PoolState, config: PoolConfig) -> tuple[bool, float |
 
 
 def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
-    """Whether the current price and solar situation permit heating."""
-    # An external cheap-price signal outranks the fixed ceiling, because it knows
-    # something the ceiling cannot: where this moment sits within today's prices.
-    # A day whose cheapest hour is above the limit would otherwise never heat,
-    # and a cheap hour on an expensive day would be missed.
+    """Whether the current price and solar situation permit heating.
+
+    An external cheap-price signal can outrank the fixed ceiling, because it
+    knows something the ceiling cannot: where this moment sits within today's
+    prices. A day whose cheapest hour is above the limit would otherwise
+    never heat, and a cheap hour on an expensive day would be missed. Whether
+    it actually does outrank the ceiling -- always, never past a price of its
+    own, or never past max_price itself -- is config.energy.cheap_price_mode.
+    See CheapPriceMode and issue #22.
+    """
     if state.cheap_price_now is True:
-        return True, "the tariff integration marks this as a cheap period"
+        mode = config.energy.cheap_price_mode
+        if mode == CheapPriceMode.MAX_PRICE_HARD:
+            hard_limit = config.energy.max_price
+            if (
+                hard_limit is None
+                or state.price_total is None
+                or state.price_total <= hard_limit
+            ):
+                return True, "the tariff integration marks this as a cheap period"
+            # Falls through: max_price is a hard ceiling in this mode, so a
+            # "cheap" hour that still exceeds it is judged below like any
+            # other price, instead of being waved through.
+        elif mode == CheapPriceMode.CHEAP_WINS_CAPPED:
+            ceiling = config.energy.cheap_price_ceiling
+            if (
+                ceiling is None
+                or state.price_total is None
+                or state.price_total <= ceiling
+            ):
+                return True, "the tariff integration marks this as a cheap period"
+            # Falls through: the cheap signal's own ceiling was crossed.
+        else:
+            return True, "the tariff integration marks this as a cheap period"
 
     limit = config.energy.max_price
     if state.mode is Mode.ECO and limit is not None:
@@ -137,6 +164,10 @@ def _plan_justifies_price(state: PoolState) -> bool:
 
     A fallback means "heat when allowed", not "heat regardless". Only Boost, a
     negative price, and a genuine cheapest-slot plan override the ceiling.
+
+    Both call sites gate this on CheapPriceMode.MAX_PRICE_HARD themselves,
+    since that mode's whole promise is that nothing -- neither the cheap
+    signal nor this plan-based fallback -- heats above max_price. See #22.
     """
     if not state.plan_price_informed:
         return False
@@ -225,7 +256,10 @@ def _augment_with_heating(
         why = "Boost is on, so price is ignored"
     else:
         acceptable, reason = _price_acceptable(state, config)
-        planned = _plan_justifies_price(state)
+        planned = (
+            config.energy.cheap_price_mode != CheapPriceMode.MAX_PRICE_HARD
+            and _plan_justifies_price(state)
+        )
         if not (acceptable or planned):
             return decision
         why = (
@@ -414,7 +448,10 @@ def _walk(
             )
         else:
             acceptable, why = _price_acceptable(state, config)
-            planned = _plan_justifies_price(state)
+            planned = (
+                config.energy.cheap_price_mode != CheapPriceMode.MAX_PRICE_HARD
+                and _plan_justifies_price(state)
+            )
             if acceptable:
                 return win(
                     Decision(

@@ -289,6 +289,16 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                 if plan
                 else None
             ),
+            #: The settings adjusted most often, so the panel's Settings tab can
+            #: offer them directly instead of sending the user to Configure for
+            #: a single number. See issue #23.
+            "settings": {
+                "target_temp": coordinator.target_temp,
+                "max_temp": config.comfort.max_temp,
+                "max_price": config.energy.max_price,
+                "solar_threshold_w": config.energy.solar_threshold_w,
+                "power_limit_w": config.energy.power_limit_w,
+            },
             "derived": {
                 "daily_filtration_hours": round(config.daily_filtration_hours(water, measured), 3),
                 "block_hours": round(config.block_hours(water, measured), 3),

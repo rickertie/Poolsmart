@@ -47,6 +47,35 @@ record_dose:
             - label: kilogram
               value: kg
 
+set_setting:
+  name: Change a setting
+  description: >-
+    Change one of the settings otherwise only reachable through Configure.
+    Meant for the panel's Settings tab, where these are the values people
+    adjust most often -- see issue #23.
+  fields:
+    key:
+      name: Setting
+      required: true
+      selector:
+        select:
+          options:
+            - label: Desired temperature
+              value: target_temp
+            - label: Maximum price for heating
+              value: max_price
+            - label: Solar surplus for free heating
+              value: solar_threshold
+            - label: House power limit
+              value: power_limit
+    value:
+      name: Value
+      required: true
+      selector:
+        number:
+          mode: box
+          step: 0.01
+
 reset_learned:
   name: Reset one learned value
   description: >-

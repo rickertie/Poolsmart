@@ -44,7 +44,7 @@ def _parse_iso(value: str | None) -> datetime | None:
 #: list is dropped, so a confused model cannot propose altering a safety limit.
 ADJUSTABLE = {
     c.CONF_TURNOVER_FACTOR: (0.5, 4.0),
-    c.CONF_MAX_PRICE: (0.0, 2.0),
+    c.CONF_MAX_PRICE: c.MAX_PRICE_BOUNDS,
     c.CONF_SOLAR_THRESHOLD_W: (0.0, 20000.0),
     c.CONF_TEMP_HYSTERESIS: (0.1, 3.0),
     c.CONF_MIN_ON_MINUTES: (1.0, 120.0),
