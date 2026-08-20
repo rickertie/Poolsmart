@@ -1,11 +1,10 @@
-> [Home](index.md) | [Getting Started](getting_started.md) | [Architecture](architecture.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)
-
----
-
 # Getting Started
 
 Welcome to PoolSmart. This guide takes you from a fresh installation to a working,
 understood system in about 15 minutes.
+
+!!! tip "Time estimate"
+    5 minutes to verify, 10 minutes to map sensors — no hardware changes needed.
 
 ---
 
@@ -68,8 +67,8 @@ are auto-discovered. Otherwise, map them manually:
 | Solar collector temperature | No | Enables solar surplus detection |
 | Electricity price sensor | No | Enables price-aware scheduling |
 
-> **Tip:** Leave any sensor you don't have blank. PoolSmart disables the matching
-> feature gracefully and reports it in Diagnostics.
+!!! tip "Graceful degradation"
+    Leave any sensor you don't have blank. PoolSmart disables the matching feature gracefully and reports it in Diagnostics — nothing breaks.
 
 ---
 

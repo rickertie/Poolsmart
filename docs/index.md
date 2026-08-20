@@ -1,27 +1,6 @@
-<p align="center">
-  <img src="assets/logo.png" width="380" alt="PoolSmart logo">
-</p>
+<div class="ps-hero" markdown>
 
-<p align="center">
-  <em>Intelligent swimming pool controller for Home Assistant — ESPHome measures, HA decides.</em>
-</p>
-
-<p align="center">
-  <a href="https://hacs.xyz/docs/faq/custom_repositories">
-    <img src="https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square&logo=homeassistant&logoColor=white" alt="HACS Custom">
-  </a>
-  <a href="https://github.com/rickertie/Poolsmart/releases">
-    <img src="https://img.shields.io/github/v/release/rickertie/Poolsmart?style=flat-square&color=blue" alt="Version">
-  </a>
-  <a href="https://github.com/rickertie/Poolsmart/releases">
-    <img src="https://img.shields.io/github/downloads/rickertie/Poolsmart/total?style=flat-square&color=brightgreen" alt="Downloads">
-  </a>
-  <a href="https://github.com/rickertie/Poolsmart/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-orange?style=flat-square" alt="License">
-  </a>
-</p>
-
----
+<span class="ps-hero__kicker">HACS · ESPHome · Home Assistant 2024+</span>
 
 PoolSmart turns your pool into a self-optimizing system. Automate filtration scheduling,
 heat pump control, solar optimization, and water chemistry dosing — all integrated with
@@ -30,69 +9,113 @@ balancing energy costs, swim schedules, and equipment protection.
 
 > 🤖 **_Disclaimer: Co-written with AI. If your pool turns into a foam party, blame the LLM (or check your pH)._**
 
-<p align="center">
-  <img src="images/architecture-overview.svg" width="700" alt="PoolSmart System Architecture">
-</p>
+<div class="ps-hero__actions" markdown>
+[Get started :material-arrow-right:](getting_started.md){ .ps-btn .ps-btn--primary }
+[View on GitHub :material-github:](https://github.com/rickertie/Poolsmart){ .ps-btn .ps-btn--secondary }
+</div>
+
+<div class="ps-hero__meta" markdown>
+<span class="ps-badge">:material-puzzle: HACS Custom</span>
+<span class="ps-badge">:material-license: AGPL-3.0-or-later</span>
+<span class="ps-badge">:material-timer-outline: 30 s decision tick</span>
+<span class="ps-badge">:material-translate: EN · NL entities</span>
+</div>
+
+</div>
+
+<div class="ps-grid ps-grid--3" markdown>
+
+<div class="ps-card ps-card--accent" markdown>
+<div class="ps-card__icon">:material-pump:</div>
+<p class="ps-card__title">Smart filtration</p>
+<p class="ps-card__text">Runtime from pool volume × turnover ÷ measured flow. Self-corrects as filter pressure rises; heating runtime counts toward the quota.</p>
+</div>
+
+<div class="ps-card" markdown>
+<div class="ps-card__icon">:material-heat-pump-outline:</div>
+<p class="ps-card__title">Price- & solar-aware heating</p>
+<p class="ps-card__text">Picks the cheapest COP-weighted hours before swim time. Heats on free solar surplus or negative prices, pauses on house-power cap.</p>
+</div>
+
+<div class="ps-card" markdown>
+<div class="ps-card__icon">:material-brain:</div>
+<p class="ps-card__title">Self-learning</p>
+<p class="ps-card__text">Learns heat loss, heating rate, and COP per 5 °C band. Manual session review with weighted smoothing and outlier rejection.</p>
+</div>
+
+<div class="ps-card" markdown>
+<div class="ps-card__icon">:material-test-tube:</div>
+<p class="ps-card__title">Water chemistry</p>
+<p class="ps-card__text">pH readings become dosing instructions. Intervals scale with water temperature; logs and reminders included.</p>
+</div>
+
+<div class="ps-card" markdown>
+<div class="ps-card__icon">:material-solar-power-variant:</div>
+<p class="ps-card__title">Solar optimization</p>
+<p class="ps-card__text">Uses any irradiance or solar-production sensor — panels not required. Sunny idle periods teach heat loss instead of being discarded.</p>
+</div>
+
+<div class="ps-card" markdown>
+<div class="ps-card__icon">:material-shield-check-outline:</div>
+<p class="ps-card__title">Equipment protection</p>
+<p class="ps-card__text">Compressor minimum off/run times, frost protection, flow adequacy by delta-T, and emergency stop — none negotiable by schedule.</p>
+</div>
+
+</div>
+
+> 🤖 **Co-written with AI.** If your pool turns into a foam party, blame the LLM — or check your pH.
+
+<figure markdown>
+  ![PoolSmart System Architecture — ESPHome sensors feed Home Assistant, the decision engine evaluates every 30 s, and controls pump, heat pump, and dosing](images/architecture-overview.svg){ width="700" loading="lazy" }
+  <figcaption>ESPHome → Home Assistant → Decision Engine → pool equipment. One tick, one winner.</figcaption>
+</figure>
 
 ---
 
-## Features
+## Install in two minutes
 
-| | | |
-|---|---|---|
-| **Smart filtration** — runtime from pool volume and measured flow | **Heat pump control** — plans around dynamic prices and solar surplus | **Self-learning** — learns heat loss, heating rate, and COP, with manual session review |
-| **Water chemistry** — pH readings become dosing instructions | **Solar optimization** — heats with free surplus | **Price-aware scheduling** — works backwards from swim time |
-| **Compressor protection** — minimum off/run times enforced | **AI advisory** — suggests settings, applies nothing without approval | **Dashboards** — detailed three-tab view and simple household page |
+### Option A — One-click (recommended)
 
----
+1. Add PoolSmart to HACS:
 
-## Installation
-
-### Method 1: Easy (One-Click)
-
-1. Click the button below to add PoolSmart to HACS automatically:
-
-   [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rickertie&repository=Poolsmart&category=integration)
+    [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rickertie&repository=Poolsmart&category=integration)
 
 2. Click **Download** in HACS and restart Home Assistant.
-3. Click the button below to configure PoolSmart:
+3. Add the integration:
 
-   [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=poolsmart)
+    [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=poolsmart)
 
----
+### Option B — Manual
 
-### Method 2: Manual
+1. In HACS → **Custom repositories**, add `rickertie/Poolsmart` as **Integration**.
+2. Download, restart Home Assistant.
+3. Go to **Settings → Devices & Services → Add Integration → PoolSmart**.
 
-1. Open **HACS** in your Home Assistant instance.
-2. Click **Custom Repositories** (top right) and add `rickertie/Poolsmart` with category **Integration**.
-3. Download PoolSmart and restart Home Assistant.
-4. Go to **Settings → Devices & Services → Add Integration → PoolSmart**.
-
-!!! note "Full setup"
-    **Full setup** (unlock all features):
-    - Map your temperature sensors and flow meter
-    - Configure heating source and target temperature
+!!! note "Unlock all features after install"
+    - Map temperature probes and flow meter
+    - Choose heating source and target temperature
     - Connect a price sensor for cost optimization
-    - See [Hardware](hardware.md) and [ESPHome](esphome.md)
+    - See [Hardware](hardware.md) and [ESPHome setup](esphome.md)
+
+<figure markdown>
+  ![PoolSmart Dashboard — three-tab Lovelace view for household members, management panel at /poolsmart for maintainers](images/dashboard-mockup.svg){ width="700" loading="lazy" }
+  <figcaption>Household dashboard (Lovelace) vs maintainer panel at <code>/poolsmart</code> — deliberately separate.</figcaption>
+</figure>
 
 ---
 
-<p align="center">
-  <img src="images/dashboard-mockup.svg" width="700" alt="PoolSmart Dashboard Mockup">
-</p>
+## Explore the docs
 
-## Documentation
+### Start here
 
-### Getting Started
+**[Getting Started](getting_started.md)** — 15 minutes from fresh install to first verified decision.
 
-Start here: [Getting Started Guide](getting_started.md) — first-time setup, verifying your installation.
-
-### Core Concepts
+### Core concepts
 
 | Topic | Document | Covers |
 |---|---|---|
 | Architecture & decision core | [Architecture](architecture.md) | Priority ladder, filtration math, AI layer |
-| Heating planning & prices | [Planning](planning.md) | Maintenance vs. seasonal mode, price integrations |
+| Heating planning & prices | [Planning](planning.md) | Maintenance vs seasonal mode, price integrations |
 | Self-learning model | [Learning](learning.md) | Learned parameters, validation rules, session logging |
 
 ### Subsystems
@@ -103,7 +126,7 @@ Start here: [Getting Started Guide](getting_started.md) — first-time setup, ve
 | Heating sources | [Heating](heating.md) | Heat pump, electric, solar, gas |
 | Water chemistry | [Chemistry](chemistry.md) | Dosing, test intervals, circulation timing |
 
-### Setup & Configuration
+### Setup & configuration
 
 | Topic | Document | Covers |
 |---|---|---|
@@ -119,49 +142,40 @@ Start here: [Getting Started Guide](getting_started.md) — first-time setup, ve
 |---|---|---|
 | Entity IDs | [Entities](entities.md) | Fixed IDs, translated names, source sensors |
 | Management panel | [Panel](panel.md) | Six-tab sidebar panel at `/poolsmart` |
-| Dashboards | [Lovelace dashboards](lovelace/README.md) | Installing and customizing Lovelace dashboards |
+| Lovelace dashboards | [Lovelace dashboards](lovelace/README.md) | Installing and customizing Lovelace dashboards |
 | Logging & diagnostics | [Logging](logging.md) | Logbook entries, notifications, full trace |
 | Troubleshooting | [Troubleshooting](troubleshooting.md) | Common issues, fault isolation, diagnostics |
 | Development | [Development](development.md) | Running tests, contributing |
-| Changelog | [CHANGELOG.md](https://github.com/rickertie/Poolsmart/blob/main/CHANGELOG.md) | Release history |
+| Changelog | [CHANGELOG](https://github.com/rickertie/Poolsmart/blob/main/CHANGELOG.md) | Release history |
 
 ---
 
-## The Management Panel
+## The management panel
 
-PoolSmart ships a full management panel at `/poolsmart` with six tabs: Overview,
-Planning, Sessions, Learning, Diagnostics, and Settings. It visualizes the decision
-ladder, lets you review past heating and filtration sessions, and exposes the
-self-learning engine — see [Panel](panel.md) for the complete reference.
-
-For everyday use by household members, a simple [Lovelace dashboard](lovelace/README.md)
-is also provided.
+PoolSmart ships a full panel at `/poolsmart` with six tabs: **Overview, Planning, Sessions, Learning, Settings, Diagnostics**.
+It visualizes the decision ladder, shows why the last decision was made, and exposes the self-learning engine.
+See [Panel](panel.md) for the full reference. For everyday household use, install the [Lovelace dashboard](lovelace/README.md).
 
 ---
 
-## Quick Links
+## Quick links
 
-!!! tip
-    - 🚀 **First time?** Check out the [Getting Started Guide](getting_started.md)
-    - 📈 **COP & Heat loss:** Read about the [Self-Learning Engine](learning.md)
-    - 💡 **Dynamic Prices:** Learn how [Price-Aware Heating](planning.md) works
-    - 🧪 **Water Quality:** Review [Automated Dosing Math](chemistry.md)
-    - 📊 **UI Layout:** Set up your [Lovelace Dashboards](lovelace/README.md)
+!!! tip "Where to next?"
+    - :material-rocket-launch: **First time?** [Getting Started](getting_started.md)
+    - :material-chart-line: **COP & heat loss:** [Self-Learning Engine](learning.md)
+    - :material-currency-eur: **Dynamic prices:** [Price-Aware Heating](planning.md)
+    - :material-test-tube: **Water quality:** [Automated Dosing](chemistry.md)
+    - :material-view-dashboard: **UI layout:** [Lovelace Dashboards](lovelace/README.md)
 
 ---
 
-## Known Limitations
+## Known limitations
 
-- **Services require a single pool.** All PoolSmart services (dose recording,
-  history import/export, learning reset, etc.) only work when exactly one
-  PoolSmart pool is configured. With two or more pools, service calls are refused.
-  See [Troubleshooting](troubleshooting.md#single-pool-limitation-for-services).
-- **House power limit needs the right sensor.** The demand limiter expects a
-  whole-house power sensor (e.g. from your smart meter), not the pool's own
-  consumption. See [Configuration](configuration.md#house-power-limit).
+- **Services require a single pool.** All PoolSmart services (dose recording, history import/export, learning reset, etc.) only work when exactly one PoolSmart pool is configured. With two or more pools, service calls are refused. See [Troubleshooting](troubleshooting.md#single-pool-limitation-for-services).
+- **House power limit needs the right sensor.** The demand limiter expects a whole-house power sensor (e.g. from your smart meter), not the pool's own consumption. See [Configuration](configuration.md#house-power-limit).
 
 ---
 
 ## License
 
-AGPL-3.0-or-later
+AGPL-3.0-or-later. See [LICENSE](https://github.com/rickertie/Poolsmart/blob/main/LICENSE) on GitHub.

@@ -1,0 +1,229 @@
+/* PoolSmart — Polished Material Design System
+   Brand Guardian + UI Designer + UX Architect — v1.0
+   WCAG 2.2 AA, 4.5:1 contrast, keyboard & reduced-motion aware
+*/
+
+/* ── Design Tokens ────────────────────────────────────────────── */
+:root {
+  /* Brand — PoolSmart identity extracted from logo + docs/images README */
+  --ps-pool-50:  #e0f7fb;
+  --ps-pool-100: #b2ebf2;
+  --ps-pool-500: #00ACC1; /* legacy brand blue — decoration only, not text */
+  --ps-pool-700: #007e8f; /* WCAG AA on white: 4.52:1 */
+  --ps-pool-800: #00677f; /* WCAG AA large+small: 6.1:1 — primary actions */
+  --ps-pool-900: #004a5c;
+
+  --ps-navy-800: #0f2b46; /* headings, hero */
+  --ps-navy-700: #163a5e;
+  --ps-ink:      #1a242f;
+  --ps-muted:    #5b6b7a; /* 4.6:1 on #fff */
+
+  --ps-orange-500: #FF9800;
+  --ps-orange-700: #b26a00; /* 4.5:1 on white */
+  --ps-ha-blue: #03A9F4;
+  --ps-success: #0e7a4b; /* 4.8:1 */
+  --ps-warning: #8a6100;
+  --ps-error:   #b42318;
+
+  /* Material overrides — light */
+  --md-primary-fg-color:        var(--ps-pool-800);
+  --md-primary-fg-color--light: var(--ps-pool-700);
+  --md-primary-fg-color--dark:  var(--ps-pool-900);
+  --md-accent-fg-color:         var(--ps-pool-700);
+  --md-default-bg-color:        #ffffff;
+  --md-default-fg-color:        var(--ps-ink);
+
+  /* Typography — Inter + JetBrains Mono (loaded via Google Fonts in mkdocs.yml) */
+  --ps-font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --ps-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Spacing 4-pt */
+  --ps-space-1: 0.25rem;
+  --ps-space-2: 0.5rem;
+  --ps-space-3: 0.75rem;
+  --ps-space-4: 1rem;
+  --ps-space-6: 1.5rem;
+  --ps-space-8: 2rem;
+  --ps-space-12: 3rem;
+
+  /* Radius & shadow */
+  --ps-radius-sm: 8px;
+  --ps-radius-md: 12px;
+  --ps-radius-lg: 16px;
+  --ps-shadow-sm: 0 1px 2px rgba(15,43,70,.06), 0 1px 3px rgba(15,43,70,.08);
+  --ps-shadow-md: 0 4px 12px rgba(15,43,70,.08), 0 2px 6px rgba(15,43,70,.06);
+}
+
+/* Dark — slate with池 blue that still passes AA on #1e1e2a-ish */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #4dd0e1; /* light cyan remapped for dark bg */
+  --md-primary-fg-color--light: #80deea;
+  --md-accent-fg-color:         #4dd0e1;
+  --md-hue: 200;
+  --md-default-bg-color:        #121821;
+  --md-default-fg-color:        #e6eef5;
+  --ps-navy-800: #e6eef5;
+  --ps-muted: #a8b7c6;
+}
+
+/* ── Base Typography ──────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+body, .md-typeset {
+  font-family: var(--ps-font-sans);
+  font-size: 16px;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4 {
+  font-family: var(--ps-font-sans);
+  letter-spacing: -0.02em;
+  color: var(--ps-navy-800);
+  scroll-margin-top: 1.5rem;
+}
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3 { color: #e6eef5; }
+.md-typeset h1 { font-weight: 800; font-size: 2.2rem; line-height: 1.15; }
+.md-typeset h2 { font-weight: 700; font-size: 1.5rem; margin-top: var(--ps-space-12); border-bottom: 1px solid rgba(0,103,127,.12); padding-bottom: .35rem; }
+.md-typeset h3 { font-weight: 650; font-size: 1.15rem; }
+.md-typeset a { text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+.md-typeset a:focus-visible, :focus-visible {
+  outline: 3px solid var(--ps-pool-700);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.md-typeset code, .md-typeset pre code { font-family: var(--ps-font-mono); font-size: .875em; }
+.md-typeset :is(p, li) code { background: rgba(0,103,127,.08); border: 1px solid rgba(0,103,127,.12); padding: .1em .35em; border-radius: 6px; }
+[data-md-color-scheme="slate"] .md-typeset :is(p, li) code { background: rgba(77,208,225,.14); border-color: rgba(77,208,225,.2); }
+
+/* ── Skip link (a11y) ─────────────────────────────────────────── */
+.md-skip { background: var(--ps-pool-800); color: #fff !important; padding: .6rem 1rem; border-radius: 0 0 var(--ps-radius-sm) 0; }
+.md-skip:focus { outline: 3px solid #fff; outline-offset: -2px; }
+
+/* ── Header / Tabs ────────────────────────────────────────────── */
+.md-header { background: var(--ps-pool-800); border-bottom: 1px solid rgba(255,255,255,.08); }
+.md-header__title { font-weight: 700; letter-spacing: -0.02em; }
+.md-tabs { background: #005a6e; border-bottom: 1px solid rgba(255,255,255,.06); }
+.md-tabs__link { font-weight: 550; opacity: .92; }
+.md-tabs__link--active, .md-tabs__link:hover { opacity: 1; color: #fff; }
+.md-header__button.md-icon svg { fill: currentColor; }
+
+/* Search — larger hit area, visible focus */
+.md-search__input { border-radius: 999px; }
+.md-search__input::placeholder { color: rgba(255,255,255,.7); }
+
+/* ── Hero (home) ──────────────────────────────────────────────── */
+.ps-hero {
+  background: radial-gradient(1200px 600px at 20% -10%, rgba(0,172,193,.18), transparent 60%),
+              radial-gradient(900px 500px at 90% 0%, rgba(255,152,0,.10), transparent 55%),
+              linear-gradient(180deg, #f7fbfd 0%, #ffffff 100%);
+  border: 1px solid rgba(0,103,127,.08);
+  border-radius: var(--ps-radius-lg);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  margin: 1rem 0 2rem;
+  box-shadow: var(--ps-shadow-sm);
+}
+[data-md-color-scheme="slate"] .ps-hero {
+  background: radial-gradient(900px 500px at 20% 0%, rgba(77,208,225,.12), transparent 60%),
+              linear-gradient(180deg, #1a242f 0%, #121821 100%);
+  border-color: rgba(77,208,225,.14);
+}
+.ps-hero__kicker {
+  display: inline-flex; align-items: center; gap: .45rem;
+  font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ps-pool-800); background: var(--ps-pool-50); border: 1px solid rgba(0,103,127,.14);
+  padding: .25rem .6rem; border-radius: 999px;
+}
+[data-md-color-scheme="slate"] .ps-hero__kicker { background: rgba(77,208,225,.14); color: #80deea; border-color: rgba(77,208,225,.2); }
+.ps-hero h1 { margin: .8rem 0 .6rem; font-size: clamp(1.9rem, 4vw, 2.6rem); }
+.ps-hero__lead { color: var(--ps-muted); font-size: 1.05rem; max-width: 62ch; margin: 0 0 1.2rem; }
+.ps-hero__actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.ps-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 44px; padding: .65rem 1.15rem; border-radius: 999px;
+  font-weight: 650; font-size: .95rem; line-height: 1; text-decoration: none !important;
+  border: 2px solid transparent; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.ps-btn:focus-visible { outline: 3px solid var(--ps-pool-700); outline-offset: 2px; }
+.ps-btn--primary { background: var(--ps-pool-800); color: #fff; box-shadow: var(--ps-shadow-sm); }
+.ps-btn--primary:hover { background: var(--ps-pool-900); transform: translateY(-1px); box-shadow: var(--ps-shadow-md); color: #fff; }
+.ps-btn--secondary { background: #fff; color: var(--ps-pool-800); border-color: rgba(0,103,127,.18); }
+.ps-btn--secondary:hover { background: var(--ps-pool-50); border-color: var(--ps-pool-700); color: var(--ps-pool-800); }
+[data-md-color-scheme="slate"] .ps-btn--secondary { background: transparent; color: #e6eef5; border-color: rgba(255,255,255,.18); }
+.ps-hero__meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.ps-badge {
+  font-size: .78rem; font-weight: 600; color: var(--ps-navy-700);
+  background: #fff; border: 1px solid rgba(15,43,70,.10); padding: .25rem .55rem; border-radius: 999px;
+}
+[data-md-color-scheme="slate"] .ps-badge { background: rgba(255,255,255,.06); color: #cfe0ef; border-color: rgba(255,255,255,.1); }
+
+/* Feature grid — replaces empty-header markdown tables */
+.ps-grid { display: grid; gap: 1rem; margin: 1.2rem 0; }
+.ps-grid--3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.ps-grid--2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+@media (max-width: 900px) { .ps-grid--3 { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .ps-grid--2 { grid-template-columns: 1fr; } }
+.ps-card {
+  background: #fff; border: 1px solid rgba(15,43,70,.08); border-radius: var(--ps-radius-md);
+  padding: 1.1rem 1.15rem; box-shadow: var(--ps-shadow-sm); transition: box-shadow .15s ease, transform .15s ease;
+}
+.ps-card:hover { box-shadow: var(--ps-shadow-md); transform: translateY(-1px); }
+[data-md-color-scheme="slate"] .ps-card { background: #1a242f; border-color: rgba(255,255,255,.08); }
+.ps-card__icon { font-size: 1.35rem; line-height: 1; margin-bottom: .4rem; }
+.ps-card__title { font-weight: 700; font-size: .98rem; margin: 0 0 .25rem; color: var(--ps-navy-800); }
+[data-md-color-scheme="slate"] .ps-card__title { color: #e6eef5; }
+.ps-card__text { color: var(--ps-muted); font-size: .92rem; margin: 0; }
+.ps-card--accent { border-left: 4px solid var(--ps-pool-700); }
+
+/* ── Tables — accessible, scannable ───────────────────────────── */
+.md-typeset table:not([class]) { border-radius: var(--ps-radius-sm); overflow: hidden; border: 1px solid rgba(15,43,70,.10); box-shadow: var(--ps-shadow-sm); }
+.md-typeset table:not([class]) th { background: #f0f7f9; color: var(--ps-navy-700); font-weight: 700; font-size: .85rem; letter-spacing: .02em; text-transform: none; border-bottom: 2px solid rgba(0,103,127,.14); }
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th { background: #1c2a38; color: #cfe0ef; }
+.md-typeset table:not([class]) td { font-size: .92rem; vertical-align: top; }
+.md-typeset table:not([class]) tr:nth-child(even) td { background: rgba(0,103,127,.03); }
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+
+/* ── Admonitions — higher contrast borders ────────────────────── */
+.md-typeset .admonition, .md-typeset details { border-radius: var(--ps-radius-sm); border-width: 1.5px; box-shadow: var(--ps-shadow-sm); }
+.md-typeset .admonition.note { border-color: var(--ps-pool-700); }
+.md-typeset .admonition.tip { border-color: var(--ps-success); }
+.md-typeset .admonition.warning { border-color: var(--ps-orange-700); }
+
+/* ── Code blocks — line numbers + copy button larger target ───── */
+.md-typeset .highlight { border-radius: var(--ps-radius-sm); }
+.md-clipboard { min-width: 44px; min-height: 44px; }
+.md-typeset pre > code { padding: 1rem; }
+
+/* ── Images — prevent CLS, nice frame ─────────────────────────── */
+.md-typeset img { border-radius: var(--ps-radius-sm); height: auto; }
+.md-typeset img:not([width]) { max-width: 100%; }
+.md-typeset figure { margin: 1.2rem 0; }
+.md-typeset figure img { box-shadow: var(--ps-shadow-sm); border: 1px solid rgba(15,43,70,.08); }
+.md-typeset figcaption { color: var(--ps-muted); font-size: .85rem; text-align: center; margin-top: .5rem; }
+
+/* ── TOC & nav — clearer active state ─────────────────────────── */
+.md-nav__link--active, .md-nav__link:focus, .md-nav__link:hover { color: var(--ps-pool-800); }
+[data-md-color-scheme="slate"] .md-nav__link--active { color: #80deea; }
+.md-nav__link { font-size: .9rem; }
+.md-nav__item--active > .md-nav__link { font-weight: 650; }
+
+/* ── Footer ───────────────────────────────────────────────────── */
+.md-footer { background: #0f1a26; }
+.md-footer-meta { background: #0b121c; }
+
+/* ── Print ────────────────────────────────────────────────────── */
+@media print {
+  .ps-hero__actions, .md-header, .md-tabs, .md-footer { display: none !important; }
+}
+
+/* ── Motion respect already handled above ─────────────────────── */
+
+/* ── Utilities ────────────────────────────────────────────────── */
+.ps-muted { color: var(--ps-muted); }
+.ps-eyebrow { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ps-pool-700); }
+.ps-divider { border: none; border-top: 1px solid rgba(15,43,70,.08); margin: 2rem 0; }

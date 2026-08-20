@@ -1,7 +1,9 @@
 site_name: PoolSmart
-site_description: Intelligent swimming pool controller for Home Assistant
+site_description: Intelligent swimming pool controller for Home Assistant — ESPHome measures, HA decides.
 site_url: https://rickertie.github.io/Poolsmart/
+site_author: PoolSmart contributors
 repo_url: https://github.com/rickertie/Poolsmart
+repo_name: rickertie/Poolsmart
 edit_uri: edit/main/docs/
 copyright: PoolSmart is licensed under AGPL-3.0-or-later
 
@@ -9,44 +11,107 @@ theme:
   name: material
   logo: assets/logo.png
   favicon: assets/logo.png
+  custom_dir: overrides
+  language: en
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: logo
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: cyan
-      accent: cyan
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: cyan
-      accent: cyan
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
     - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - navigation.tracking
     - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.footer
+    - navigation.path
     - navigation.top
+    - navigation.prune
     - toc.follow
+    - toc.integrate
     - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - content.action.view
+    - search.suggest
+    - search.highlight
+    - search.share
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rickertie/Poolsmart
+      name: GitHub repository
+    - icon: fontawesome/solid/puzzle-piece
+      link: https://github.com/rickertie/Poolsmart#installation
+      name: Install via HACS
+  version:
+    provider: mike
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/extra.js
 
 plugins:
-  - search
+  - search:
+      lang: en
+      separator: '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - social:
+      cards: false
 
 markdown_extensions:
+  - abbr
   - admonition
-  - tables
   - attr_list
+  - def_list
+  - footnotes
   - md_in_html
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.tabbed
-  - pymdownx.tasklist:
-      custom_checkbox: true
+  - tables
   - toc:
       permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 exclude_docs: |
   .AI_RECOMMENDATIONS/
