@@ -41,21 +41,30 @@ The state shows the current decision:
 ### 2. Open the Management Panel
 
 Navigate to `/poolsmart` in your Home Assistant instance (add it to your sidebar
-if you haven't already). The **Overview** tab shows:
+if you haven't already). This is a separate interface from any dashboard you may
+add later: the sidebar panel is for *understanding* what PoolSmart is doing, not
+for everyday use. The **Overview** tab shows:
 
 - Current pool temperature
 - Active mode and reason for the last decision
 - Next scheduled action
 
+<p align="center">
+  <img src="images/panel-overview.svg" width="650" alt="PoolSmart Overview tab: current temperature, active mode, reason for the last decision, and next scheduled action">
+</p>
+
 ### 3. Verify the First Decision
 
 On the panel's **Overview** tab, read the "Last decision" reason. It explains *why*
-PoolSmart made its current choice. For example:
+PoolSmart made its current choice — not just what it is doing, but the condition
+that made this branch win over every other one it considered. For example:
 
 > "Filtration block: 2 hours remaining to meet today of 3 turnovers"
 
-If the reason mentions a sensor is "unavailable", you likely have a mapping issue.
-See [Sensors](#mapping-your-sensors) below.
+That sentence is the whole point of the rewrite this integration replaced: a
+decision with its reasoning attached, instead of a pump that just turns on and
+leaves you to guess why. If the reason mentions a sensor is "unavailable", you
+likely have a mapping issue. See [Sensors](#mapping-your-sensors) below.
 
 ---
 
@@ -66,7 +75,14 @@ PoolSmart needs at least two readings to function:
 1. **Water temperature** — from your ESPHome probe or any temperature sensor
 2. **Flow meter** — from your ESPHome pulse counter (optional for basic filtration)
 
-If you installed the ESPHome board from [ESPHome](esphome.md), the sensors
+<p align="center">
+  <img src="images/Sensors.svg" width="550" alt="All PoolSmart temperature probes and the flow meter, as installed">
+</p>
+<p align="center"><em>Everything in this photo maps to one row in the table below. The full hardware build is in <a href="hardware.md">Hardware</a>.</em></p>
+
+Every other row in the table below is optional, and PoolSmart tells you exactly
+what it loses without it rather than failing silently. If you installed the
+ESPHome board from [ESPHome](esphome.md), the sensors
 are auto-discovered. Otherwise, map them manually:
 
 **Settings → Devices & Services → PoolSmart → Configure → Sensors and switches**
@@ -85,6 +101,15 @@ are auto-discovered. Otherwise, map them manually:
 ---
 
 ## What to Expect on Day One
+
+Nothing about PoolSmart needs a waiting period to start working, but two things
+— the self-learning model and heating predictions — only get *better* with time.
+Here is the honest timeline, so "it's not perfect yet" on day one doesn't read
+as broken:
+
+<p align="center">
+  <img src="images/day-one-timeline.svg" width="700" alt="Timeline: first 30 seconds, first hour, first day, first week, first month">
+</p>
 
 | Timeframe | What Happens |
 |---|---|

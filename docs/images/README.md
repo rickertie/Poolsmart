@@ -48,6 +48,7 @@ All paths use forward slashes for cross-platform compatibility.
 | 39 | `3wayValve.svg` | Generated | heating.md | Manual three-way valve photo |
 | 40 | `3wayValve-schema.svg` | Generated | heating.md | Three-way valve plumbing/wiring schema |
 | 41 | `waterPump.svg` | Generated | filtration.md | Circulation pump installed in the filtration loop |
+| 42 | `day-one-timeline.svg` | Placeholder | getting_started.md | Timeline: first 30 seconds through first month |
 
 ## Status Legend
 

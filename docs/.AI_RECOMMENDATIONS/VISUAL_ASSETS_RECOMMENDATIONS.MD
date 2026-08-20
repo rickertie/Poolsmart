@@ -1788,3 +1788,44 @@ systems-diagram quality, no decorative elements, no people
 **Estimated effort**: 1.5 hrs
 
 ---
+
+### 38. What-to-Expect Timeline (Day One)
+
+**Purpose**:
+Getting Started is the highest-traffic page in the docs — the first thing anyone
+scrolls through before deciding whether to keep going. The "What to Expect on
+Day One" table lists five timeframes (30 seconds → first month) but reads as a
+flat list; a timeline makes the *shape* of the rollout visible: instant
+decisions from second one, learning quality rising gradually afterward.
+
+**Placement**:
+Primary: getting_started.md — under "What to Expect on Day One", above the table
+
+**Recommended format**: SVG horizontal timeline (flat diagram style, matching
+getting-started-journey.svg)
+
+**AI Generation Prompt**:
+
+```
+Clean horizontal timeline infographic, flat vector illustration
+style. A baseline runs left to right with five evenly-spaced
+circular markers, each in a different accent color (pool blue,
+HA blue, warm orange, purple, green). Above each marker, a small
+white card with a rounded border in the marker's color contains
+a short label: "Pool state evaluated, branch chosen" (30 seconds),
+"Pump on/off per filtration block" (first hour), "Daily filtration
+block, any heating demand" (first day), "Session data collected
+per heating cycle" (first week), "Heat loss learned, timing
+tightens up" (first month). Below each marker, bold text names
+the timeframe. The overall shape should read left-to-right as
+"instant, then gradually smarter" — the first marker larger or
+more emphasized than the rest to show immediacy. Clean sans-serif
+typography, light gray (#FAFAFA) background, subtle card shadows,
+onboarding-illustration quality, no people, no clutter
+```
+
+**File naming**: `images/day-one-timeline.svg`
+
+**Estimated effort**: 1 hr
+
+---
