@@ -15,6 +15,7 @@ from pathlib import Path
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify
@@ -301,34 +302,45 @@ def _async_register_services(hass: HomeAssistant) -> None:
         because the panel that calls this has no reliable way to know the
         entity_id -- it depends on the pool's name, which the panel does not
         assume. See issue #23.
+
+        Unlike this integration's other services, invalid input is raised
+        rather than logged and swallowed: the panel calls this synchronously
+        and shows its own "Saved"/"failed" status from whether the call
+        succeeded, so a silent no-op here would have it claim success for a
+        value that was actually rejected.
         """
         key = str(call.data["key"])
         try:
             value = float(call.data["value"])
         except (TypeError, ValueError):
-            _LOGGER.error("Setting value %r is not a number", call.data.get("value"))
-            return
+            raise ServiceValidationError(
+                f"Setting value {call.data.get('value')!r} is not a number"
+            ) from None
 
         coordinator = _target_coordinator(hass, "change a setting")
         if coordinator is None:
-            return
+            raise ServiceValidationError(
+                "Cannot change a setting: no PoolSmart pool is set up, or more "
+                "than one is and this service cannot yet target one specifically"
+            )
 
         bounds = {
             "target_temp": (10.0, coordinator.pool_config.comfort.max_temp),
-            "max_price": (0.0, 2.0),
+            # Matches the options flow's own max_price field (config_flow.py),
+            # not number.py's stricter 2.0 -- this service is not specific to
+            # that entity and should not be more restrictive than Configure.
+            "max_price": (0.0, 5.0),
             "solar_threshold": (0.0, 20000.0),
             "power_limit": (0.0, 30000.0),
         }
         limits = bounds.get(key)
         if limits is None:
-            _LOGGER.error("Refusing to change unknown setting %r", key)
-            return
+            raise ServiceValidationError(f"Unknown setting {key!r}")
         low, high = limits
         if not (low <= value <= high):
-            _LOGGER.error(
-                "Refusing to set %s to %s: outside the %s-%s range", key, value, low, high
+            raise ServiceValidationError(
+                f"{value} is outside the {low}-{high} range for {key}"
             )
-            return
 
         setters = {
             "target_temp": coordinator.async_set_target,

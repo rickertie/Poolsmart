@@ -454,6 +454,18 @@ def _price_verdict(coordinator: PoolSmartCoordinator):
 
     price = state.price_total
     numbers = {"price": round(price, 4)}
+    energy = coordinator.pool_config.energy
+
+    # In max_price_hard and cheap_wins_capped, a "cheap" verdict has a ceiling
+    # of its own -- the same one the ladder enforces -- so this sensor never
+    # calls a price cheap that the ladder would actually refuse to heat on.
+    # See issue #22.
+    capped_by = None
+    if energy.cheap_price_mode == CheapPriceMode.MAX_PRICE_HARD:
+        capped_by = energy.max_price
+    elif energy.cheap_price_mode == CheapPriceMode.CHEAP_WINS_CAPPED:
+        capped_by = energy.cheap_price_ceiling
+    under_cap = capped_by is None or price <= capped_by
 
     slots = coordinator._price_slots
     if slots:
@@ -465,25 +477,15 @@ def _price_verdict(coordinator: PoolSmartCoordinator):
             position = (price - low) / span
             numbers["position"] = round(position, 2)
             if position <= 0.25:
-                return "cheap", numbers
+                return ("cheap" if under_cap else "normal"), numbers
             if position <= 0.6:
                 return "normal", numbers
             return "expensive", numbers
 
     # An external cheap-period signal is a better answer than a bare comparison
-    # against a fixed ceiling, because it knows the shape of the day. Whether
-    # it is trusted here follows the same cheap_price_mode the ladder itself
-    # uses, so this verdict never calls a price "cheap" that the ladder would
-    # actually refuse to heat on. See issue #22.
-    if state.cheap_price_now is True:
-        energy = coordinator.pool_config.energy
-        capped_by = None
-        if energy.cheap_price_mode == CheapPriceMode.MAX_PRICE_HARD:
-            capped_by = energy.max_price
-        elif energy.cheap_price_mode == CheapPriceMode.CHEAP_WINS_CAPPED:
-            capped_by = energy.cheap_price_ceiling
-        if capped_by is None or price <= capped_by:
-            return "cheap", numbers
+    # against a fixed ceiling, because it knows the shape of the day.
+    if state.cheap_price_now is True and under_cap:
+        return "cheap", numbers
     limit = coordinator.pool_config.energy.max_price
     if limit:
         numbers["limit"] = limit

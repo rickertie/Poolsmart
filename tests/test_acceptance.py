@@ -1230,6 +1230,35 @@ def test_t50c_cheap_wins_capped_mode_respects_its_own_ceiling():
     assert decision.heat_pump is False, decision.reason
 
 
+def test_t50d_max_price_hard_mode_also_blocks_the_plan_fallback():
+    """max_price_hard's promise covers the planner's own escape hatch too.
+
+    Without a cheap-period signal at all, a price-informed plan may still
+    heat above max_price when nothing cheaper was available before the swim
+    deadline (see T48). That fallback is a second way past the ceiling, so
+    max_price_hard has to close it as well, or "hard ceiling" would not
+    actually be one. See issue #22.
+    """
+    config = make_config(
+        energy=EnergySettings(
+            max_price=0.20, cheap_price_mode=CheapPriceMode.MAX_PRICE_HARD
+        )
+    )
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.248,
+        solar_power_w=0.0,
+        heating_session_active=True,  # the planner chose this interval
+        plan_price_informed=True,
+        measured_flow_m3h=1.02,
+    )
+    decision = run_tick(state, config, done_h=20.0)
+    assert decision.heat_pump is False, decision.reason
+
+
 # ---------------------------------------------------------------------------
 # T51 - the fifth probe earns its place as a calibration check
 # ---------------------------------------------------------------------------

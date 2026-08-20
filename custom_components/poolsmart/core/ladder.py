@@ -154,6 +154,10 @@ def _plan_justifies_price(state: PoolState) -> bool:
 
     A fallback means "heat when allowed", not "heat regardless". Only Boost, a
     negative price, and a genuine cheapest-slot plan override the ceiling.
+
+    Both call sites gate this on CheapPriceMode.MAX_PRICE_HARD themselves,
+    since that mode's whole promise is that nothing -- neither the cheap
+    signal nor this plan-based fallback -- heats above max_price. See #22.
     """
     if not state.plan_price_informed:
         return False
@@ -242,7 +246,10 @@ def _augment_with_heating(
         why = "Boost is on, so price is ignored"
     else:
         acceptable, reason = _price_acceptable(state, config)
-        planned = _plan_justifies_price(state)
+        planned = (
+            config.energy.cheap_price_mode != CheapPriceMode.MAX_PRICE_HARD
+            and _plan_justifies_price(state)
+        )
         if not (acceptable or planned):
             return decision
         why = (
@@ -431,7 +438,10 @@ def _walk(
             )
         else:
             acceptable, why = _price_acceptable(state, config)
-            planned = _plan_justifies_price(state)
+            planned = (
+                config.energy.cheap_price_mode != CheapPriceMode.MAX_PRICE_HARD
+                and _plan_justifies_price(state)
+            )
             if acceptable:
                 return win(
                     Decision(
