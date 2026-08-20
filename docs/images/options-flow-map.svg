@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- PLACEHOLDER SVG — Replace with AI-generated image from VISUAL_ASSETS_RECOMMENDATIONS.md -->
+<svg
+   version="1.1"
+   id="svg-options-flow-map"
+   width="820"
+   height="560"
+   viewBox="0 0 820 560"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+
+  <title>Options Flow Map — Placeholder</title>
+  <desc>Hub-and-spoke map of the Configure menu: eight settings sections branching from one central Configure hub. See VISUAL_ASSETS_RECOMMENDATIONS.md for AI generation prompt.</desc>
+
+  <defs>
+    <filter id="opt-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="820" height="560" fill="#FAFAFA"/>
+  <rect x="0" y="0" width="820" height="56" fill="#00ACC1"/>
+  <text x="32" y="35" font-family="Inter, Roboto, system-ui, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">Settings → Devices &amp; Services → PoolSmart → Configure</text>
+
+  <!-- spokes -->
+  <g stroke="#B0BEC5" stroke-width="2">
+    <line x1="410" y1="280" x2="150" y2="130"/>
+    <line x1="410" y1="280" x2="410" y2="110"/>
+    <line x1="410" y1="280" x2="670" y2="130"/>
+    <line x1="410" y1="280" x2="700" y2="280"/>
+    <line x1="410" y1="280" x2="670" y2="430"/>
+    <line x1="410" y1="280" x2="410" y2="480"/>
+    <line x1="410" y1="280" x2="150" y2="430"/>
+    <line x1="410" y1="280" x2="120" y2="280"/>
+  </g>
+
+  <!-- central hub -->
+  <g filter="url(#opt-shadow)">
+    <circle cx="410" cy="280" r="66" fill="#00ACC1"/>
+    <text x="410" y="276" font-family="Inter, Roboto, system-ui, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle">Configure</text>
+    <text x="410" y="296" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#E0F7FA" text-anchor="middle">nothing locked in</text>
+  </g>
+
+  <!-- spoke nodes -->
+  <g font-family="Inter, Roboto, system-ui, sans-serif">
+    <g filter="url(#opt-shadow)">
+      <rect x="70" y="98" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#03A9F4" stroke-width="2"/>
+      <text x="150" y="119" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Sensors &amp; switches</text>
+      <text x="150" y="136" font-size="10" fill="#78909C" text-anchor="middle">every entity mapping</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="330" y="70" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#03A9F4" stroke-width="2"/>
+      <text x="410" y="91" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Pool &amp; pump</text>
+      <text x="410" y="108" font-size="10" fill="#78909C" text-anchor="middle">volume, flow, medium</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="590" y="98" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#FF9800" stroke-width="2"/>
+      <text x="670" y="119" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Heating appliance</text>
+      <text x="670" y="136" font-size="10" fill="#78909C" text-anchor="middle">source, HP curve, envelope</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="620" y="254" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#FF9800" stroke-width="2"/>
+      <text x="700" y="275" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">When to heat</text>
+      <text x="700" y="292" font-size="10" fill="#78909C" text-anchor="middle">target, price, swim time</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="590" y="404" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#4CAF50" stroke-width="2"/>
+      <text x="670" y="425" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Filtration</text>
+      <text x="670" y="442" font-size="10" fill="#78909C" text-anchor="middle">turnover, quiet hours</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="330" y="432" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#4CAF50" stroke-width="2"/>
+      <text x="410" y="453" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Water treatment</text>
+      <text x="410" y="470" font-size="10" fill="#78909C" text-anchor="middle">sanitiser, products, doses</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="70" y="404" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#9C27B0" stroke-width="2"/>
+      <text x="150" y="425" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Notifications</text>
+      <text x="150" y="442" font-size="10" fill="#78909C" text-anchor="middle">which message, which device</text>
+    </g>
+    <g filter="url(#opt-shadow)">
+      <rect x="10" y="254" width="160" height="52" rx="10" fill="#FFFFFF" stroke="#9C27B0" stroke-width="2"/>
+      <text x="90" y="275" font-size="12" font-weight="700" fill="#37474F" text-anchor="middle">Advanced</text>
+      <text x="90" y="292" font-size="10" fill="#78909C" text-anchor="middle">timings &amp; tolerances</text>
+    </g>
+  </g>
+
+  <g transform="translate(50, 528)">
+    <rect x="0" y="0" width="720" height="20" rx="4" ry="4" fill="#FFF3E0"/>
+    <text x="360" y="14" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#E65100" text-anchor="middle">Placeholder — see VISUAL_ASSETS_RECOMMENDATIONS.md for AI generation prompt</text>
+  </g>
+</svg>

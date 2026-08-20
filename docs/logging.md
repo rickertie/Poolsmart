@@ -48,6 +48,10 @@ everything off*; the weekly review offers *Apply the suggestion*. Tapping one
 acts immediately. Other notify platforms ignore the extra data and receive the
 text as normal.
 
+<p align="center">
+  <img src="images/notification-actions-mockup.svg" width="320" alt="Mobile notification with two action buttons: Heat now anyway, Do not heat today">
+</p>
+
 On iOS, the Companion app sometimes shows action buttons only after a
 long-press or swipe on the notification, rather than directly under it --
 that is standard iOS behaviour for actionable notifications, not a PoolSmart
@@ -64,6 +68,10 @@ tick, with a verdict for each: chosen, price, outside limits, mode, night, not
 applicable, or not reached. The ladder stops at the first match, so branches
 below the winner genuinely were not evaluated — saying "not reached" is a fact
 about how it works, not an omission.
+
+<p align="center">
+  <img src="images/panel-diagnostics.svg" width="600" alt="PoolSmart Diagnostics tab showing every branch of the priority ladder with its verdict">
+</p>
 
 ---
 

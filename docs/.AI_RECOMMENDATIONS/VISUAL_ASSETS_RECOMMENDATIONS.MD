@@ -1575,3 +1575,216 @@ For maximum impact with limited resources, create assets in this order:
 ---
 
 *Document prepared for the PoolSmart development team. All prompts are ready for use with Midjourney, DALL-E, Stable Diffusion, Flux, or similar AI image generation tools. SVG-format recommendations should be refined by a designer after AI generation to ensure technical accuracy.*
+
+---
+
+## 🆕 Additional Recommendations — Documentation Coverage Pass
+
+> **Prepared by**: Image Prompt Engineer
+> **Date**: 2026-08-20
+> **Focus**: Audit found four documentation pages with zero images — getting_started.md, configuration.md, logging.md, defaults.md. These are the remaining gaps after the Round 1 and Round 2 passes above (lovelace/README.md, brand-image.md, and hardware.md are covered separately by reusing already-generated-but-unused assets).
+
+---
+
+### 34. Getting-Started Journey Diagram
+
+**Purpose**:
+New users arriving at getting_started.md are met with a wall of prose before they understand the shape of the setup process. A simple, friendly horizontal flow of the four concrete milestones — install, verify, map sensors, understand the first decision — sets expectations up front and signals "this is approachable," reducing first-run anxiety before the step-by-step instructions begin.
+
+**Placement**:
+- Primary: getting_started.md — near the top, immediately below the introduction and above the first "Step 1" heading, as a visual table of contents for the whole page
+
+**Recommended format**: SVG vector diagram (flat, clean, matching the existing priority-ladder.svg / dashboard-mockup.svg diagram aesthetic — not photorealistic)
+
+**AI Generation Prompt**:
+```
+Simple horizontal 4-step journey diagram, clean flat vector 
+illustration style, friendly and welcoming — not intimidating 
+or overly technical.
+
+Four circular milestone nodes arranged left to right, connected 
+by a gently curved arrow path (not a rigid straight line — 
+suggest an easy, approachable journey).
+
+Node 1 "Install via HACS": Rounded circle in pool blue (#00ACC1) 
+containing a simple download/puzzle-piece icon. Small label 
+below reads "Install via HACS".
+
+Node 2 "Verify Status Sensor": Rounded circle in HA blue 
+(#03A9F4) containing a simple checkmark-in-a-badge icon. Label 
+below reads "Verify status sensor".
+
+Node 3 "Map Your Sensors": Rounded circle in warm orange 
+(#FF9800) containing a simple thermometer-and-link icon. Label 
+below reads "Map your sensors".
+
+Node 4 "Understand Your First Decision": Rounded circle in a 
+soft green containing a simple lightbulb-with-checkmark icon. 
+Label below reads "Understand your first decision".
+
+Each node has a small step number badge (1, 2, 3, 4) in the 
+top-left corner. The connecting path has a small friendly 
+arrowhead between each node, no harsh angles. A subtle light 
+gray (#FAFAFA) background with generous white space. Rounded, 
+soft shadows, consistent stroke width, clean sans-serif 
+typography (Inter/Roboto style), no people, no photorealistic 
+elements, onboarding-illustration quality rather than dense 
+engineering-diagram quality — approachable and light
+```
+
+**File naming**: `images/getting-started-journey.svg`
+
+**Estimated effort**: 1.5 hrs
+
+---
+
+### 35. Options Flow Map
+
+**Purpose**:
+The Configure menu in configuration.md exposes eight distinct sections, but users currently have to read a linear list to understand what lives where. A hub-and-spoke settings map gives an immediate mental model of the configuration surface — "one central place, eight focused areas" — and helps users jump straight to the section they need instead of hunting through prose.
+
+**Placement**:
+- Primary: configuration.md — near the top, under the introductory paragraph and before the per-section detail headings, as an at-a-glance map of the Configure menu
+
+**Recommended format**: SVG vector hub-and-spoke diagram (flat, clean, settings-map style, matching the existing data-flow.svg / architecture-overview.svg diagram aesthetic)
+
+**AI Generation Prompt**:
+```
+Hub-and-spoke settings map diagram, clean flat vector 
+illustration style, technical documentation quality.
+
+Center: A prominent rounded rectangle hub node labeled 
+"Configure" in Home Assistant blue (#03A9F4) with a small gear 
+icon, slightly larger than the surrounding nodes to establish 
+visual hierarchy.
+
+Eight spoke nodes arranged evenly in a circle around the hub, 
+each connected to the center by a short straight line (like 
+spokes of a wheel):
+
+1. "Sensors and switches" — small sensor/toggle icon, pool blue.
+2. "Pool and pump" — small pool-with-pump icon, pool blue.
+3. "Heating appliance" — small heat pump icon, warm orange 
+   (#FF9800).
+4. "When to heat" — small clock-with-flame icon, warm orange.
+5. "Filtration" — small filter-cylinder icon, pool blue.
+6. "Water treatment" — small flask/droplet icon, teal.
+7. "Notifications" — small bell icon, HA blue.
+8. "Advanced" — small wrench/gear icon, mid gray (#9E9E9E).
+
+Each spoke node is a small rounded rectangle with icon on top 
+and label below. Consistent node sizing across all eight. Clean 
+sans-serif typography, thin connecting lines in light gray, 
+white/off-white (#FAFAFA) background, subtle shadows on nodes, 
+settings-map / control-panel quality, no decorative elements, 
+no people
+```
+
+**File naming**: `images/options-flow-map.svg`
+
+**Estimated effort**: 2 hrs
+
+---
+
+### 36. Actionable Notification Mockup
+
+**Purpose**:
+logging.md describes actionable push notifications (e.g. a heating-postponed alert with response buttons) purely in text. A realistic mobile mockup of the Home Assistant companion app notification — complete with its action buttons — shows users exactly what to expect on their phone and demonstrates that they can respond directly from the notification, not just read it.
+
+**Placement**:
+- Primary: logging.md — under the section describing actionable notifications, as a visual example of the notification shown in the text
+
+**Recommended format**: SVG vector UI mockup (flat, clean, matching the existing dashboard-mockup.svg UI-mockup aesthetic — a stylized phone frame with a realistic-looking but clearly illustrated notification, not a photorealistic phone render)
+
+**AI Generation Prompt**:
+```
+Mobile phone notification UI mockup, clean flat vector 
+illustration style, matching a modern smart-home companion app.
+
+A simplified smartphone frame (rounded rectangle, minimal bezel, 
+small notch at top) shown from the front, phone lock screen 
+with a subtle dark gradient background and a faint clock/date 
+readout at the top.
+
+Centered on the lock screen: a Home Assistant companion-app 
+push notification card — white rounded rectangle with soft 
+shadow. Top row of the card shows a small Home Assistant blue 
+(#03A9F4) house-icon app badge, the app name "Home Assistant" 
+in small gray text, and a timestamp "now" aligned right.
+
+Below the app row: a bold title line reading "Heating postponed" 
+with a small orange (#FF9800) pause/clock icon to its left. 
+Below the title, a shorter gray body line reading "Electricity 
+price is high right now — heating has been delayed."
+
+Below the body text: two full-width action buttons side by side, 
+separated by a thin divider line, styled like standard iOS/
+Android notification action buttons (flat, no background fill, 
+just bold text): left button reads "Heat now anyway" in warm 
+orange (#FF9800) text, right button reads "Do not heat today" 
+in pool blue (#00ACC1) text.
+
+Clean sans-serif typography (system UI font style), realistic 
+but illustrated notification card proportions, subtle drop 
+shadow separating the card from the lock screen background, 
+phone frame in neutral dark gray, no other lock-screen clutter, 
+no people, UI-mockup quality, documentation-illustration 
+finish rather than a literal photorealistic screenshot
+```
+
+**File naming**: `images/notification-actions-mockup.svg`
+
+**Estimated effort**: 2 hrs
+
+---
+
+### 37. Defaults File Override Flow
+
+**Purpose**:
+defaults.md explains that a user-supplied `poolsmart_defaults.json` file can override the integration's built-in defaults to pre-fill the setup wizard, but the merge relationship (built-in baseline, selective override, merged result) is only described in prose. A simple flow diagram makes the override mechanic visually obvious — which values come from where, and that only the keys present in the user's file change anything.
+
+**Placement**:
+- Primary: defaults.md — under the section introducing `poolsmart_defaults.json`, showing how the file relates to the built-in defaults and the setup wizard
+
+**Recommended format**: SVG vector flow diagram (flat, clean, matching the existing data-flow.svg / options-flow-map.svg diagram aesthetic)
+
+**AI Generation Prompt**:
+```
+Simple three-part merge/override flow diagram, clean flat 
+vector illustration style, technical documentation quality.
+
+Left: A rounded rectangle box labeled "Built-in Defaults" in 
+mid gray (#9E9E9E), containing a small document icon and a 
+short illustrative list of key-value pairs shown as faint gray 
+text lines (e.g. "pool_volume: 20000", "target_temp: 28", 
+"min_air_temp: 11") — suggesting a complete baseline config.
+
+Below-left, feeding into the same merge point: A smaller rounded 
+rectangle labeled "poolsmart_defaults.json (yours)" in warm 
+orange (#FF9800), containing a small file/JSON-brackets icon 
+and only one or two highlighted key-value lines (e.g. 
+"pool_volume: 35000") in bold orange text — suggesting a 
+partial, selective override file.
+
+Center: A merge point shown as a funnel or converging-arrows 
+icon labeled "Override — matching keys replaced, everything 
+else keeps the built-in value", where the gray baseline lines 
+and the orange override line combine into one arrow.
+
+Right: A rounded rectangle box labeled "Setup Wizard — 
+Pre-filled Fields" in pool blue (#00ACC1), containing simplified 
+form-field icons (small labeled input boxes) already populated 
+with values — most fields shown in gray (from built-in 
+defaults) and the one overridden field shown highlighted in 
+orange, making clear which value came from the user's file.
+
+Clean sans-serif typography, thin connecting arrows, rounded 
+boxes, light gray (#FAFAFA) background, subtle shadows, 
+systems-diagram quality, no decorative elements, no people
+```
+
+**File naming**: `images/defaults-override-flow.svg`
+
+**Estimated effort**: 1.5 hrs
+
+---

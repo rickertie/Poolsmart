@@ -6,9 +6,21 @@ understood system in about 15 minutes.
 !!! tip "Time estimate"
     5 minutes to verify, 10 minutes to map sensors — no hardware changes needed.
 
+<p align="center">
+  <img src="images/Pool.svg" width="600" alt="The above-ground pool PoolSmart was built to automate">
+</p>
+<p align="center"><em>This is the pool it was built for — an Intex Metal Frame, filter pump, and a small heat pump. Yours doesn't need to look anything like it.</em></p>
+
 ---
 
 ## Your First 5 Minutes
+
+<p align="center">
+  <img src="images/getting-started-journey.svg" width="700" alt="Four-step onboarding journey: install via HACS, verify the status sensor, map your sensors, read the first decision">
+</p>
+
+The four steps below are the whole journey: install, verify it is alive, tell it
+where your sensors are, and read its own explanation for what it just did.
 
 After installing via HACS and completing the setup wizard, PoolSmart is already
 filtering your pool. Here is how to verify everything is working:

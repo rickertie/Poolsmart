@@ -10,6 +10,11 @@ filter resistance. For sensor calibration (including the flow meter bucket test)
 see [Sensors](sensors.md). For the decision ladder that executes filtration
 blocks, see [Architecture](architecture.md).
 
+<p align="center">
+  <img src="images/waterPump.svg" width="260" alt="Circulation pump installed in the pool's filtration loop">
+</p>
+<p align="center"><em>Every formula below describes this pump: its rated flow, what the filter medium takes off that flow, and how much of the pool it actually turns over.</em></p>
+
 ---
 
 ## The Two Rules

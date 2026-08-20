@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- PLACEHOLDER SVG — Replace with AI-generated image from VISUAL_ASSETS_RECOMMENDATIONS.md -->
+<svg
+   version="1.1"
+   id="svg-getting-started-journey"
+   width="900"
+   height="320"
+   viewBox="0 0 900 320"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+
+  <title>Getting Started Journey — Placeholder</title>
+  <desc>Four-step onboarding journey: install via HACS, verify the status sensor, map your sensors, understand the first decision. See VISUAL_ASSETS_RECOMMENDATIONS.md for AI generation prompt.</desc>
+
+  <defs>
+    <marker id="journey-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#B0BEC5"/>
+    </marker>
+    <filter id="journey-shadow" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="320" fill="#FAFAFA"/>
+  <rect x="0" y="0" width="900" height="56" fill="#00ACC1"/>
+  <text x="32" y="35" font-family="Inter, Roboto, system-ui, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">Your First 15 Minutes with PoolSmart</text>
+
+  <!-- Connecting line -->
+  <line x1="130" y1="170" x2="770" y2="170" stroke="#B0BEC5" stroke-width="3" stroke-dasharray="2,6" marker-end="url(#journey-arrow)"/>
+
+  <!-- Step 1: Install -->
+  <g transform="translate(50, 110)" filter="url(#journey-shadow)">
+    <circle cx="60" cy="60" r="56" fill="#FFFFFF" stroke="#00ACC1" stroke-width="3"/>
+    <text x="60" y="50" font-family="Inter, Roboto, system-ui, sans-serif" font-size="30" text-anchor="middle">📦</text>
+    <text x="60" y="80" font-family="Inter, Roboto, system-ui, sans-serif" font-size="12" font-weight="700" fill="#00ACC1" text-anchor="middle">STEP 1</text>
+  </g>
+  <text x="110" y="245" font-family="Inter, Roboto, system-ui, sans-serif" font-size="13" font-weight="600" fill="#37474F" text-anchor="middle">Install via HACS</text>
+  <text x="110" y="264" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" fill="#78909C" text-anchor="middle">Add + restart HA</text>
+
+  <!-- Step 2: Verify -->
+  <g transform="translate(250, 110)" filter="url(#journey-shadow)">
+    <circle cx="60" cy="60" r="56" fill="#FFFFFF" stroke="#03A9F4" stroke-width="3"/>
+    <text x="60" y="50" font-family="Inter, Roboto, system-ui, sans-serif" font-size="30" text-anchor="middle">✅</text>
+    <text x="60" y="80" font-family="Inter, Roboto, system-ui, sans-serif" font-size="12" font-weight="700" fill="#03A9F4" text-anchor="middle">STEP 2</text>
+  </g>
+  <text x="310" y="245" font-family="Inter, Roboto, system-ui, sans-serif" font-size="13" font-weight="600" fill="#37474F" text-anchor="middle">Verify the status sensor</text>
+  <text x="310" y="264" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" fill="#78909C" text-anchor="middle">Developer Tools → States</text>
+
+  <!-- Step 3: Map sensors -->
+  <g transform="translate(450, 110)" filter="url(#journey-shadow)">
+    <circle cx="60" cy="60" r="56" fill="#FFFFFF" stroke="#FF9800" stroke-width="3"/>
+    <text x="60" y="50" font-family="Inter, Roboto, system-ui, sans-serif" font-size="30" text-anchor="middle">🌡️</text>
+    <text x="60" y="80" font-family="Inter, Roboto, system-ui, sans-serif" font-size="12" font-weight="700" fill="#FF9800" text-anchor="middle">STEP 3</text>
+  </g>
+  <text x="510" y="245" font-family="Inter, Roboto, system-ui, sans-serif" font-size="13" font-weight="600" fill="#37474F" text-anchor="middle">Map your sensors</text>
+  <text x="510" y="264" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" fill="#78909C" text-anchor="middle">Temperature + flow</text>
+
+  <!-- Step 4: Understand -->
+  <g transform="translate(650, 110)" filter="url(#journey-shadow)">
+    <circle cx="60" cy="60" r="56" fill="#FFFFFF" stroke="#4CAF50" stroke-width="3"/>
+    <text x="60" y="50" font-family="Inter, Roboto, system-ui, sans-serif" font-size="30" text-anchor="middle">💡</text>
+    <text x="60" y="80" font-family="Inter, Roboto, system-ui, sans-serif" font-size="12" font-weight="700" fill="#4CAF50" text-anchor="middle">STEP 4</text>
+  </g>
+  <text x="710" y="245" font-family="Inter, Roboto, system-ui, sans-serif" font-size="13" font-weight="600" fill="#37474F" text-anchor="middle">Read the first decision</text>
+  <text x="710" y="264" font-family="Inter, Roboto, system-ui, sans-serif" font-size="11" fill="#78909C" text-anchor="middle">Panel → Overview tab</text>
+
+  <g transform="translate(90, 292)">
+    <rect x="0" y="0" width="720" height="20" rx="4" ry="4" fill="#FFF3E0"/>
+    <text x="360" y="14" font-family="Inter, Roboto, system-ui, sans-serif" font-size="10" fill="#E65100" text-anchor="middle">Placeholder — see VISUAL_ASSETS_RECOMMENDATIONS.md for AI generation prompt</text>
+  </g>
+</svg>

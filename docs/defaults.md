@@ -15,6 +15,10 @@ Every field in the setup wizard arrives with a value already in it, so nothing i
 ever a blank box. The built-in numbers describe a generic mid-sized pool with a
 typical cartridge pump and a small heat pump.
 
+<p align="center">
+  <img src="images/defaults-override-flow.svg" width="700" alt="poolsmart_defaults.json overriding the built-in defaults, merging into the pre-filled setup wizard">
+</p>
+
 Those numbers are deliberately not anyone's actual pool. Baking one particular
 installation into the integration would make it wrong for everybody else, and
 being usable by other people was the point of building it this way.
