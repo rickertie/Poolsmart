@@ -22,7 +22,7 @@ from homeassistant.util import slugify
 
 from . import websocket as poolsmart_ws
 from .const import CONF_ADOPT_FROM as MIGRATION_ADOPT
-from .const import DOMAIN, MIGRATION_FLAG, PANEL_URL
+from .const import DOMAIN, MAX_PRICE_BOUNDS, MIGRATION_FLAG, PANEL_URL
 from .coordinator import PoolSmartCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -326,10 +326,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
         bounds = {
             "target_temp": (10.0, coordinator.pool_config.comfort.max_temp),
-            # Matches the options flow's own max_price field (config_flow.py),
-            # not number.py's stricter 2.0 -- this service is not specific to
-            # that entity and should not be more restrictive than Configure.
-            "max_price": (0.0, 5.0),
+            # Shared with the options flow, number.py and the AI advisor's
+            # whitelist -- see const.MAX_PRICE_BOUNDS.
+            "max_price": MAX_PRICE_BOUNDS,
             "solar_threshold": (0.0, 20000.0),
             "power_limit": (0.0, 30000.0),
         }

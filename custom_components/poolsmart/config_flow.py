@@ -1248,7 +1248,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     vol.Optional(
                         c.CONF_MAX_PRICE,
                         default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
-                    ): _positive(0, 5, 0.01),
+                    ): _positive(*c.MAX_PRICE_BOUNDS, 0.01),
                     vol.Optional(
                         c.CONF_CHEAP_PRICE_MODE,
                         default=current.get(
@@ -1269,7 +1269,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         description={
                             "suggested_value": current.get(c.CONF_CHEAP_PRICE_CEILING)
                         },
-                    ): _positive(0, 5, 0.01),
+                    ): _positive(*c.MAX_PRICE_BOUNDS, 0.01),
                     vol.Optional(
                         c.CONF_ECO_PRICE_FACTOR,
                         default=current.get(c.CONF_ECO_PRICE_FACTOR, 0.7),

@@ -59,8 +59,8 @@ class PoolSmartMaxPrice(PoolSmartEntity, NumberEntity):
     """Upper price limit for heating, ignored in BOOST."""
 
     _attr_native_step = 0.01
-    _attr_native_min_value = 0.0
-    _attr_native_max_value = 2.0
+    _attr_native_min_value = c.MAX_PRICE_BOUNDS[0]
+    _attr_native_max_value = c.MAX_PRICE_BOUNDS[1]
     _attr_mode = NumberMode.BOX
 
     def __init__(self, coordinator: PoolSmartCoordinator) -> None:

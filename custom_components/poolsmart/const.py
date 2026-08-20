@@ -280,6 +280,13 @@ DEFAULT_CHEMISTRY_MINUTES = 30
 #: Starting price ceiling for heating, in the local currency per kWh.
 DEFAULT_MAX_PRICE = 0.22
 
+#: The one allowed range for max_price, in the local currency per kWh.
+#: Shared by the options flow, the live number entity, the AI advisor's
+#: adjustable-settings whitelist, and the poolsmart.set_setting service, so
+#: the four cannot drift into disagreeing about what a valid price is. 2.0
+#: comfortably covers even the worst dynamic-tariff price spikes seen so far.
+MAX_PRICE_BOUNDS = (0.0, 2.0)
+
 #: Starting values for the setup wizard, so no field is ever blank.
 #:
 #: These describe a mid-sized above-ground pool with a typical cartridge pump and
