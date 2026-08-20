@@ -240,6 +240,12 @@ CONF_TEMP_HYSTERESIS = "temp_hysteresis"
 CONF_MIN_WATER_TEMP = "min_water_temp"
 CONF_FROST_AIR_TEMP = "frost_air_temp"
 CONF_MAX_PRICE = "max_price"
+#: How a cheap_price_sensor signal relates to max_price. See
+#: core.config.CheapPriceMode. See issue #22.
+CONF_CHEAP_PRICE_MODE = "cheap_price_mode"
+#: Absolute ceiling the cheap-period signal may not cross, only used in
+#: CheapPriceMode.CHEAP_WINS_CAPPED. See issue #22.
+CONF_CHEAP_PRICE_CEILING = "cheap_price_ceiling"
 CONF_NEGATIVE_PRICE_BASIS = "negative_price_basis"
 CONF_SOLAR_THRESHOLD_W = "solar_threshold_w"
 #: House-power cap above which heating pauses. See issue #13.

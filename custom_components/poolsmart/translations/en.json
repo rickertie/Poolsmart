@@ -586,6 +586,8 @@
           "eco_price_factor": "ECO strictness factor",
           "frost_air_temp": "Frost protection below (°C)",
           "max_price": "Maximum price for heating (per kWh)",
+          "cheap_price_mode": "Cheap-period signal vs. maximum price",
+          "cheap_price_ceiling": "Cheap-period signal's own ceiling (per kWh, optional)",
           "max_temp": "Maximum temperature (°C)",
           "min_water_temp": "Minimum water temperature (°C)",
           "negative_price_basis": "Which price counts as below zero",
@@ -605,6 +607,8 @@
           "eco_price_factor": "ECO multiplies the price limit by this, making it stricter. 0.7 means ECO only heats below 70% of your normal limit.",
           "frost_air_temp": "Below this outdoor temperature the pump circulates. Moving water does not freeze.",
           "max_price": "Heating waits for a cheaper moment above this price. Boost ignores it. Leave it high to effectively switch price optimisation off.",
+          "cheap_price_mode": "Only relevant with a cheap-period signal mapped under Weather and price. 'Always wins' lets the signal heat above the maximum price, because it knows the shape of today's prices and a fixed ceiling does not. 'Hard ceiling' makes the maximum price a promise nothing crosses, so a 'cheap' hour that is still above it is treated like any other expensive hour. 'Own ceiling' keeps the signal authoritative but adds a separate, usually higher, price below it that even the signal may not cross.",
+          "cheap_price_ceiling": "Only used when the option above is set to 'own ceiling'. The cheap-period signal is trusted below this price; above it, heating is judged the normal way. Leave blank to make that option behave like 'always wins'.",
           "max_temp": "The highest you would ever set. Used to suggest a safe setting for the heat pump's own thermostat.",
           "min_water_temp": "Below this the pool is protected regardless of mode. If the air is too cold for the heat pump, protection circulates instead of heating.",
           "negative_price_basis": "Which price has to drop below zero before heating runs regardless of everything else.",
@@ -716,6 +720,13 @@
       "options": {
         "total": "All-in price below zero (rare, but you genuinely earn money)",
         "market": "Spot price below zero (more often, but you still pay taxes)"
+      }
+    },
+    "cheap_price_mode": {
+      "options": {
+        "cheap_wins": "Cheap-period signal always wins (original behaviour)",
+        "max_price_hard": "Maximum price is a hard ceiling",
+        "cheap_wins_capped": "Cheap-period signal wins, up to its own ceiling"
       }
     },
     "filter_media": {

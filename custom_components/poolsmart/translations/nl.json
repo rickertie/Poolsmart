@@ -586,6 +586,8 @@
           "eco_price_factor": "Strengheidsfactor ECO",
           "frost_air_temp": "Vorstbeveiliging onder (°C)",
           "max_price": "Maximale prijs voor verwarmen (per kWh)",
+          "cheap_price_mode": "Goedkoop-signaal versus maximumprijs",
+          "cheap_price_ceiling": "Eigen bovengrens goedkoop-signaal (per kWh, optioneel)",
           "max_temp": "Maximale temperatuur (°C)",
           "min_water_temp": "Minimale watertemperatuur (°C)",
           "negative_price_basis": "Welke prijs geldt als onder nul",
@@ -605,6 +607,8 @@
           "eco_price_factor": "ECO vermenigvuldigt de prijslimiet hiermee en wordt daardoor strenger. 0,7 betekent dat ECO alleen verwarmt onder 70% van je normale limiet.",
           "frost_air_temp": "Onder deze buitentemperatuur gaat de pomp draaien. Stromend water bevriest niet.",
           "max_price": "Boven deze prijs wacht de verwarming op een goedkoper moment. Boost negeert dit. Zet hem hoog om prijsoptimalisatie feitelijk uit te schakelen.",
+          "cheap_price_mode": "Alleen van belang als er bij Weer en prijs een goedkoop-signaal is ingesteld. 'Wint altijd' laat het signaal boven de maximumprijs verwarmen, omdat het de vorm van de prijzen van vandaag kent en een vaste grens dat niet doet. 'Harde grens' maakt van de maximumprijs een belofte die niets doorbreekt, zodat een 'goedkoop' uur dat er toch boven zit gewoon als een duur uur behandeld wordt. 'Eigen bovengrens' houdt het signaal leidend, maar voegt er een aparte, meestal hogere prijs onder toe die zelfs het signaal niet mag overschrijden.",
+          "cheap_price_ceiling": "Alleen gebruikt als de optie hierboven op 'eigen bovengrens' staat. Onder deze prijs wordt het goedkoop-signaal vertrouwd; erboven wordt verwarmen op de normale manier beoordeeld. Laat leeg om die optie te laten werken als 'wint altijd'.",
           "max_temp": "Het hoogste dat je ooit zou instellen. Wordt gebruikt om een veilige stand voor de thermostaat van de warmtepomp voor te stellen.",
           "min_water_temp": "Daaronder wordt het bad beschermd, ongeacht de modus. Is het buiten te koud voor de warmtepomp, dan circuleert de beveiliging in plaats van te verwarmen.",
           "negative_price_basis": "Welke prijs onder nul moet zakken voordat er hoe dan ook verwarmd wordt.",
@@ -716,6 +720,13 @@
       "options": {
         "total": "Totaalprijs onder nul (zeldzaam, maar dan verdien je echt geld)",
         "market": "Marktprijs onder nul (vaker, maar je betaalt nog belasting)"
+      }
+    },
+    "cheap_price_mode": {
+      "options": {
+        "cheap_wins": "Goedkoop-signaal wint altijd (oorspronkelijk gedrag)",
+        "max_price_hard": "Maximumprijs is een harde grens",
+        "cheap_wins_capped": "Goedkoop-signaal wint, tot zijn eigen bovengrens"
       }
     },
     "filter_media": {

@@ -294,6 +294,52 @@ def _async_register_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, "reset_learned", _reset)
 
+    async def _set_setting(call) -> None:
+        """Change one of the values also exposed as a number entity.
+
+        A domain service rather than a call to the number entity directly,
+        because the panel that calls this has no reliable way to know the
+        entity_id -- it depends on the pool's name, which the panel does not
+        assume. See issue #23.
+        """
+        key = str(call.data["key"])
+        try:
+            value = float(call.data["value"])
+        except (TypeError, ValueError):
+            _LOGGER.error("Setting value %r is not a number", call.data.get("value"))
+            return
+
+        coordinator = _target_coordinator(hass, "change a setting")
+        if coordinator is None:
+            return
+
+        bounds = {
+            "target_temp": (10.0, coordinator.pool_config.comfort.max_temp),
+            "max_price": (0.0, 2.0),
+            "solar_threshold": (0.0, 20000.0),
+            "power_limit": (0.0, 30000.0),
+        }
+        limits = bounds.get(key)
+        if limits is None:
+            _LOGGER.error("Refusing to change unknown setting %r", key)
+            return
+        low, high = limits
+        if not (low <= value <= high):
+            _LOGGER.error(
+                "Refusing to set %s to %s: outside the %s-%s range", key, value, low, high
+            )
+            return
+
+        setters = {
+            "target_temp": coordinator.async_set_target,
+            "max_price": coordinator.async_set_max_price,
+            "solar_threshold": coordinator.async_set_solar_threshold,
+            "power_limit": coordinator.async_set_power_limit,
+        }
+        await setters[key](value)
+
+    hass.services.async_register(DOMAIN, "set_setting", _set_setting)
+
     async def _set_session_review(call) -> None:
         from .core.learning import SESSION_REVIEW_STATES
 

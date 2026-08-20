@@ -1223,6 +1223,8 @@ class PoolSmartOptionsFlow(OptionsFlow):
         if user_input is not None:
             return self._save(user_input)
 
+        from .core.config import CheapPriceMode
+
         current = {**self.config_entry.data, **self.config_entry.options}
         return self.async_show_form(
             step_id="when_to_heat",
@@ -1246,6 +1248,27 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     vol.Optional(
                         c.CONF_MAX_PRICE,
                         default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
+                    ): _positive(0, 5, 0.01),
+                    vol.Optional(
+                        c.CONF_CHEAP_PRICE_MODE,
+                        default=current.get(
+                            c.CONF_CHEAP_PRICE_MODE, CheapPriceMode.CHEAP_WINS
+                        ),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                CheapPriceMode.CHEAP_WINS,
+                                CheapPriceMode.MAX_PRICE_HARD,
+                                CheapPriceMode.CHEAP_WINS_CAPPED,
+                            ],
+                            translation_key="cheap_price_mode",
+                        )
+                    ),
+                    vol.Optional(
+                        c.CONF_CHEAP_PRICE_CEILING,
+                        description={
+                            "suggested_value": current.get(c.CONF_CHEAP_PRICE_CEILING)
+                        },
                     ): _positive(0, 5, 0.01),
                     vol.Optional(
                         c.CONF_ECO_PRICE_FACTOR,

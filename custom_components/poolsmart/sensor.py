@@ -26,6 +26,7 @@ from .const import DOMAIN, HP_STANDBY_WATTS, PROGRESS_EPSILON
 from homeassistant.util import dt as dt_util
 
 from .core import safety
+from .core.config import CheapPriceMode
 from .coordinator import PoolSmartCoordinator
 from .entity import PoolSmartEntity
 
@@ -470,9 +471,19 @@ def _price_verdict(coordinator: PoolSmartCoordinator):
             return "expensive", numbers
 
     # An external cheap-period signal is a better answer than a bare comparison
-    # against a fixed ceiling, because it knows the shape of the day.
+    # against a fixed ceiling, because it knows the shape of the day. Whether
+    # it is trusted here follows the same cheap_price_mode the ladder itself
+    # uses, so this verdict never calls a price "cheap" that the ladder would
+    # actually refuse to heat on. See issue #22.
     if state.cheap_price_now is True:
-        return "cheap", numbers
+        energy = coordinator.pool_config.energy
+        capped_by = None
+        if energy.cheap_price_mode == CheapPriceMode.MAX_PRICE_HARD:
+            capped_by = energy.max_price
+        elif energy.cheap_price_mode == CheapPriceMode.CHEAP_WINS_CAPPED:
+            capped_by = energy.cheap_price_ceiling
+        if capped_by is None or price <= capped_by:
+            return "cheap", numbers
     limit = coordinator.pool_config.energy.max_price
     if limit:
         numbers["limit"] = limit
