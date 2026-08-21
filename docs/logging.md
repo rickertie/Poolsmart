@@ -49,7 +49,7 @@ acts immediately. Other notify platforms ignore the extra data and receive the
 text as normal.
 
 <p align="center">
-  <img src="images/notification-actions-mockup.svg" width="320" alt="Mobile notification with two action buttons: Heat now anyway, Do not heat today">
+  <img src="images/notification-actions-mockup.jpg" width="320" alt="Mobile notification with two action buttons: Heat now anyway, Do not heat today">
 </p>
 
 On iOS, the Companion app sometimes shows action buttons only after a

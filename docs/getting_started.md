@@ -16,7 +16,7 @@ understood system in about 15 minutes.
 ## Your First 5 Minutes
 
 <p align="center">
-  <img src="images/getting-started-journey.svg" width="700" alt="Four-step onboarding journey: install via HACS, verify the status sensor, map your sensors, read the first decision">
+  <img src="images/getting-started-journey.jpg" width="700" alt="Four-step onboarding journey: install via HACS, verify the status sensor, map your sensors, read the first decision">
 </p>
 
 The four steps below are the whole journey: install, verify it is alive, tell it

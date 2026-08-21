@@ -19,10 +19,10 @@ All paths use forward slashes for cross-platform compatibility.
 | 10 | `chemistry-intervals.svg` | Generated | chemistry.md | Test intervals by water temperature |
 | 11 | `heat-loss-comparison.svg` | Generated | heating.md | Pool cover vs no cover heat loss |
 | 12 | `bucket-test-calibration.svg` | Placeholder | esphome.md | Flow meter calibration procedure |
-| 13 | `getting-started-journey.svg` | Placeholder | getting_started.md | 4-step onboarding journey: install, verify, map sensors, first decision |
-| 14 | `options-flow-map.svg` | Placeholder | configuration.md | Configure menu hub-and-spoke map of the 8 settings sections |
-| 15 | `notification-actions-mockup.svg` | Placeholder | logging.md | Mobile mockup of an actionable HA companion-app notification |
-| 16 | `defaults-override-flow.svg` | Placeholder | defaults.md | poolsmart_defaults.json override flow into the setup wizard |
+| 13 | `getting-started-journey.jpg` | Generated | getting_started.md | 4-step onboarding journey: install, verify, map sensors, first decision |
+| 14 | `options-flow-map.jpg` | Generated | configuration.md | Configure menu hub-and-spoke map of the 8 settings sections |
+| 15 | `notification-actions-mockup.jpg` | Generated | logging.md | Mobile mockup of an actionable HA companion-app notification |
+| 16 | `defaults-override-flow.jpg` | Generated | defaults.md | poolsmart_defaults.json override flow into the setup wizard |
 | 17 | `cop-weighted-cost.svg` | Generated | planning.md | Price × COP weighting behind heating hour selection |
 | 18 | `chemistry-dosing-workflow.svg` | Generated | chemistry.md | pH reading → dosing instruction workflow |
 | 19 | `delta-t-flow-adequacy.svg` | Generated | filtration.md | Delta-T flow adequacy zones (healthy/marginal/starved) |

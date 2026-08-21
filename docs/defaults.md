@@ -16,7 +16,7 @@ ever a blank box. The built-in numbers describe a generic mid-sized pool with a
 typical cartridge pump and a small heat pump.
 
 <p align="center">
-  <img src="images/defaults-override-flow.svg" width="700" alt="poolsmart_defaults.json overriding the built-in defaults, merging into the pre-filled setup wizard">
+  <img src="images/defaults-override-flow.jpg" width="700" alt="poolsmart_defaults.json overriding the built-in defaults, merging into the pre-filled setup wizard">
 </p>
 
 Those numbers are deliberately not anyone's actual pool. Baking one particular
