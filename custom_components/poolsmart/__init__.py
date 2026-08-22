@@ -13,8 +13,8 @@ import time
 from pathlib import Path
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import EVENT_HOMEASSISTANT_FINAL_WRITE, Platform
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
@@ -193,6 +193,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator.actions.async_start()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    async def _async_flush_before_shutdown(_event: Event) -> None:
+        """Persist filtration/session state before Home Assistant exits.
+
+        async_unload_entry (below) is the only place that force-saves today,
+        and it only runs when this config entry is explicitly reloaded or
+        removed. A full Home Assistant restart -- which is what a Core,
+        Supervisor/OS or add-on update actually does -- never unloads
+        individual config entries; it goes straight from this event to the
+        process exiting. Without a save here, whatever the periodic
+        debounced tick save last wrote is all that survives the restart, and
+        a gap of even one missed tick can lose enough of today's filtration
+        runtime that the pool looks unfiltered afterwards and runs a full
+        block again. See issue #28.
+        """
+        try:
+            await coordinator.store.async_save(force=True)
+        except Exception:  # noqa: BLE001 -- a failed final write must not block shutdown
+            _LOGGER.exception(
+                "Could not persist PoolSmart state before Home Assistant stopped"
+            )
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_FINAL_WRITE, _async_flush_before_shutdown
+        )
+    )
 
     if not hass.data.get(f"{DOMAIN}_ws"):
         poolsmart_ws.async_register(hass)

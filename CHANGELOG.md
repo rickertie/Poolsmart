@@ -12,6 +12,24 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.12.2] — A Save Before the Door Closes
+
+### Fixed
+
+- **Filtration progress could be lost across a Home Assistant restart or
+  update, making the pump run a full block again.** The only place that
+  force-saved PoolSmart's state was `async_unload_entry`, which runs when
+  this integration itself is reloaded or removed — never during a full
+  Home Assistant restart, which is what a Core, Supervisor/OS or add-on
+  update actually does. On that path, only the periodic debounced tick
+  save reached disk, so a restart landing between saves (or catching a
+  missed tick) could lose enough of today's recorded filtration runtime
+  that the pool looked unfiltered afterwards. PoolSmart now also flushes
+  its state to disk on `EVENT_HOMEASSISTANT_FINAL_WRITE`, Home Assistant's
+  own last-chance-to-persist signal before it exits, so an update or
+  restart no longer costs the day's progress. Addresses
+  [#28](https://github.com/rickertie/Poolsmart/issues/28).
+
 ## [1.12.1] — What the Meter Was Actually Saying
 
 ### Fixed
