@@ -14,6 +14,7 @@ MODULES = [
     "test_v13",
     "test_v14",
     "test_trends",
+    "test_price_and_grid_logging",
 ]
 
 passed, failed = 0, []

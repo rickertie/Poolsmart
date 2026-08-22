@@ -85,9 +85,13 @@ _PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "irradiance": (0.0, 1500.0),
     #: A whole house can draw far more than the pool's own equipment -- an EV
     #: charger or an electric oven alone can exceed the pool's own sensors'
-    #: range -- so this stays wide; it exists to catch negative/garbage
-    #: readings, not to model a specific installation.
-    "grid_power": (0.0, 50000.0),
+    #: range -- so this stays wide; it exists to catch garbage readings, not
+    #: to model a specific installation. The floor is negative, not zero:
+    #: many smart-meter "total house power" sensors (e.g. a Dutch P1 netto
+    #: reading) are signed and go negative during solar export, which is a
+    #: legitimate value the demand limiter should use as-is -- not a fault.
+    #: See issue reported against sensor.grid_netto_p1.
+    "grid_power": (-50000.0, 50000.0),
 }
 
 #: Conversion to cubic metres per hour.
