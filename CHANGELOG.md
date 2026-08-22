@@ -12,6 +12,21 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.13.0] — Three More Quick Settings
+
+### Added
+
+- **Maximum water temperature, minimum daily filtration and the eco-mode
+  price factor are now Quick Settings too.** The panel's Settings tab
+  (added in 1.12.0 for #23) only ever had four fields — desired
+  temperature, maximum price, solar threshold and house power limit — with
+  everything else pointed at Configure. These three are adjusted almost as
+  often as those four, so they get the same inline field-and-save-button
+  treatment rather than a trip through the options flow. Deliberately not
+  every Configure field: the point of Quick Settings is a short, well-chosen
+  list, not a second copy of the whole options flow that could drift out of
+  step with it.
+
 ## [1.12.0] — Who Actually Wins: the Price or the Signal
 
 ### Added

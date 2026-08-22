@@ -1786,6 +1786,15 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
     async def async_set_power_limit(self, value: float) -> None:
         await self._async_set_option_live(c.CONF_POWER_LIMIT_W, value)
 
+    async def async_set_max_temp(self, value: float) -> None:
+        await self._async_set_option_live(c.CONF_MAX_TEMP, value)
+
+    async def async_set_min_daily_hours(self, value: float) -> None:
+        await self._async_set_option_live(c.CONF_MIN_DAILY_HOURS, value)
+
+    async def async_set_eco_price_factor(self, value: float) -> None:
+        await self._async_set_option_live(c.CONF_ECO_PRICE_FACTOR, value)
+
     async def async_set_session_review(self, session_start: str, review: str) -> bool:
         """Override whether one logged session counts toward learning.
 

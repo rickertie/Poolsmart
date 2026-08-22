@@ -331,6 +331,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "max_price": MAX_PRICE_BOUNDS,
             "solar_threshold": (0.0, 20000.0),
             "power_limit": (0.0, 30000.0),
+            "max_temp": (coordinator.pool_config.comfort.target_temp, 40.0),
+            "min_daily_hours": (0.5, 24.0),
+            "eco_price_factor": (0.1, 1.0),
         }
         limits = bounds.get(key)
         if limits is None:
@@ -346,6 +349,9 @@ def _async_register_services(hass: HomeAssistant) -> None:
             "max_price": coordinator.async_set_max_price,
             "solar_threshold": coordinator.async_set_solar_threshold,
             "power_limit": coordinator.async_set_power_limit,
+            "max_temp": coordinator.async_set_max_temp,
+            "min_daily_hours": coordinator.async_set_min_daily_hours,
+            "eco_price_factor": coordinator.async_set_eco_price_factor,
         }
         await setters[key](value)
 
