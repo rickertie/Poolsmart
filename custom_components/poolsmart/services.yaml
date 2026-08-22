@@ -69,6 +69,12 @@ set_setting:
               value: solar_threshold
             - label: House power limit
               value: power_limit
+            - label: Maximum water temperature
+              value: max_temp
+            - label: Minimum daily filtration hours
+              value: min_daily_hours
+            - label: Eco mode price factor
+              value: eco_price_factor
     value:
       name: Value
       required: true

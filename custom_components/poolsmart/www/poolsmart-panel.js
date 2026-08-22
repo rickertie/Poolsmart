@@ -71,6 +71,9 @@ const STRINGS = {
     maxPrice: "Maximum price for heating (per kWh)",
     solarThreshold: "Solar surplus for free heating (W)",
     houseLimit: "House power limit (W)",
+    maxTemperature: "Maximum water temperature (°C)",
+    minDailyHours: "Minimum daily filtration (hours)",
+    ecoPriceFactor: "Eco mode price factor",
     notSet: "not set",
     save: "Save",
     saved: "Saved.",
@@ -125,6 +128,9 @@ const STRINGS = {
     maxPrice: "Maximale prijs voor verwarmen (per kWh)",
     solarThreshold: "Zonoverschot voor gratis verwarmen (W)",
     houseLimit: "Huisverbruikslimiet (W)",
+    maxTemperature: "Maximale watertemperatuur (°C)",
+    minDailyHours: "Minimale filtratie per dag (uur)",
+    ecoPriceFactor: "Prijsfactor eco-modus",
     notSet: "niet ingesteld",
     save: "Opslaan",
     saved: "Opgeslagen.",
@@ -1524,6 +1530,18 @@ class PoolSmartPanel extends HTMLElement {
         ${this._settingField("power_limit", this.t("houseLimit"), set.power_limit_w, {
           step: 50,
           min: 0,
+        })}
+        ${this._settingField("max_temp", this.t("maxTemperature"), set.max_temp, {
+          step: 0.5,
+          min: 10,
+        })}
+        ${this._settingField("min_daily_hours", this.t("minDailyHours"), set.min_daily_hours, {
+          step: 0.5,
+          min: 0.5,
+        })}
+        ${this._settingField("eco_price_factor", this.t("ecoPriceFactor"), set.eco_price_factor, {
+          step: 0.05,
+          min: 0.1,
         })}
         <div class="reason muted" id="settings-status"></div>
       </div>
