@@ -12,7 +12,7 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
-## [1.12.3] — Three More Quick Settings
+## [1.12.3] — Three More Quick Settings and A Season's Worth of History, Recovered
 
 ### Added
 
@@ -27,9 +27,6 @@ own paperwork.
   flow. Deliberately not every Configure field: the point of Quick Settings
   is a short, well-chosen list, not a second copy of the whole options flow
   that could drift out of step with it.
-## [1.12.3] — A Season's Worth of History, Recovered
-
-### Added
 
 - **Monthly trend rows are now backfilled from existing history on
   upgrade, instead of starting from zero.** Addresses
@@ -43,14 +40,17 @@ own paperwork.
   `PoolStore.backfill_monthly_aggregates()` now reconstructs monthly rows
   from the existing session log and daily summaries the first time it finds
   none, respecting the same review overrides `rebuild_learning` does.
+  
 - **The months of history a trend needs before it is reported is now a
   setting, not a fixed three.** Also part of #31: a pool that only runs
   part of the year has fewer months to work with by nature, and the
   previous fixed floor of three could mean never seeing a trend within a
   single season. **Months of history before a trend is reported** now lives
   under Configure → Advanced, from 2 to 24 months.
+  
 - **The Learning tab's monthly trends and COP-by-temperature data are now
   charts, not just tables.** Addresses
+  
   [#32](https://github.com/rickertie/Poolsmart/issues/32): a table of ten
   monthly rows or a dozen COP buckets takes reading every number to notice a
   drift or a shape. Heating rate, heat loss, and COP each get a small line
