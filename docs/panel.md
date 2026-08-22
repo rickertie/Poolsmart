@@ -74,7 +74,11 @@ Visualizes the self-learning engine's performance models, including heat loss ca
 ---
 
 ### 5. Settings Tab
-Offers quick access to frequently adjusted operational targets and overrides without needing to open the main Home Assistant integration configuration wizard.
+Offers quick access to the seven settings adjusted most often — desired and
+maximum temperature, maximum price, solar surplus threshold, house power
+limit, minimum daily filtration, and the eco-mode price factor — without
+needing to open the main Home Assistant integration configuration wizard.
+Everything else still lives under Configure.
 
 <p align="center">
   <img src="images/panel-settings.svg" width="750" alt="PoolSmart Settings Tab">
