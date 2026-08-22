@@ -343,3 +343,141 @@ def test_t110_stats_counts_monthly_aggregates():
     store.record_monthly_metric("heating_rate", 1.0, datetime(2026, 2, 1, tzinfo=TZ))
 
     assert store.stats()["monthly_aggregates"] == 2
+
+
+# ---------------------------------------------------------------------------
+# T111 - upgrading with pre-existing history reconstructs monthly rows
+# instead of starting the trend from zero
+# ---------------------------------------------------------------------------
+
+
+def _store_with_history(session_log=None, daily_summaries=None):
+    store = _new_store()
+    store.session_log = session_log if session_log is not None else []
+    store.daily_summaries = daily_summaries if daily_summaries is not None else []
+    return store
+
+
+def _auto_session(end, heating_rate=1.1, air_avg=26.0, measured_cop=3.4, review="auto"):
+    return {
+        "end": end,
+        "heating_rate": heating_rate,
+        "air_avg": air_avg,
+        "measured_cop": measured_cop,
+        "review": review,
+        "measurements": {"heating_rate": heating_rate is not None, "cop": measured_cop is not None},
+    }
+
+
+def test_t111_backfill_replays_usable_sessions_into_monthly_rows():
+    store = _store_with_history(
+        session_log=[
+            _auto_session("2026-05-03T10:00:00+00:00", heating_rate=1.1, air_avg=26.0, measured_cop=3.4),
+            _auto_session("2026-05-20T10:00:00+00:00", heating_rate=1.3, air_avg=27.0, measured_cop=3.6),
+            _auto_session("2026-06-01T10:00:00+00:00", heating_rate=0.9, air_avg=32.0, measured_cop=4.1),
+        ]
+    )
+
+    recovered = store.backfill_monthly_aggregates()
+
+    assert recovered is True
+    assert set(store.monthly_aggregates) == {"2026-05", "2026-06"}
+    may = store.monthly_aggregates["2026-05"]
+    assert round(may.heating_rate.mean, 6) == 1.2
+    assert may.session_count == 2
+    assert round(may.cop_by_bucket["25-30"].mean, 6) == 3.5
+
+
+def test_t111b_backfill_folds_daily_summaries_into_the_month():
+    store = _store_with_history(
+        daily_summaries=[
+            {"date": "2026-04-29", "runtime_hours": 2.0, "energy_kwh": 5.0, "cost_euro": 1.0},
+            {"date": "2026-04-30", "runtime_hours": 3.0, "energy_kwh": 7.5, "cost_euro": 1.5},
+        ]
+    )
+
+    recovered = store.backfill_monthly_aggregates()
+
+    assert recovered is True
+    april = store.monthly_aggregates["2026-04"]
+    assert april.runtime_hours == 5.0
+    assert april.energy_kwh == 12.5
+    assert april.cost_euro == 2.5
+
+
+def test_t111c_backfill_respects_explicit_review_overrides():
+    store = _store_with_history(
+        session_log=[
+            # An "auto" verdict that found nothing usable must stay excluded.
+            _auto_session(
+                "2026-05-03T10:00:00+00:00",
+                heating_rate=None,
+                air_avg=None,
+                measured_cop=None,
+            ),
+            # A human "excluded" override drops an otherwise-usable session.
+            _auto_session(
+                "2026-05-04T10:00:00+00:00",
+                heating_rate=1.5,
+                review="excluded",
+            ),
+            # A human "included" override rescues one the auto verdict skipped.
+            {
+                "end": "2026-05-05T10:00:00+00:00",
+                "heating_rate": 1.2,
+                "air_avg": None,
+                "measured_cop": None,
+                "review": "included",
+                "measurements": {"heating_rate": False, "cop": False},
+            },
+        ]
+    )
+
+    recovered = store.backfill_monthly_aggregates()
+
+    assert recovered is True
+    may = store.monthly_aggregates["2026-05"]
+    assert may.heating_rate.n == 1
+    assert round(may.heating_rate.mean, 6) == 1.2
+    assert may.session_count == 1
+
+
+def test_t111d_backfill_is_skipped_once_a_monthly_row_already_exists():
+    store = _store_with_history(
+        session_log=[_auto_session("2026-05-03T10:00:00+00:00")]
+    )
+    store.record_monthly_metric("heating_rate", 9.9, datetime(2026, 1, 1, tzinfo=TZ))
+
+    recovered = store.backfill_monthly_aggregates()
+
+    assert recovered is False
+    assert set(store.monthly_aggregates) == {"2026-01"}
+
+
+# ---------------------------------------------------------------------------
+# T112 - a seasonal pool can lower the months-before-reporting floor instead
+# of being stuck with a year-round default
+# ---------------------------------------------------------------------------
+
+
+def test_t112_a_lower_min_months_reports_a_trend_sooner():
+    months = _months([3.2, 3.4], field="heating_rate")
+    assert trend(months, "heating_rate", higher_is_better=True).direction == (
+        "insufficient_data"
+    )
+
+    result = trend(months, "heating_rate", higher_is_better=True, min_months=2)
+    assert result.direction == "improving"
+    assert result.months_considered == 2
+
+
+def test_t112b_min_months_is_never_allowed_below_two():
+    months = _months([3.2], field="heating_rate")
+    result = trend(months, "heating_rate", higher_is_better=True, min_months=1)
+    assert result.direction == "insufficient_data"
+
+
+def test_t112c_all_trends_passes_min_months_through():
+    months = _months([3.2, 3.4], field="heating_rate")
+    results = all_trends(months, min_months=2)
+    assert results["heating_rate"].direction == "improving"

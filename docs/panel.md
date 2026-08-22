@@ -29,7 +29,7 @@ thing.
 | Overview | Current status, mode, temperature, and the reason for the last decision |
 | Planning | Heating plan, price forecast, and target time/date |
 | Sessions | Session history with learned values, rejection reasons, and manual review controls |
-| Learning | Learned heat loss, heating rate, and COP curve with confidence bars; storage stats, maintenance actions, and export/import |
+| Learning | Learned heat loss, heating rate, and COP curve with confidence bars; monthly trend and COP-by-temperature charts; storage stats, maintenance actions, and export/import |
 | Settings | Quick access to common settings without opening the full options flow |
 | Diagnostics | Full ladder trace, decision log, faults, and export button |
 
@@ -65,7 +65,7 @@ Logs past heating and filtration cycles, displaying evaluated metrics, learned p
 ---
 
 ### 4. Learning Tab
-Visualizes the self-learning engine's performance models, including heat loss calculations, heating rate estimations, and the active COP curve with confidence margins. Below that sits storage statistics, maintenance actions (reprocess history, clear debug traces, clear all history), and export/import, including a selective export and an advanced full-replace option. See [Learning](learning.md#maintenance-exportimport).
+Visualizes the self-learning engine's performance models, including heat loss calculations, heating rate estimations, and the active COP curve with confidence margins. Monthly heating rate, heat loss, and COP each get a line chart covering the last 12 months, and COP by outdoor temperature gets a bar chart, alongside the underlying tables. Below that sits storage statistics, maintenance actions (reprocess history, clear debug traces, clear all history), and export/import, including a selective export and an advanced full-replace option. See [Learning](learning.md#maintenance-exportimport).
 
 <p align="center">
   <img src="images/panel-learning.svg" width="750" alt="PoolSmart Learning Tab">

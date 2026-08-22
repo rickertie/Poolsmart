@@ -27,6 +27,38 @@ own paperwork.
   flow. Deliberately not every Configure field: the point of Quick Settings
   is a short, well-chosen list, not a second copy of the whole options flow
   that could drift out of step with it.
+## [1.12.3] — A Season's Worth of History, Recovered
+
+### Added
+
+- **Monthly trend rows are now backfilled from existing history on
+  upgrade, instead of starting from zero.** Addresses
+  [#31](https://github.com/rickertie/Poolsmart/issues/31): long-term trend
+  retention (#11) only ever folded a *new* observation into a monthly row
+  the moment a session finished or a day rolled over — nothing replayed
+  what was already sitting in the session log or daily summaries when that
+  feature shipped. Anyone upgrading with existing history saw trends start
+  from a single row, needing months of fresh data to say anything at all
+  despite already having the history to say it immediately.
+  `PoolStore.backfill_monthly_aggregates()` now reconstructs monthly rows
+  from the existing session log and daily summaries the first time it finds
+  none, respecting the same review overrides `rebuild_learning` does.
+- **The months of history a trend needs before it is reported is now a
+  setting, not a fixed three.** Also part of #31: a pool that only runs
+  part of the year has fewer months to work with by nature, and the
+  previous fixed floor of three could mean never seeing a trend within a
+  single season. **Months of history before a trend is reported** now lives
+  under Configure → Advanced, from 2 to 24 months.
+- **The Learning tab's monthly trends and COP-by-temperature data are now
+  charts, not just tables.** Addresses
+  [#32](https://github.com/rickertie/Poolsmart/issues/32): a table of ten
+  monthly rows or a dozen COP buckets takes reading every number to notice a
+  drift or a shape. Heating rate, heat loss, and COP each get a small line
+  chart over the last 12 months, with a gap rather than an interpolated
+  guess for any month with nothing measured; COP by outdoor temperature gets
+  a bar chart sorted by temperature. Both are hand-written inline SVG, no
+  charting library involved, so the panel keeps working without a build
+  step or internet access.
 
 ## [1.12.2] — A Save Before the Door Closes
 

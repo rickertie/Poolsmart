@@ -394,6 +394,12 @@ class PoolStore:
                 "confidence counter"
             )
 
+        if self.backfill_monthly_aggregates():
+            _LOGGER.info(
+                "Reconstructed monthly trend rows from session and daily history "
+                "that predates long-term trend retention"
+            )
+
     def _migrate_data(self, old_version: int, raw: dict) -> dict:
         """Upgrade stored data from an older schema version to the current one.
 
@@ -899,3 +905,76 @@ class PoolStore:
             self.monthly_aggregates[key].as_dict()
             for key in sorted(self.monthly_aggregates)
         ]
+
+    def backfill_monthly_aggregates(self) -> bool:
+        """Reconstruct monthly trend rows for history that predates them.
+
+        Long-term trend retention only folds in observations from the moment a
+        session finishes or a day rolls over -- see the ``record_monthly_*``
+        and ``bump_monthly_session_count`` call sites in the coordinator.
+        Nothing replays what was already sitting in ``session_log`` and
+        ``daily_summaries`` when that feature shipped, so anyone upgrading
+        with existing history saw trends start from zero and need
+        ``TREND_MIN_MONTHS`` more months to say anything at all, despite
+        already having the data to say it immediately.
+
+        Only ever runs while no monthly aggregate exists yet: once the live
+        path has folded in a single observation, replaying the logs again
+        would double-count whatever overlaps between them and the raw history.
+        Heat loss and heat-loss-covered are not recovered here -- unlike
+        heating rate and COP, no raw sample of either survives anywhere once
+        it has been folded into ``learned``, so there is nothing left to
+        replay.
+        """
+        if self.monthly_aggregates:
+            return False
+
+        recovered = False
+
+        for day in self.daily_summaries:
+            try:
+                when = date.fromisoformat(day["date"])
+            except (KeyError, ValueError, TypeError):
+                continue
+            agg = self._month_agg(when)
+            agg.runtime_hours += day.get("runtime_hours", 0.0)
+            agg.energy_kwh += day.get("energy_kwh", 0.0)
+            agg.cost_euro += day.get("cost_euro", 0.0)
+            recovered = True
+
+        # Mirrors rebuild_learned's review handling in core.learning: an
+        # explicit "excluded" always drops the session, "included" forces it
+        # in as long as the value it would contribute actually exists, and
+        # "auto" (or a log written before review existed) falls back to the
+        # verdict recorded when the session finished.
+        for entry in self.session_log:
+            if entry.get("review") == "excluded":
+                continue
+            included = entry.get("review") == "included"
+            verdict = entry.get("measurements") or {}
+            end = entry.get("end")
+            if not end:
+                continue
+            try:
+                when = datetime.fromisoformat(end)
+            except (ValueError, TypeError):
+                continue
+
+            use_rate = (included or verdict.get("heating_rate")) and entry.get(
+                "heating_rate"
+            ) is not None
+            use_cop = (included or verdict.get("cop")) and entry.get(
+                "measured_cop"
+            ) is not None
+
+            if use_rate:
+                self.record_monthly_metric("heating_rate", entry["heating_rate"], when)
+            if use_cop:
+                air = entry.get("air_avg")
+                if air is not None:
+                    self.record_monthly_cop(float(air), entry["measured_cop"], when)
+            if use_rate or use_cop:
+                self.bump_monthly_session_count(when)
+                recovered = True
+
+        return recovered

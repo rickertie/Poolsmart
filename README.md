@@ -154,12 +154,15 @@ balancing energy costs, swim schedules, and equipment protection.
 
 ---
 
+<!-- single-pool limitation: _target_coordinator() in __init__.py only supports one config entry — see issue #25 / docs/troubleshooting.md#single-pool-limitation-for-services -->
 ## Known Limitations
 
-- **Services require a single pool.** All PoolSmart services (dose recording,
-  history import/export, learning reset, etc.) only work when exactly one
-  PoolSmart pool is configured. With two or more pools, service calls are refused.
-  See [Troubleshooting](docs/troubleshooting.md#single-pool-limitation-for-services).
+- **Services require a single pool.** All PoolSmart services (`record_dose`,
+  `reset_learned`, `export_learning`, `import_learning`, `replace_learning`,
+  `rebuild_learning`, `set_session_review`, `clear_debug_log`,
+  `clear_all_history`, `set_setting`) only work when exactly one PoolSmart pool
+  is configured. With two or more pools, service calls are refused. See
+  [Troubleshooting](docs/troubleshooting.md#single-pool-limitation-for-services).
 - **House power limit needs the right sensor.** The demand limiter expects a
   whole-house power sensor (e.g. from your smart meter), not the pool's own
   consumption. A signed "net" reading (negative during solar export, such as

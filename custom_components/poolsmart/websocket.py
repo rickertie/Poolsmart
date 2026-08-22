@@ -128,7 +128,11 @@ def _monthly_trends(coordinator) -> dict:
     from .core import aggregates
 
     months = list(coordinator.store.monthly_aggregates.values())
-    return {k: v.as_dict() for k, v in aggregates.all_trends(months).items()}
+    min_months = coordinator.pool_config.learning.trend_min_months
+    return {
+        k: v.as_dict()
+        for k, v in aggregates.all_trends(months, min_months=min_months).items()
+    }
 
 
 def _branch_time_today(coordinator) -> list[dict]:

@@ -300,8 +300,9 @@ class Advisor:
         from ..core import aggregates
 
         months = list(self.coordinator.store.monthly_aggregates.values())
+        min_months = self.coordinator.pool_config.learning.trend_min_months
         out = []
-        for metric, result in aggregates.all_trends(months).items():
+        for metric, result in aggregates.all_trends(months, min_months=min_months).items():
             if result.direction not in ("improving", "degrading"):
                 continue
             out.append(

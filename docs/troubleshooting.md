@@ -52,8 +52,8 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 
 All PoolSmart services (`record_dose`, `reset_learned`, `export_learning`,
 `import_learning`, `replace_learning`, `rebuild_learning`,
-`set_session_review`, `clear_debug_log`, `clear_all_history`) only work when
-**exactly one** PoolSmart config entry is loaded.
+`set_session_review`, `clear_debug_log`, `clear_all_history`,
+`set_setting`) only work when **exactly one** PoolSmart config entry is loaded.
 
 If you set up two or more pools and call a service, it is refused with an error
 like:

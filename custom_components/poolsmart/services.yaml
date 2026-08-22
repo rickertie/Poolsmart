@@ -52,7 +52,8 @@ set_setting:
   description: >-
     Change one of the settings otherwise only reachable through Configure.
     Meant for the panel's Settings tab, where these are the values people
-    adjust most often -- see issue #23.
+    adjust most often -- see issue #23. Refused when more than one
+    PoolSmart pool is configured — multi-pool targeting is not yet supported.
   fields:
     key:
       name: Setting
