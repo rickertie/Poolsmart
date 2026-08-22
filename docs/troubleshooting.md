@@ -46,6 +46,7 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Integration shows `unavailable` after restart | ESPHome device not reachable | Check ESPHome device status; verify WiFi |
 | Configuration changes have no effect | Options not saved | Click "Submit" and reload the integration |
 | Entities disappeared after upgrade | Entity ID migration | Check the log for rename messages; update automations |
+| Pump runs a full filtration block again right after a Home Assistant update or restart | Fixed in 1.12.2 — filtration state is now flushed to disk before Home Assistant shuts down, not only when the integration itself is reloaded | Update to 1.12.2 or later |
 
 ### Single-Pool Limitation for Services
 

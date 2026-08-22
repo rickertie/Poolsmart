@@ -75,7 +75,7 @@ You need two settings, both in **Configure → Sensors and switches** or
 
 | Setting | Where | What to enter |
 |---|---|---|
-| `grid_power_sensor` | Sensors and switches | Your **total household power** sensor (e.g. from a smart meter or the Home Assistant energy dashboard). This must be the whole-house reading, **not** the pool's own consumption. |
+| `grid_power_sensor` | Sensors and switches | Your **total household power** sensor (e.g. from a smart meter or the Home Assistant energy dashboard). This must be the whole-house reading, **not** the pool's own consumption. A signed "net" reading (e.g. a Dutch P1 *netto* sensor) is fine too — it goes negative while solar export exceeds household use, and PoolSmart uses that as-is. |
 | `power_limit_w` | When to heat | The maximum total household draw in watts. |
 
 ### How the limit works

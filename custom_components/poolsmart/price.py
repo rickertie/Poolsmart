@@ -18,6 +18,15 @@ from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
+#: Entity IDs already warned about having no recognisable forecast shape.
+#: The shape of a sensor's attributes does not change tick to tick, so once
+#: this has been reported there is nothing new to say on the next refresh --
+#: without this, a permanently-unrecognised sensor logs the same warning on
+#: every coordinator update forever (seen: thousands of times a day).
+#: Cleared for an entity as soon as it produces a recognised forecast again,
+#: so a real change back to "no forecast" is still reported once.
+_warned_no_forecast: set[str] = set()
+
 #: Attribute names that have been seen to hold a list of priced intervals.
 #:
 #: There is no standard for this. Every tariff integration invents its own shape,
@@ -108,19 +117,25 @@ def extract_forecast(state: State | None) -> tuple[tuple[datetime, datetime, flo
         # Worth a real warning rather than a debug line: without a forecast the
         # planner cannot choose a cheap moment, and the difference between "no
         # price sensor" and "a price sensor whose shape I do not recognise" is
-        # the difference between a setup mistake and a gap in this list.
-        candidates = [
-            name
-            for name, value in state.attributes.items()
-            if isinstance(value, list) and value
-        ]
-        _LOGGER.warning(
-            "No price forecast recognised on %s. Planning will fall back to "
-            "heating on demand. List attributes present: %s",
-            state.entity_id,
-            candidates or "none",
-        )
+        # the difference between a setup mistake and a gap in this list. But
+        # only once per entity -- the sensor's shape does not change between
+        # coordinator refreshes, so repeating it every tick is just noise.
+        if state.entity_id not in _warned_no_forecast:
+            candidates = [
+                name
+                for name, value in state.attributes.items()
+                if isinstance(value, list) and value
+            ]
+            _LOGGER.warning(
+                "No price forecast recognised on %s. Planning will fall back to "
+                "heating on demand. List attributes present: %s",
+                state.entity_id,
+                candidates or "none",
+            )
+            _warned_no_forecast.add(state.entity_id)
         return ()
+
+    _warned_no_forecast.discard(state.entity_id)
 
     # De-duplicate on start time, keep chronological order.
     unique: dict[datetime, tuple] = {}

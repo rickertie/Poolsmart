@@ -162,7 +162,9 @@ balancing energy costs, swim schedules, and equipment protection.
   See [Troubleshooting](docs/troubleshooting.md#single-pool-limitation-for-services).
 - **House power limit needs the right sensor.** The demand limiter expects a
   whole-house power sensor (e.g. from your smart meter), not the pool's own
-  consumption. See [Configuration](docs/configuration.md#house-power-limit).
+  consumption. A signed "net" reading (negative during solar export, such as
+  a Dutch P1 *netto* sensor) works too. See
+  [Configuration](docs/configuration.md#house-power-limit).
 
 ---
 

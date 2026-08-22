@@ -28,6 +28,47 @@ own paperwork.
   is a short, well-chosen list, not a second copy of the whole options flow
   that could drift out of step with it.
 
+## [1.12.2] — A Save Before the Door Closes
+
+### Fixed
+
+- **Filtration progress could be lost across a Home Assistant restart or
+  update, making the pump run a full block again.** The only place that
+  force-saved PoolSmart's state was `async_unload_entry`, which runs when
+  this integration itself is reloaded or removed — never during a full
+  Home Assistant restart, which is what a Core, Supervisor/OS or add-on
+  update actually does. On that path, only the periodic debounced tick
+  save reached disk, so a restart landing between saves (or catching a
+  missed tick) could lose enough of today's recorded filtration runtime
+  that the pool looked unfiltered afterwards. PoolSmart now also flushes
+  its state to disk on `EVENT_HOMEASSISTANT_FINAL_WRITE`, Home Assistant's
+  own last-chance-to-persist signal before it exits, so an update or
+  restart no longer costs the day's progress. Addresses
+  [#28](https://github.com/rickertie/Poolsmart/issues/28).
+
+## [1.12.1] — What the Meter Was Actually Saying
+
+### Fixed
+
+- **A signed "net" grid-power reading was treated as a fault, not a
+  measurement.** `grid_power_sensor`'s plausible range floored at 0.0 W, so a
+  smart-meter sensor reporting *net* household power (negative while solar
+  export exceeds household use — e.g. a Dutch P1 "netto" reading) had every
+  single reading rejected as implausible. Beyond the log spam this caused —
+  a warning every ~30 seconds — it silently disabled the demand limiter
+  entirely: a rejected reading falls back to `grid_power_w=None`, which the
+  limiter reads as "not configured." Related to
+  [#21](https://github.com/rickertie/Poolsmart/issues/21). The range is now
+  `(-50000.0, 50000.0)`, and [Configuration](docs/configuration.md#house-power-limit)
+  notes that a signed net-meter sensor is a valid choice.
+- **A price sensor with no recognisable forecast shape warned on every
+  refresh, forever.** `price.extract_forecast` logged the same "no price
+  forecast recognised" warning on every ~30-second coordinator tick when a
+  mapped sensor's attributes never matched a known shape — thousands of
+  identical lines a day for a condition that does not change between ticks.
+  It now warns once, and warns again only if the sensor's forecast actually
+  reappears and is then lost again.
+
 ## [1.12.0] — Who Actually Wins: the Price or the Signal
 
 ### Added
