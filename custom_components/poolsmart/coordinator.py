@@ -463,7 +463,8 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
                     PoolKind(self._conf(c.CONF_POOL_KIND, "frame")), 0.22
                 ),
                 max_step_ratio=float(self._conf(c.CONF_MAX_STEP_RATIO, 0.15)),
-                enabled=bool(self._conf(c.CONF_LEARNING_ENABLED, True))
+                enabled=bool(self._conf(c.CONF_LEARNING_ENABLED, True)),
+                trend_min_months=int(self._conf(c.CONF_TREND_MIN_MONTHS, 3)),
             ),
             heating_source=self._conf(c.CONF_HEATING_SOURCE, "heat_pump"),
             pool_kind=self._conf(c.CONF_POOL_KIND, "frame"),

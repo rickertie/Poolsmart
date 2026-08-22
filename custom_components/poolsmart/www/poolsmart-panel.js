@@ -1091,7 +1091,9 @@ class PoolSmartPanel extends HTMLElement {
 
   _legacyLearning(s) {
     const l = s.learned;
-    const buckets = Object.entries(l.cop_by_air_bucket || {});
+    const buckets = Object.entries(l.cop_by_air_bucket || {}).sort(
+      (a, b) => parseFloat(a[0]) - parseFloat(b[0])
+    );
     return `
       <div class="card">
         <div class="row"><span>Sessions learned from</span><span>${l.session_count}</span></div>
@@ -1109,7 +1111,17 @@ class PoolSmartPanel extends HTMLElement {
         <strong>COP by outdoor temperature</strong>
         ${
           buckets.length
-            ? `<table><tr><th>Air</th><th>COP</th></tr>${buckets
+            ? `<div style="margin-top:8px">${this._barChartSvg(
+                buckets.map(([, v]) => Number(v)),
+                { colour: "#2e7d32", label: "COP by outdoor temperature" }
+              )}</div>
+               ${this._chartCaption(
+                 buckets.map(([k]) => `${k} °C`),
+                 buckets.map(([, v]) => Number(v)),
+                 "",
+                 2
+               )}
+               <table style="margin-top:8px"><tr><th>Air</th><th>COP</th></tr>${buckets
                 .map(([k, v]) => `<tr><td>${esc(k)} °C</td><td>${v}</td></tr>`)
                 .join("")}</table>`
             : `<div class="muted">Nothing measured yet. Until then the curve from the
@@ -1147,6 +1159,95 @@ class PoolSmartPanel extends HTMLElement {
     return `<span class="badge" style="background:${color}">${label}</span>`;
   }
 
+  /**
+   * Minimal inline SVG line chart. No axes, no library -- consistent with the
+   * panel's "no build step and no external imports" constraint. A null value
+   * breaks the line rather than being interpolated across, so a month with
+   * nothing measured reads as a gap, not a guess.
+   */
+  _lineChartSvg(values, opts = {}) {
+    const width = opts.width || 300;
+    const height = opts.height || 56;
+    const pad = 4;
+    const present = values.filter((v) => v !== null && v !== undefined);
+    if (present.length < 2) return "";
+    const min = Math.min(...present);
+    const max = Math.max(...present);
+    const range = max - min || 1;
+    const stepX = values.length > 1 ? (width - pad * 2) / (values.length - 1) : 0;
+    const points = values.map((v, i) =>
+      v === null || v === undefined
+        ? null
+        : [pad + i * stepX, height - pad - ((v - min) / range) * (height - pad * 2)]
+    );
+    let path = "";
+    let drawing = false;
+    points.forEach((p) => {
+      if (!p) {
+        drawing = false;
+        return;
+      }
+      path += `${drawing ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)} `;
+      drawing = true;
+    });
+    const colour = opts.colour || "var(--primary-color,#03a9f4)";
+    const dots = points
+      .map((p) => (p ? `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.2" fill="${colour}"/>` : ""))
+      .join("");
+    return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}"
+        preserveAspectRatio="none" role="img" aria-label="${esc(opts.label || "")}">
+      <path d="${path.trim()}" fill="none" stroke="${colour}" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+      ${dots}
+    </svg>`;
+  }
+
+  /** Same constraints as _lineChartSvg, for values that are counts or levels rather than a trend. */
+  _barChartSvg(values, opts = {}) {
+    const width = opts.width || 300;
+    const height = opts.height || 64;
+    const pad = 4;
+    const gap = 3;
+    if (!values.length) return "";
+    const max = Math.max(...values, 0);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+    const barW = (width - pad * 2 - gap * (values.length - 1)) / values.length;
+    const zeroY = height - pad - ((0 - min) / range) * (height - pad * 2);
+    const colour = opts.colour || "var(--primary-color,#03a9f4)";
+    const bars = values
+      .map((v, i) => {
+        const x = pad + i * (barW + gap);
+        const y = height - pad - ((v - min) / range) * (height - pad * 2);
+        const top = Math.min(y, zeroY);
+        const h = Math.max(Math.abs(zeroY - y), 1);
+        return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${Math.max(
+          barW,
+          1
+        ).toFixed(1)}" height="${h.toFixed(1)}" fill="${colour}" rx="1.5"/>`;
+      })
+      .join("");
+    return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}"
+        role="img" aria-label="${esc(opts.label || "")}">${bars}</svg>`;
+  }
+
+  /** First and last plotted point, as a caption row under a chart. */
+  _chartCaption(labels, values, unit, decimals) {
+    const present = values
+      .map((v, i) => ({ v, i }))
+      .filter((o) => o.v !== null && o.v !== undefined);
+    if (!present.length) return "";
+    const first = present[0];
+    const last = present[present.length - 1];
+    const fmt = (v) => `${v.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+    return `<div class="row" style="font-size:11px">
+      <span class="muted">${esc(labels[first.i])} · ${fmt(first.v)}</span>
+      <span class="muted">${esc(labels[last.i])} · <b style="color:var(--primary-text-color)">${fmt(
+        last.v
+      )}</b></span>
+    </div>`;
+  }
+
   _trendsCard(s) {
     const months = s.monthly_aggregates || [];
     if (!months.length) return "";
@@ -1156,12 +1257,36 @@ class PoolSmartPanel extends HTMLElement {
     );
 
     const recent = months.slice(-12);
+    const labels = recent.map((m) => m.month);
     const copMean = (m) => {
       const buckets = Object.values(m.cop_by_bucket || {});
       const n = buckets.reduce((a, b) => a + b.n, 0);
       if (!n) return null;
       return buckets.reduce((a, b) => a + b.mean * b.n, 0) / n;
     };
+    const series = [
+      {
+        label: "Heating rate",
+        unit: "°C/h",
+        decimals: 3,
+        colour: "#f57c00",
+        values: recent.map((m) => (m.heating_rate && m.heating_rate.n ? m.heating_rate.mean : null)),
+      },
+      {
+        label: "Heat loss",
+        unit: "°C/h",
+        decimals: 3,
+        colour: "#1565c0",
+        values: recent.map((m) => (m.heat_loss && m.heat_loss.n ? m.heat_loss.mean : null)),
+      },
+      {
+        label: "COP",
+        unit: "",
+        decimals: 2,
+        colour: "#2e7d32",
+        values: recent.map(copMean),
+      },
+    ];
 
     return `
       <div class="card">
@@ -1183,7 +1308,21 @@ class PoolSmartPanel extends HTMLElement {
                 .join("")
             : `<div class="muted">Nothing trending yet; everything measured is holding steady.</div>`
         }
-        <table style="margin-top:10px">
+      </div>
+      ${series
+        .map((sr) => {
+          const chart = this._lineChartSvg(sr.values, { colour: sr.colour, label: sr.label });
+          if (!chart) return "";
+          return `<div class="card">
+            <strong>${esc(sr.label)}</strong>
+            <div style="margin-top:8px">${chart}</div>
+            ${this._chartCaption(labels, sr.values, sr.unit, sr.decimals)}
+          </div>`;
+        })
+        .join("")}
+      <div class="card">
+        <strong>By month</strong>
+        <table>
           <tr><th>Month</th><th>Sessions</th><th>Heating rate</th><th>Heat loss</th><th>COP</th></tr>
           ${recent
             .map((m) => {

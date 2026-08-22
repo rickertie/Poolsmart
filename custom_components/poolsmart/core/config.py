@@ -535,6 +535,12 @@ class LearningSettings:
     initial_heat_loss_c_per_h: float = 0.08
     #: Rolling window for the measured flow average, in hours of runtime.
     flow_average_window_h: float = 6.0
+    #: Calendar months of history a long-term trend needs before it is
+    #: reported at all -- see core.aggregates.trend(). The default of 3
+    #: assumes a pool that runs year-round; a seasonal pool that is only
+    #: filled for a few months a year may want this lower so a trend can be
+    #: read within a single season instead of needing several.
+    trend_min_months: int = 3
 
 
 @dataclass(frozen=True)

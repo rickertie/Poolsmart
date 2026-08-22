@@ -1485,6 +1485,10 @@ class PoolSmartOptionsFlow(OptionsFlow):
                         default=current.get(c.CONF_MAX_STEP_RATIO, 0.15),
                     ): _positive(0.01, 1.0, 0.01),
                     vol.Optional(
+                        c.CONF_TREND_MIN_MONTHS,
+                        default=current.get(c.CONF_TREND_MIN_MONTHS, 3),
+                    ): _positive(2, 24, 1),
+                    vol.Optional(
                         c.CONF_HP_COP_CLAMP_MIN,
                         default=current.get(c.CONF_HP_COP_CLAMP_MIN, 3.0),
                     ): _positive(1.0, 15.0, 0.1),

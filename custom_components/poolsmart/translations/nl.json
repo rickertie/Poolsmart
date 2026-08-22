@@ -695,7 +695,8 @@
           "temp_hysteresis": "Temperatuurhysterese (°C)",
           "max_step_ratio": "Maximale verandering per meting",
           "hp_cop_clamp_min": "Laagst aannemelijke COP",
-          "hp_cop_clamp_max": "Hoogst aannemelijke COP"
+          "hp_cop_clamp_max": "Hoogst aannemelijke COP",
+          "trend_min_months": "Maanden historie voordat een trend gemeld wordt"
         },
         "data_description": {
           "calibration_tolerance": "Hoeveel de zwembadvoeler en de pompaanvoer mogen verschillen voordat het gemeld wordt. DS18B20's zijn nauwkeurig tot ongeveer ±0,5 °C, dus alles daaronder komt van de sensoren en niet van het bad.",
@@ -710,7 +711,8 @@
           "temp_hysteresis": "Hoever het water onder het doel moet zakken voordat er weer verwarmd wordt. Stoppen gebeurt precies op het doel.",
           "max_step_ratio": "Hoeveel een geleerde waarde in één keer mag verschuiven, als fractie. Bij 0,15 verschuift één vreemde sessie de boel hooguit vijftien procent, zodat één slechte meting geen weken aan goede metingen ongedaan maakt. Lager is stabieler en past zich trager aan.",
           "hp_cop_clamp_min": "Een sessie met een gemeten COP onder deze waarde wordt beschouwd als een foutieve meting en telt niet mee in het automatische oordeel, ongeacht de reviewstatus. Verhoog dit alleen als jouw warmtepomp echt een lager rendement haalt dan de standaardwaarde van 3,0 toelaat.",
-          "hp_cop_clamp_max": "Hetzelfde plafond aan de bovenkant. Een gemeten COP boven deze waarde wordt beschouwd als een foutieve meting in plaats van een uitzonderlijk efficiënte sessie. Begrenst ook de planningscurve, dus dit beïnvloedt zowel voorspellingen als welke sessies het model bijleren."
+          "hp_cop_clamp_max": "Hetzelfde plafond aan de bovenkant. Een gemeten COP boven deze waarde wordt beschouwd als een foutieve meting in plaats van een uitzonderlijk efficiënte sessie. Begrenst ook de planningscurve, dus dit beïnvloedt zowel voorspellingen als welke sessies het model bijleren.",
+          "trend_min_months": "Hoeveel kalendermaanden historie een meetwaarde nodig heeft voordat de langetermijntrend ervan überhaupt gemeld wordt. De standaardwaarde van 3 gaat uit van een bad dat het hele jaar draait; een seizoensbad dat maar een deel van het jaar gevuld is, kan dit lager willen zetten zodat een trend al binnen één seizoen af te lezen is in plaats van pas na meerdere."
         }
       }
     }

@@ -167,6 +167,7 @@ def trend(
     metric: str,
     *,
     higher_is_better: bool,
+    min_months: int = TREND_MIN_MONTHS,
 ) -> TrendResult:
     """How a metric's monthly mean has been moving, most recent months first.
 
@@ -181,6 +182,10 @@ def trend(
     ``TREND_STABLE_THRESHOLD`` the slope is reported as ``"stable"`` rather
     than as a very small improvement or degradation -- real installations are
     noisy enough that a dead-flat line is the exception, not the rule.
+
+    ``min_months`` overrides :data:`TREND_MIN_MONTHS` -- a pool only filled
+    for part of the year has that many fewer months to work with, and may
+    want a lower floor so a trend can be read within a single season.
     """
     ordered = sorted(months, key=lambda a: a.month)
     points: list[tuple[int, float]] = []
@@ -189,7 +194,7 @@ def trend(
         if value is not None:
             points.append((index, value))
 
-    if len(points) < TREND_MIN_MONTHS:
+    if len(points) < max(2, min_months):
         return TrendResult(direction="insufficient_data", months_considered=len(points))
 
     n = len(points)
@@ -228,7 +233,9 @@ STANDARD_METRICS = {
 }
 
 
-def all_trends(months: list[MonthlyAggregate]) -> dict[str, TrendResult]:
+def all_trends(
+    months: list[MonthlyAggregate], *, min_months: int = TREND_MIN_MONTHS
+) -> dict[str, TrendResult]:
     """Trend for every standard metric, plus one per COP bucket ever recorded.
 
     The single place this is assembled, so the panel and the AI advisor can
@@ -240,6 +247,8 @@ def all_trends(months: list[MonthlyAggregate]) -> dict[str, TrendResult]:
             metrics.setdefault(f"cop_by_bucket.{bucket}", True)
 
     return {
-        metric: trend(months, metric, higher_is_better=higher_is_better)
+        metric: trend(
+            months, metric, higher_is_better=higher_is_better, min_months=min_months
+        )
         for metric, higher_is_better in metrics.items()
     }
