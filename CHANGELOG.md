@@ -12,6 +12,29 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.12.1] — What the Meter Was Actually Saying
+
+### Fixed
+
+- **A signed "net" grid-power reading was treated as a fault, not a
+  measurement.** `grid_power_sensor`'s plausible range floored at 0.0 W, so a
+  smart-meter sensor reporting *net* household power (negative while solar
+  export exceeds household use — e.g. a Dutch P1 "netto" reading) had every
+  single reading rejected as implausible. Beyond the log spam this caused —
+  a warning every ~30 seconds — it silently disabled the demand limiter
+  entirely: a rejected reading falls back to `grid_power_w=None`, which the
+  limiter reads as "not configured." Related to
+  [#21](https://github.com/rickertie/Poolsmart/issues/21). The range is now
+  `(-50000.0, 50000.0)`, and [Configuration](docs/configuration.md#house-power-limit)
+  notes that a signed net-meter sensor is a valid choice.
+- **A price sensor with no recognisable forecast shape warned on every
+  refresh, forever.** `price.extract_forecast` logged the same "no price
+  forecast recognised" warning on every ~30-second coordinator tick when a
+  mapped sensor's attributes never matched a known shape — thousands of
+  identical lines a day for a condition that does not change between ticks.
+  It now warns once, and warns again only if the sensor's forecast actually
+  reappears and is then lost again.
+
 ## [1.12.0] — Who Actually Wins: the Price or the Signal
 
 ### Added
