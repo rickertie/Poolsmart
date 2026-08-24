@@ -161,6 +161,22 @@ def _parse_time_optional(raw: str | None) -> time | None:
         return None
 
 
+def _parse_datetime_optional(raw: str | None) -> datetime | None:
+    """A full date-and-time from an ``input_datetime`` helper with both
+    enabled -- a one-off appointment such as "swim next Wednesday at 14:00"
+    rather than a recurring time of day. ``None`` for a date-only or
+    time-only state, exactly matching Home Assistant's own
+    ``"YYYY-MM-DD HH:MM:SS"`` serialisation for that helper type, so it never
+    misreads a plain time as a date-bearing one.
+    """
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(str(raw), "%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return None
+
+
 class PoolSmartCoordinator(DataUpdateCoordinator):
     """Runs the decision engine and drives the two switches."""
 
@@ -624,6 +640,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         back to the static fields when the entity is unset or unreadable keeps
         this purely additive. A configured swim_skip_entity ("not swimming
         today") excludes today's date from every source, entity or static.
+
+        The same helper doubles as a one-off appointment when both its date
+        and time are set: "swim next Wednesday at 14:00" without making every
+        future Wednesday a swim day. That reading wins outright -- it ignores
+        swim_days entirely, since choosing a specific date is the point -- and
+        a date that has already passed is simply stale, falling through to the
+        recurring schedule below exactly as an unset helper would rather than
+        needing to be cleared by hand.
         """
         days = self._conf(c.CONF_SWIM_DAYS, [0, 1, 2, 3, 4, 5, 6]) or []
         skip_today = bool(self._read_binary(c.CONF_SWIM_SKIP_ENTITY))
@@ -633,7 +657,14 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         if entity_id:
             state = self.hass.states.get(entity_id)
             if state is not None and state.state not in UNAVAILABLE:
-                entity_time = _parse_time_optional(state.state)
+                one_off = _parse_datetime_optional(state.state)
+                if one_off is not None:
+                    one_off = one_off.replace(tzinfo=now.tzinfo)
+                    on_skipped_today = skip_today and one_off.date() == now.date()
+                    if one_off > now and not on_skipped_today:
+                        return one_off
+                else:
+                    entity_time = _parse_time_optional(state.state)
 
         if entity_time is not None:
             wanted_times = [entity_time]

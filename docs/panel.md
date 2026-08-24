@@ -47,7 +47,7 @@ Provides a real-time summary of the pool state, active operating mode, live temp
 ---
 
 ### 2. Planning Tab
-Displays the automated heating schedule, real-time dynamic energy price forecasts, and target temperatures for scheduled swim sessions.
+Displays the automated heating schedule, real-time dynamic energy price forecasts, and target temperatures for scheduled swim sessions. Swim time — whichever source supplied it, recurring or a one-off appointment (see [Planning](planning.md#swim-time)) — sits next to Ready at with an on-track/won't-make-it note, so it is visible that a configured time was picked up and whether the plan meets it.
 
 <p align="center">
   <img src="images/panel-planning.svg" width="750" alt="PoolSmart Planning Tab">

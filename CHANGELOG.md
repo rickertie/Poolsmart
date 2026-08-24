@@ -12,7 +12,45 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
-## [1.12.4] — The Swim Deadline, Visible
+## [1.12.5] — A Deadline You Can See, and a Restart You Can Trust
+
+### Fixed
+
+- **A single unreadable filtration interval could silently wipe an entire
+  day's filtration credit.** `PoolStore.async_load()` parsed `quota_date` and
+  `intervals` as one group: since `quota_date` is assigned before `intervals`
+  is built, a malformed entry anywhere in the stored interval list raised
+  partway through the list comprehension, leaving `intervals` at its
+  freshly-initialised empty default while the already-assigned `quota_date`
+  still read as today. `roll_day()` then saw no date change and quietly
+  credited zero runtime, so a pool that had already finished today's
+  filtration looked completely unfiltered after a restart or reload and ran
+  a full block again. `quota_date` and `intervals` are now parsed as
+  independent groups, and each interval is parsed on its own, so one bad
+  entry costs only that interval instead of the whole day.
+
+- **The example dashboards' dose-advice cards failed to load with "Configuration
+  error: Conditions are invalid".** Both `docs/lovelace/dashboard.yaml` and
+  `dashboard_old.yaml` gated the pH- and chlorine-dose cards behind a
+  Lovelace `conditional` card using `condition: template` — a condition type
+  the conditional card's own conditions list rejects outright, even though
+  the identical template already works fine as an ordinary card field
+  elsewhere on the same dashboard. Replaced both with a single always-visible
+  markdown card that branches on `ph_dose`/`chlorine_dose` inside its own
+  template instead. It also now tells "no readings yet" apart from "readings
+  show it's balanced" (both previously collapsed into the same "no dose
+  needed" message), and renders the same partial-correction warning for
+  chlorine that pH already had — the shared dose payload supports `partial`
+  for either.
+
+- **A system clock moved backward between a save and the next load could
+  credit filtration runtime that had not actually happened.**
+  `_close_open_interval` closed a dangling open interval at `synced_at`
+  whenever it was later than the interval's start, but never checked it
+  against the current time — so a `synced_at` that ended up in the future
+  relative to this boot's own clock was accepted anyway, contrary to what
+  its own docstring promised. It now also requires `synced_at <= now`,
+  falling back to the conservative "credit nothing" close otherwise.
 
 ### Added
 
@@ -28,6 +66,31 @@ own paperwork.
   directly, the **Ready at** sensor's attributes add `deadline` and an
   `on_time` flag, and the panel's Planning tab shows the swim time next to
   Ready at with an on-track/won't-make-it note.
+
+- **The swim time dashboard helper can now be set as a one-off appointment,
+  not just a recurring time of day.** `swim_time_entity` (issue #17) only
+  ever read the *time* out of the `input_datetime` helper it points at, so a
+  household that does not swim on a fixed weekly rhythm had no way to say
+  "swim next Wednesday at 14:00" without permanently adding Wednesday to
+  **Dagen**/**Days** — the one person actually setting the time from the
+  dashboard has no reason to know that screen exists, let alone open it for
+  a single occasion. Turning on both **date and time** on the helper now
+  reads as exactly that: a one-off appointment that wins outright, even on a
+  day not ticked in the recurring schedule, and quietly stops applying once
+  the date has passed rather than needing to be cleared by hand. A
+  time-only helper keeps behaving exactly as before.
+
+- **Diagnostics now show what the last restore actually found on disk.**
+  Tracking down a lost-filtration-credit report meant asking someone to
+  enable debug logging and grep the full Home Assistant log for the right
+  line, every time. `PoolStore.async_load()` now logs one INFO-level restore
+  summary — quota date, hours credited, interval count, last confirmed write
+  to disk — visible at the default log level with no configuration needed.
+  The **Download diagnostics** button (Settings → Devices & services →
+  PoolSmart) carries the same numbers plus whether an interval was left open
+  by the pump still running, in a `persistence` section, so a single
+  one-click download says what a full restart actually restored instead of
+  hunting through a log file.
 
 ## [1.12.3] — Three More Quick Settings and A Season's Worth of History, Recovered
 

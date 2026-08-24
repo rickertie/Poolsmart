@@ -213,6 +213,10 @@ class PoolStore:
         self._save_lock = asyncio.Lock()
         #: Monotonic time of the last write, for the debounce in :meth:`async_save`.
         self._last_saved_at: float = 0.0
+        #: Wall-clock time of the last write that actually reached disk, kept
+        #: for diagnostics -- monotonic time answers "how long ago" but not
+        #: "at what moment", which is what a bug report needs.
+        self.last_synced_at: datetime | None = None
         self.quota_date: date | None = None
         self.intervals: list[RuntimeInterval] = []
         #: The open interval, so :meth:`record_pump` does not have to rescan the
@@ -255,6 +259,11 @@ class PoolStore:
     def path(self) -> str:
         """Where this pool's state lives on disk, for stats and diagnostics."""
         return self._store.path
+
+    @property
+    def open_interval_since(self) -> datetime | None:
+        """When the pump's currently-running interval started, if any."""
+        return self._open_interval.start if self._open_interval else None
 
     def stats(self) -> dict:
         """In-memory counts, cheap enough to compute on every request.
@@ -301,13 +310,26 @@ class PoolStore:
         try:
             if raw.get("quota_date"):
                 self.quota_date = date.fromisoformat(raw["quota_date"])
-            self.intervals = [
-                RuntimeInterval.from_dict(item) for item in raw.get("intervals", [])
-            ]
-        except (ValueError, KeyError, TypeError):
-            _LOGGER.warning(
-                "Stored filtration intervals were unreadable and have been reset"
-            )
+        except (ValueError, TypeError):
+            _LOGGER.warning("Stored quota date was unreadable and has been reset")
+
+        # Parsed one interval at a time rather than as a single list
+        # comprehension: today's filtration credit is exactly what a
+        # comprehension throws away wholesale the moment any one entry is
+        # malformed, even though quota_date (parsed above) survives and still
+        # reads as today -- so roll_day sees no day change and the pool looks
+        # completely unfiltered despite everything else having gone right.
+        # One bad entry should cost that one interval, not the whole day.
+        intervals: list[RuntimeInterval] = []
+        for item in raw.get("intervals", []):
+            try:
+                intervals.append(RuntimeInterval.from_dict(item))
+            except (ValueError, KeyError, TypeError):
+                _LOGGER.warning(
+                    "Discarding one unreadable filtration interval; the rest of "
+                    "today's runtime is kept"
+                )
+        self.intervals = intervals
 
         try:
             self.learned = LearnedValues.from_dict(raw.get("learned", {}))
@@ -381,12 +403,26 @@ class PoolStore:
                 "Stored monthly aggregates were unreadable and have been reset"
             )
 
-        self._close_open_interval(synced_at)
+        self.last_synced_at = synced_at
+        self._close_open_interval(synced_at, datetime.now(timezone.utc))
         self._open_interval = None
         self._closed_hours = sum(
             max(0.0, (i.end - i.start).total_seconds() / 3600.0)
             for i in self.intervals
             if i.end is not None
+        )
+        # One line, always visible at the default log level, that answers the
+        # question a lost-filtration-credit report always starts with: what
+        # did this boot actually find on disk. Reaching for debug logging or
+        # hunting through the full log after the fact should not be necessary
+        # to see whether today's runtime came back or not.
+        _LOGGER.info(
+            "PoolSmart state restored: quota_date=%s, filtration credited=%.2fh "
+            "from %d interval(s), last write to disk was %s",
+            self.quota_date.isoformat() if self.quota_date else "none",
+            self._closed_hours,
+            len(self.intervals),
+            self.last_synced_at.isoformat() if self.last_synced_at else "unknown",
         )
         if self.backfill_cop_counts():
             _LOGGER.info(
@@ -429,7 +465,7 @@ class PoolStore:
         data["data_version"] = version
         return data
 
-    def _close_open_interval(self, synced_at: datetime | None) -> None:
+    def _close_open_interval(self, synced_at: datetime | None, now: datetime) -> None:
         """Close an interval that a crash or restart left open.
 
         The pump state after the gap is unknown, so the interval cannot simply
@@ -438,13 +474,15 @@ class PoolStore:
         used as the close point so an interval that had been open for hours
         loses only the unsaved tail, not the whole thing. Without a usable
         ``synced_at`` (an old file predating this field, or one somehow from
-        the future) the interval is closed at its own start instead, crediting
-        it nothing -- the same conservative fallback this always used, kept
-        for exactly the cases it was meant to cover.
+        the future relative to this boot's own clock -- a system clock moved
+        backward between the save and this load would produce exactly that)
+        the interval is closed at its own start instead, crediting it nothing
+        -- the same conservative fallback this always used, kept for exactly
+        the cases it was meant to cover.
         """
         for interval in self.intervals:
             if interval.end is None:
-                if synced_at is not None and synced_at > interval.start:
+                if synced_at is not None and interval.start < synced_at <= now:
                     interval.end = synced_at
                 else:
                     interval.end = interval.start
@@ -489,12 +527,13 @@ class PoolStore:
         if now - self._last_saved_at < STORAGE_SAVE_DEBOUNCE_SECONDS and not force:
             return
 
+        synced_at = datetime.now(timezone.utc)
         data = {
             "data_version": DATA_VERSION,
             #: Wall-clock time this save actually reached disk, so a dangling
             #: open interval found on the next load can be closed here instead
             #: of at its own start -- see _close_open_interval.
-            "synced_at": datetime.now(timezone.utc).isoformat(),
+            "synced_at": synced_at.isoformat(),
             "quota_date": self.quota_date.isoformat() if self.quota_date else None,
             "intervals": [i.as_dict() for i in self.intervals],
             "learned": self.learned.as_dict(),
@@ -537,6 +576,7 @@ class PoolStore:
         async with self._save_lock:
             self._last_saved_at = time.monotonic()
             await self._async_save_atomic(data, self._store.path)
+            self.last_synced_at = synced_at
 
     # -- Filtration quota --------------------------------------------------
 
