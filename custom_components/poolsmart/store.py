@@ -404,7 +404,7 @@ class PoolStore:
             )
 
         self.last_synced_at = synced_at
-        self._close_open_interval(synced_at)
+        self._close_open_interval(synced_at, datetime.now(timezone.utc))
         self._open_interval = None
         self._closed_hours = sum(
             max(0.0, (i.end - i.start).total_seconds() / 3600.0)
@@ -465,7 +465,7 @@ class PoolStore:
         data["data_version"] = version
         return data
 
-    def _close_open_interval(self, synced_at: datetime | None) -> None:
+    def _close_open_interval(self, synced_at: datetime | None, now: datetime) -> None:
         """Close an interval that a crash or restart left open.
 
         The pump state after the gap is unknown, so the interval cannot simply
@@ -474,13 +474,15 @@ class PoolStore:
         used as the close point so an interval that had been open for hours
         loses only the unsaved tail, not the whole thing. Without a usable
         ``synced_at`` (an old file predating this field, or one somehow from
-        the future) the interval is closed at its own start instead, crediting
-        it nothing -- the same conservative fallback this always used, kept
-        for exactly the cases it was meant to cover.
+        the future relative to this boot's own clock -- a system clock moved
+        backward between the save and this load would produce exactly that)
+        the interval is closed at its own start instead, crediting it nothing
+        -- the same conservative fallback this always used, kept for exactly
+        the cases it was meant to cover.
         """
         for interval in self.intervals:
             if interval.end is None:
-                if synced_at is not None and synced_at > interval.start:
+                if synced_at is not None and interval.start < synced_at <= now:
                     interval.end = synced_at
                 else:
                     interval.end = interval.start

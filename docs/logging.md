@@ -46,7 +46,7 @@ One line, logged at **INFO** level — visible with no debug logging enabled —
 the moment PoolSmart finishes reading its stored state back on every start or
 reload:
 
-```
+```text
 PoolSmart state restored: quota_date=2026-08-24, filtration credited=1.75h
 from 3 interval(s), last write to disk was 2026-08-24T20:15:00+00:00
 ```

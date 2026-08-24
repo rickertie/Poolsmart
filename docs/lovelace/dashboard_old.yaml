@@ -757,7 +757,9 @@ views:
         content: >
           {%- set ph = state_attr('sensor.pool_dose_advice','ph_dose') -%}
           {%- set cl = state_attr('sensor.pool_dose_advice','chlorine_dose') -%}
-          {%- if ph is none and cl is none -%}
+          {%- if states('sensor.pool_dose_advice') == 'no readings' -%}
+          🧪 Nog geen meting vastgelegd — voer hieronder een meting in.
+          {%- elif ph is none and cl is none -%}
           ✅ Geen dosering nodig op dit moment.
           {%- else -%}
           {%- if ph is not none -%}
@@ -775,6 +777,9 @@ views:
           ### {{ cl.amount }} {{ cl.unit }} {{ cl.label }}
 
           {{ cl.reason }}
+
+          {% if cl.partial %}⚠️ Eerst naar {{ cl.aiming_for }} — een correctie van
+          deze grootte schiet in één keer door. Meet na een uur opnieuw.{% endif %}
 
           _{{ cl.instructions }}_
           {%- endif -%}

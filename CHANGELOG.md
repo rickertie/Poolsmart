@@ -37,8 +37,20 @@ own paperwork.
   the identical template already works fine as an ordinary card field
   elsewhere on the same dashboard. Replaced both with a single always-visible
   markdown card that branches on `ph_dose`/`chlorine_dose` inside its own
-  template instead, showing a plain "no dose needed" message when neither
-  applies.
+  template instead. It also now tells "no readings yet" apart from "readings
+  show it's balanced" (both previously collapsed into the same "no dose
+  needed" message), and renders the same partial-correction warning for
+  chlorine that pH already had — the shared dose payload supports `partial`
+  for either.
+
+- **A system clock moved backward between a save and the next load could
+  credit filtration runtime that had not actually happened.**
+  `_close_open_interval` closed a dangling open interval at `synced_at`
+  whenever it was later than the interval's start, but never checked it
+  against the current time — so a `synced_at` that ended up in the future
+  relative to this boot's own clock was accepted anyway, contrary to what
+  its own docstring promised. It now also requires `synced_at <= now`,
+  falling back to the conservative "credit nothing" close otherwise.
 
 ### Added
 
