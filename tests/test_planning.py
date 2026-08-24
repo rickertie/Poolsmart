@@ -41,6 +41,7 @@ def test_t13_maintenance_picks_cheapest_hours():
     assert max(chosen_prices) <= 0.11, chosen_prices
     assert plan.hours_planned >= plan.hours_needed
     assert plan.ready_at is not None
+    assert plan.deadline == now + timedelta(hours=12)
 
 
 # ---------------------------------------------------------------------------

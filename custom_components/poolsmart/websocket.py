@@ -280,6 +280,7 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                     "hours_planned": round(plan.hours_planned, 2),
                     "expected_cost": plan.expected_cost,
                     "ready_at": plan.ready_at.isoformat() if plan.ready_at else None,
+                    "deadline": plan.deadline.isoformat() if plan.deadline else None,
                     "slots": [
                         {
                             "start": s.isoformat(),

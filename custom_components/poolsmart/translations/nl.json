@@ -802,6 +802,9 @@
       "ready_at": {
         "name": "Klaar om"
       },
+      "swim_deadline": {
+        "name": "Zwemtijd"
+      },
       "heating_time_required": {
         "name": "Benodigde opwarmtijd"
       },

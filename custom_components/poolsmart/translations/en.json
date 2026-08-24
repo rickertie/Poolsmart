@@ -802,6 +802,9 @@
       "ready_at": {
         "name": "Ready at"
       },
+      "swim_deadline": {
+        "name": "Swim time"
+      },
       "heating_time_required": {
         "name": "Heating time required"
       },
