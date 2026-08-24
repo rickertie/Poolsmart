@@ -213,6 +213,10 @@ class PoolStore:
         self._save_lock = asyncio.Lock()
         #: Monotonic time of the last write, for the debounce in :meth:`async_save`.
         self._last_saved_at: float = 0.0
+        #: Wall-clock time of the last write that actually reached disk, kept
+        #: for diagnostics -- monotonic time answers "how long ago" but not
+        #: "at what moment", which is what a bug report needs.
+        self.last_synced_at: datetime | None = None
         self.quota_date: date | None = None
         self.intervals: list[RuntimeInterval] = []
         #: The open interval, so :meth:`record_pump` does not have to rescan the
@@ -255,6 +259,11 @@ class PoolStore:
     def path(self) -> str:
         """Where this pool's state lives on disk, for stats and diagnostics."""
         return self._store.path
+
+    @property
+    def open_interval_since(self) -> datetime | None:
+        """When the pump's currently-running interval started, if any."""
+        return self._open_interval.start if self._open_interval else None
 
     def stats(self) -> dict:
         """In-memory counts, cheap enough to compute on every request.
@@ -394,12 +403,26 @@ class PoolStore:
                 "Stored monthly aggregates were unreadable and have been reset"
             )
 
+        self.last_synced_at = synced_at
         self._close_open_interval(synced_at)
         self._open_interval = None
         self._closed_hours = sum(
             max(0.0, (i.end - i.start).total_seconds() / 3600.0)
             for i in self.intervals
             if i.end is not None
+        )
+        # One line, always visible at the default log level, that answers the
+        # question a lost-filtration-credit report always starts with: what
+        # did this boot actually find on disk. Reaching for debug logging or
+        # hunting through the full log after the fact should not be necessary
+        # to see whether today's runtime came back or not.
+        _LOGGER.info(
+            "PoolSmart state restored: quota_date=%s, filtration credited=%.2fh "
+            "from %d interval(s), last write to disk was %s",
+            self.quota_date.isoformat() if self.quota_date else "none",
+            self._closed_hours,
+            len(self.intervals),
+            self.last_synced_at.isoformat() if self.last_synced_at else "unknown",
         )
         if self.backfill_cop_counts():
             _LOGGER.info(
@@ -502,12 +525,13 @@ class PoolStore:
         if now - self._last_saved_at < STORAGE_SAVE_DEBOUNCE_SECONDS and not force:
             return
 
+        synced_at = datetime.now(timezone.utc)
         data = {
             "data_version": DATA_VERSION,
             #: Wall-clock time this save actually reached disk, so a dangling
             #: open interval found on the next load can be closed here instead
             #: of at its own start -- see _close_open_interval.
-            "synced_at": datetime.now(timezone.utc).isoformat(),
+            "synced_at": synced_at.isoformat(),
             "quota_date": self.quota_date.isoformat() if self.quota_date else None,
             "intervals": [i.as_dict() for i in self.intervals],
             "learned": self.learned.as_dict(),
@@ -550,6 +574,7 @@ class PoolStore:
         async with self._save_lock:
             self._last_saved_at = time.monotonic()
             await self._async_save_atomic(data, self._store.path)
+            self.last_synced_at = synced_at
 
     # -- Filtration quota --------------------------------------------------
 

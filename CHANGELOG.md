@@ -31,6 +31,18 @@ own paperwork.
 
 ### Added
 
+- **Diagnostics now show what the last restore actually found on disk.**
+  Tracking down a lost-filtration-credit report meant asking someone to
+  enable debug logging and grep the full Home Assistant log for the right
+  line, every time. `PoolStore.async_load()` now logs one INFO-level restore
+  summary — quota date, hours credited, interval count, last confirmed write
+  to disk — visible at the default log level with no configuration needed.
+  The **Download diagnostics** button (Settings → Devices & services →
+  PoolSmart) carries the same numbers plus whether an interval was left open
+  by the pump still running, in a `persistence` section, so a single
+  one-click download says what a full restart actually restored instead of
+  hunting through a log file.
+
 - **The swim time a plan was actually computed against is now visible, not
   just acted on.** The heating planner has worked backwards from the
   `swim_time`/`swim_time_entity` deadline since 1.11.0, using this pool's own

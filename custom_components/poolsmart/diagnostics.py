@@ -11,6 +11,7 @@ from dataclasses import asdict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import PoolSmartCoordinator
@@ -69,6 +70,31 @@ async def async_get_config_entry_diagnostics(
             "remaining_h": round(filtration.remaining_h, 3) if filtration else None,
             "available_h": round(filtration.available_h, 3) if filtration else None,
             "deadline_critical": filtration.deadline_critical if filtration else None,
+        },
+        # What was actually found on disk at the last restore, so a "lost
+        # today's filtration credit" report can be diagnosed from one
+        # download instead of hunting through the log for the restore
+        # summary or enabling debug logging to see it at all.
+        "persistence": {
+            "quota_date": (
+                coordinator.store.quota_date.isoformat()
+                if coordinator.store.quota_date
+                else None
+            ),
+            "intervals_recorded": len(coordinator.store.intervals),
+            "filtration_credited_now_h": round(
+                coordinator.store.runtime_hours(dt_util.now()), 3
+            ),
+            "open_interval_since": (
+                coordinator.store.open_interval_since.isoformat()
+                if coordinator.store.open_interval_since
+                else None
+            ),
+            "last_synced_at": (
+                coordinator.store.last_synced_at.isoformat()
+                if coordinator.store.last_synced_at
+                else None
+            ),
         },
         "learned": coordinator.store.learned.as_dict(),
         "trace": coordinator.trace.as_list() if coordinator.trace else [],

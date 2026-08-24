@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import types
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "poolsmart"))
@@ -35,6 +35,7 @@ def _new_store():
     needing a real Home Assistant `hass` to construct one."""
     store_module = ha_stubs.load_store()
     store = store_module.PoolStore.__new__(store_module.PoolStore)
+    store.last_synced_at = None
     store.quota_date = None
     store.intervals = []
     store._open_interval = None
@@ -147,6 +148,24 @@ def test_one_bad_interval_keeps_the_rest_of_todays_runtime():
     assert store.quota_date == datetime(2026, 8, 24).date()
     assert len(store.intervals) == 2
     assert store.runtime_hours(datetime(2026, 8, 24, 12, 0)) == 2.5
+
+
+def test_load_records_last_synced_at_for_diagnostics():
+    """last_synced_at should reflect the disk's synced_at, so a diagnostics
+    dump can show exactly how stale the last confirmed write was."""
+    store, _ = _new_store()
+    payload = {
+        "data_version": 1,
+        "synced_at": "2026-08-24T20:15:00+00:00",
+        "quota_date": "2026-08-24",
+        "intervals": [],
+    }
+    store._store = _FakeInnerStore(payload)
+
+    asyncio.run(store.async_load())
+
+    assert store.last_synced_at == datetime(2026, 8, 24, 20, 15, tzinfo=timezone.utc)
+    assert store.open_interval_since is None
 
 
 def test_corrupt_monthly_aggregates_do_not_touch_logs_or_learned():
