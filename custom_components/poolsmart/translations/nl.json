@@ -620,7 +620,7 @@
           "swim_time": "De planner rekent hiervandaan terug wanneer het verwarmen moet beginnen. Laat leeg als je geen vast tijdstip hebt; dan houdt hij het bad simpelweg op temperatuur.",
           "swim_time_2": "Een tweede tijdstip op dezelfde dagen, voor de uitzonderingen. De meeste mensen laten dit leeg.",
           "swim_days": "Op welke weekdagen bovenstaande tijden gelden.",
-          "swim_time_entity": "Een input_datetime-hulpmiddel op je dashboard, zodat iedereen in huis vandaag zonder dit scherm te openen het tijdstip kan instellen. Wordt vóór het vaste tijdstip hierboven gecontroleerd, en genegeerd als het leeg is.",
+          "swim_time_entity": "Een input_datetime-hulpmiddel op je dashboard, zodat iedereen in huis vandaag zonder dit scherm te openen het tijdstip kan instellen. Wordt vóór het vaste tijdstip hierboven gecontroleerd, en genegeerd als het leeg is. Zet zowel datum als tijd aan op het hulpmiddel om er een eenmalige afspraak van te maken -- \"aanstaande woensdag om 14:00 zwemmen\" -- in plaats van een terugkerend tijdstip; die geldt dan alleen op die datum, ook op een dag die hieronder niet is aangevinkt, en speelt vanzelf geen rol meer zodra de datum voorbij is.",
           "swim_skip_entity": "Een input_boolean-hulpmiddel voor \"vandaag niet zwemmen\" — zet hem op het dashboard aan om vandaag over te slaan zonder het schema te wijzigen.",
           "target_temp": "28 °C is voor de meeste mensen prettig. 26 is fris, 30 is badwater en merkbaar duurder."
         }

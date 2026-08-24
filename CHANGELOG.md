@@ -31,6 +31,19 @@ own paperwork.
 
 ### Added
 
+- **The swim time dashboard helper can now be set as a one-off appointment,
+  not just a recurring time of day.** `swim_time_entity` (issue #17) only
+  ever read the *time* out of the `input_datetime` helper it points at, so a
+  household that does not swim on a fixed weekly rhythm had no way to say
+  "swim next Wednesday at 14:00" without permanently adding Wednesday to
+  **Dagen**/**Days** — the one person actually setting the time from the
+  dashboard has no reason to know that screen exists, let alone open it for
+  a single occasion. Turning on both **date and time** on the helper now
+  reads as exactly that: a one-off appointment that wins outright, even on a
+  day not ticked in the recurring schedule, and quietly stops applying once
+  the date has passed rather than needing to be cleared by hand. A
+  time-only helper keeps behaving exactly as before.
+
 - **Diagnostics now show what the last restore actually found on disk.**
   Tracking down a lost-filtration-credit report meant asking someone to
   enable debug logging and grep the full Home Assistant log for the right
