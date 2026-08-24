@@ -29,6 +29,19 @@ own paperwork.
   independent groups, and each interval is parsed on its own, so one bad
   entry costs only that interval instead of the whole day.
 
+### Fixed
+
+- **The example dashboards' dose-advice cards failed to load with "Configuration
+  error: Conditions are invalid".** Both `docs/lovelace/dashboard.yaml` and
+  `dashboard_old.yaml` gated the pH- and chlorine-dose cards behind a
+  Lovelace `conditional` card using `condition: template` — a condition type
+  the conditional card's own conditions list rejects outright, even though
+  the identical template already works fine as an ordinary card field
+  elsewhere on the same dashboard. Replaced both with a single always-visible
+  markdown card that branches on `ph_dose`/`chlorine_dose` inside its own
+  template instead, showing a plain "no dose needed" message when neither
+  applies.
+
 ### Added
 
 - **The swim time dashboard helper can now be set as a one-off appointment,
