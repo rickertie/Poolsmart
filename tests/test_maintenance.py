@@ -33,6 +33,7 @@ def _new_store():
     store.monthly_aggregates = {}
     store.last_water_test = None
     store.near_miss_log = types.SimpleNamespace(tallies={})
+    store.accepted_suggestions = []
     return store
 
 
