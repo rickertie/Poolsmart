@@ -805,8 +805,21 @@ class PoolSmartPanel extends HTMLElement {
         <div class="row"><span>Hours needed</span><span>${fmtHours(p.hours_needed)}</span></div>
         <div class="row"><span>Hours planned</span><span>${fmtHours(p.hours_planned)}</span></div>
         <div class="row"><span>Expected cost</span><span>${p.expected_cost ?? "—"}</span></div>
+        <div class="row"><span>Swim time</span>
+          <span>${p.deadline ? (seasonal ? fmtDateTime(p.deadline) : fmtTime(p.deadline)) : "not set"}</span></div>
         <div class="row"><span>${seasonal ? "Expected ready" : "Ready at"}</span>
           <span>${seasonal ? fmtDateTime(p.ready_at) : fmtTime(p.ready_at)}</span></div>
+        ${
+          p.deadline && p.ready_at
+            ? new Date(p.ready_at) <= new Date(p.deadline)
+              ? `<div class="reason" style="color:#2e7d32">On track for ${
+                  seasonal ? fmtDateTime(p.deadline) : fmtTime(p.deadline)
+                }.</div>`
+              : `<div class="reason" style="color:#c62828">Won't make it in time: ready at ${
+                  seasonal ? fmtDateTime(p.ready_at) : fmtTime(p.ready_at)
+                }, needed by ${seasonal ? fmtDateTime(p.deadline) : fmtTime(p.deadline)}.</div>`
+            : ""
+        }
         ${
           seasonal
             ? `<div class="reason muted">A warm-up of this size does not fit in one day of cheap

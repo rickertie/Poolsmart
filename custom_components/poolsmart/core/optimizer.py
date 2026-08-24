@@ -42,6 +42,10 @@ class HeatingPlan:
     hours_needed: float = 0.0
     expected_cost: float | None = None
     ready_at: datetime | None = None
+    #: The deadline this plan was computed against, so a viewer can see the plan
+    #: was actually built from the swim time they set rather than take it on
+    #: trust. ``None`` when no swim time is configured or reachable.
+    deadline: datetime | None = None
     reason: str = ""
     detail: dict = field(default_factory=dict)
     #: Whether prices were actually compared to produce this plan.
@@ -161,6 +165,7 @@ def plan(
     if estimate.plan_mode is PlanMode.NONE or estimate.hours_needed <= 0:
         return HeatingPlan(
             mode=PlanMode.NONE,
+            deadline=deadline,
             reason="The pool is at or above target; no heating is planned.",
         )
 
@@ -179,6 +184,7 @@ def plan(
             hours_planned=needed,
             hours_needed=needed,
             ready_at=end,
+            deadline=deadline,
             reason="Boost: heating continuously until the target is reached.",
             price_informed=False,
         )
@@ -208,6 +214,7 @@ def plan(
             hours_planned=needed,
             hours_needed=needed,
             ready_at=end,
+            deadline=deadline,
             reason=(
                 "No usable price forecast, so heating runs on demand rather than "
                 "waiting for a cheaper moment."
@@ -240,6 +247,7 @@ def plan(
             hours_needed=needed,
             expected_cost=round(cost, 3),
             ready_at=ready_at,
+            deadline=deadline,
             reason=(
                 f"Heating for {needed:.1f} h in the cheapest intervals available "
                 f"({cheapest:.3f} to {dearest:.3f} per kWh)."
@@ -275,6 +283,7 @@ def plan(
         hours_needed=needed,
         expected_cost=round(cost, 3) if chosen else None,
         ready_at=ready_at,
+        deadline=deadline,
         price_informed=True,
         reason=(
             f"This needs {needed:.1f} h of heating, more than fits before the "
