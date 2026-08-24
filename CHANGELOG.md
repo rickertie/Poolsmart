@@ -14,6 +14,21 @@ own paperwork.
 
 ## [1.12.4] — The Swim Deadline, Visible
 
+### Fixed
+
+- **A single unreadable filtration interval could silently wipe an entire
+  day's filtration credit.** `PoolStore.async_load()` parsed `quota_date` and
+  `intervals` as one group: since `quota_date` is assigned before `intervals`
+  is built, a malformed entry anywhere in the stored interval list raised
+  partway through the list comprehension, leaving `intervals` at its
+  freshly-initialised empty default while the already-assigned `quota_date`
+  still read as today. `roll_day()` then saw no date change and quietly
+  credited zero runtime, so a pool that had already finished today's
+  filtration looked completely unfiltered after a restart or reload and ran
+  a full block again. `quota_date` and `intervals` are now parsed as
+  independent groups, and each interval is parsed on its own, so one bad
+  entry costs only that interval instead of the whole day.
+
 ### Added
 
 - **The swim time a plan was actually computed against is now visible, not

@@ -125,6 +125,30 @@ def test_clean_payload_loads_every_group():
     assert store.target_temp == 27.0
 
 
+def test_one_bad_interval_keeps_the_rest_of_todays_runtime():
+    """A single malformed interval must not wipe today's whole filtration
+    credit while quota_date still reads as today -- that combination makes
+    roll_day see no day change and the pool looks completely unfiltered
+    despite everything else, including quota_date, having loaded fine."""
+    store, _ = _new_store()
+    payload = {
+        "data_version": 1,
+        "quota_date": "2026-08-24",
+        "intervals": [
+            {"start": "2026-08-24T06:00:00+02:00", "end": "2026-08-24T08:00:00+02:00"},
+            {"start": "not-a-real-timestamp", "end": "2026-08-24T09:00:00+02:00"},
+            {"start": "2026-08-24T10:00:00+02:00", "end": "2026-08-24T10:30:00+02:00"},
+        ],
+    }
+    store._store = _FakeInnerStore(payload)
+
+    asyncio.run(store.async_load())
+
+    assert store.quota_date == datetime(2026, 8, 24).date()
+    assert len(store.intervals) == 2
+    assert store.runtime_hours(datetime(2026, 8, 24, 12, 0)) == 2.5
+
+
 def test_corrupt_monthly_aggregates_do_not_touch_logs_or_learned():
     store, _ = _new_store()
     payload = {

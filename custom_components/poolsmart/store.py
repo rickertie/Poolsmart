@@ -301,13 +301,26 @@ class PoolStore:
         try:
             if raw.get("quota_date"):
                 self.quota_date = date.fromisoformat(raw["quota_date"])
-            self.intervals = [
-                RuntimeInterval.from_dict(item) for item in raw.get("intervals", [])
-            ]
-        except (ValueError, KeyError, TypeError):
-            _LOGGER.warning(
-                "Stored filtration intervals were unreadable and have been reset"
-            )
+        except (ValueError, TypeError):
+            _LOGGER.warning("Stored quota date was unreadable and has been reset")
+
+        # Parsed one interval at a time rather than as a single list
+        # comprehension: today's filtration credit is exactly what a
+        # comprehension throws away wholesale the moment any one entry is
+        # malformed, even though quota_date (parsed above) survives and still
+        # reads as today -- so roll_day sees no day change and the pool looks
+        # completely unfiltered despite everything else having gone right.
+        # One bad entry should cost that one interval, not the whole day.
+        intervals: list[RuntimeInterval] = []
+        for item in raw.get("intervals", []):
+            try:
+                intervals.append(RuntimeInterval.from_dict(item))
+            except (ValueError, KeyError, TypeError):
+                _LOGGER.warning(
+                    "Discarding one unreadable filtration interval; the rest of "
+                    "today's runtime is kept"
+                )
+        self.intervals = intervals
 
         try:
             self.learned = LearnedValues.from_dict(raw.get("learned", {}))
