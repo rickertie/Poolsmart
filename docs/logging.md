@@ -40,6 +40,26 @@ timestamps.
 
 ---
 
+## Restore Summary
+
+One line, logged at **INFO** level — visible with no debug logging enabled —
+the moment PoolSmart finishes reading its stored state back on every start or
+reload:
+
+```
+PoolSmart state restored: quota_date=2026-08-24, filtration credited=1.75h
+from 3 interval(s), last write to disk was 2026-08-24T20:15:00+00:00
+```
+
+This answers the question a "lost today's filtration credit after a
+restart" report always starts with — what did this boot actually find on
+disk — without needing debug logging turned on first or a search through the
+full log. The same figures, plus whether the pump had an interval still open
+when the last save happened, are also in the diagnostics file's
+`persistence` section (see [Sharing a Problem](#sharing-a-problem) below).
+
+---
+
 ## Notifications You Can Answer
 
 Notifications to a mobile app carry buttons. "Heating postponed" offers *Heat now
@@ -79,8 +99,10 @@ about how it works, not an omission.
 
 Settings → Devices & services → PoolSmart → the three dots → **Download
 diagnostics**. That file has the trace, the decision log, a plain-sentence
-timeline, learned values, faults and every derived figure, with no credentials in
-it. It is the fastest way to hand someone the whole picture.
+timeline, learned values, faults, every derived figure, and a `persistence`
+section (quota date, filtration hours credited, last write to disk — see
+[Restore Summary](#restore-summary) above), with no credentials in it. It is
+the fastest way to hand someone the whole picture.
 
 ---
 

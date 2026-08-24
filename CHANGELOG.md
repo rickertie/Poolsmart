@@ -12,7 +12,7 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
-## [1.12.4] — The Swim Deadline, Visible
+## [1.12.5] — A Deadline You Can See, and a Restart You Can Trust
 
 ### Fixed
 
@@ -29,8 +29,6 @@ own paperwork.
   independent groups, and each interval is parsed on its own, so one bad
   entry costs only that interval instead of the whole day.
 
-### Fixed
-
 - **The example dashboards' dose-advice cards failed to load with "Configuration
   error: Conditions are invalid".** Both `docs/lovelace/dashboard.yaml` and
   `dashboard_old.yaml` gated the pH- and chlorine-dose cards behind a
@@ -43,6 +41,19 @@ own paperwork.
   applies.
 
 ### Added
+
+- **The swim time a plan was actually computed against is now visible, not
+  just acted on.** The heating planner has worked backwards from the
+  `swim_time`/`swim_time_entity` deadline since 1.11.0, using this pool's own
+  measured heating rate or COP once enough sessions exist and falling back to
+  the datasheet otherwise — but the deadline itself never left the planner.
+  Setting the dashboard's `input_datetime` helper changed *when* heating
+  started with no visible confirmation that it had been picked up at all, or
+  that the pool would actually be warm in time. `HeatingPlan` now carries its
+  `deadline` alongside `ready_at`; a new **Swim time** sensor shows it
+  directly, the **Ready at** sensor's attributes add `deadline` and an
+  `on_time` flag, and the panel's Planning tab shows the swim time next to
+  Ready at with an on-track/won't-make-it note.
 
 - **The swim time dashboard helper can now be set as a one-off appointment,
   not just a recurring time of day.** `swim_time_entity` (issue #17) only
@@ -68,19 +79,6 @@ own paperwork.
   by the pump still running, in a `persistence` section, so a single
   one-click download says what a full restart actually restored instead of
   hunting through a log file.
-
-- **The swim time a plan was actually computed against is now visible, not
-  just acted on.** The heating planner has worked backwards from the
-  `swim_time`/`swim_time_entity` deadline since 1.11.0, using this pool's own
-  measured heating rate or COP once enough sessions exist and falling back to
-  the datasheet otherwise — but the deadline itself never left the planner.
-  Setting the dashboard's `input_datetime` helper changed *when* heating
-  started with no visible confirmation that it had been picked up at all, or
-  that the pool would actually be warm in time. `HeatingPlan` now carries its
-  `deadline` alongside `ready_at`; a new **Swim time** sensor shows it
-  directly, the **Ready at** sensor's attributes add `deadline` and an
-  `on_time` flag, and the panel's Planning tab shows the swim time next to
-  Ready at with an on-track/won't-make-it note.
 
 ## [1.12.3] — Three More Quick Settings and A Season's Worth of History, Recovered
 
