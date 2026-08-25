@@ -75,6 +75,7 @@
           "cover_entity": "Afdekhoes",
           "flow_unit": "Eenheid debietmeter",
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
+          "cheap_remaining_sensor": "Resterende tijd goedkope prijs",
           "pump_inlet_sensor": "Temperatuur pompaanvoer (optioneel)",
           "ph_sensor": "pH-meting",
           "chlorine_sensor": "Meting vrij chloor (mg/L)",
@@ -102,6 +103,7 @@
           "cover_entity": "Een hoessensor, een schakelaar, of een input_boolean die je zelf omzet. Het warmteverlies wordt dan apart geleerd voor mét en zónder hoes, want die twee middelen geeft een getal dat in beide situaties fout is — een hoes halveert het verlies doorgaans of beter.",
           "flow_unit": "Wordt alleen gebruikt als de sensor zelf geen eenheid opgeeft. De meeste zwembaddebietmeters melden liters per minuut; 2 m³/u is 33 L/min.",
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Standaard gaat hij vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen. Of hij daadwerkelijk vóórgaat, of juist begrensd wordt door de limiet, stel je in bij het goedkoop-signaal onder Wanneer verwarmen.",
+          "cheap_remaining_sensor": "Hoeveel minuten de huidige goedkope periode nog duurt, als je tarief-integratie dat publiceert (bij tibber_prices heet dit 'Beste Prijs Resterende Tijd'). Puur informatief — staat op 0 zodra er geen goedkope periode actief is, kan dus geen prijsvoorspelling vervangen, maar komt wel terug in de reden die verwarmen geeft bij zijn beslissingen.",
           "pump_inlet_sensor": "Water op weg uit het bad, vóór de pomp. Dit meet hetzelfde water als de zwembadvoeler, dus die twee horen gelijk te lopen — en als dat niet zo is, moet er een voeler gekalibreerd worden, is het bad gelaagd door te weinig circulatie, of hangt een voeler niet in het water. Dit is de enige controle die kan opmerken dat een meting simpelweg fout is.",
           "ph_sensor": "Een sensor of input_number met je laatste pH-meting. Wordt gebruikt om te berekenen hoeveel je moet toevoegen, op basis van de badinhoud die je hebt ingevuld.",
           "chlorine_sensor": "Een sensor of input_number met je laatste meting van vrij chloor in mg/L.",
@@ -179,14 +181,16 @@
           "solar_power_sensor": "Actuele zonneopbrengst (W)",
           "solar_forecast_sensor": "Zonneverwachting",
           "collector_sensor": "Collectortemperatuur",
-          "cheap_price_sensor": "Goedkope prijs signaal"
+          "cheap_price_sensor": "Goedkope prijs signaal",
+          "cheap_remaining_sensor": "Resterende tijd goedkope prijs"
         },
         "data_description": {
           "irradiance_sensor": "Een sensor die al in W/m² meet, zoals een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de opbrengstsensor hieronder wanneer beide zijn ingesteld: geen piekvermogen nodig, en werkt ook zonder eigen zonnepanelen.",
           "solar_power_sensor": "Huidige opbrengst van zonnepanelen in watt.",
           "solar_forecast_sensor": "Verwachte zonne-energie voor komende uren/dagen.",
           "collector_sensor": "Temperatuur bij de uitlaat van de zonnecollector.",
-          "cheap_price_sensor": "Signaal dat aangeeft of dit een goedkoop moment is (van dynamische tarief integratie)."
+          "cheap_price_sensor": "Signaal dat aangeeft of dit een goedkoop moment is (van dynamische tarief integratie).",
+          "cheap_remaining_sensor": "Optioneel: minuten die de huidige goedkope periode nog duurt, als je tarief-integratie dat publiceert. Puur informatief, komt terug in de beslissingsreden van verwarmen."
         }
       },
       "optional_finish": {
@@ -522,6 +526,7 @@
           "air_temp_sensor": "Buitentemperatuur",
           "price_sensor": "Stroomprijs (per kWh)",
           "cheap_price_sensor": "Signaal goedkope prijsperiode",
+          "cheap_remaining_sensor": "Resterende tijd goedkope prijs",
           "solar_power_sensor": "Actuele zonneopbrengst",
           "solar_forecast_sensor": "Zonneverwachting",
           "irradiance_sensor": "Zoninstraling (W/m²)",
@@ -532,6 +537,7 @@
           "air_temp_sensor": "Buitenlucht bij de installatie. Zonder deze kan het bedrijfsbereik niet gecontroleerd worden en valt de vorstbeveiliging terug op de weer-entiteit.",
           "price_sensor": "Een sensor waarvan de waarde de prijs per kWh is. Integraties voor dynamische tarieven leveren die.",
           "cheap_price_sensor": "Een aan/uit-sensor die aangeeft of dit een goedkoop moment is; de meeste integraties voor dynamische tarieven publiceren er een. Standaard gaat hij vóór de vaste prijslimiet, omdat hij weet waar dit uur ligt binnen de prijzen van vandaag: een dag waarvan het goedkoopste uur boven je limiet ligt zou anders nooit verwarmen, en een goedkoop uur op een dure dag zou je missen. Of hij daadwerkelijk vóórgaat, of juist begrensd wordt door de limiet, stel je in bij het goedkoop-signaal onder Wanneer verwarmen.",
+          "cheap_remaining_sensor": "Hoeveel minuten de huidige goedkope periode nog duurt, als je tarief-integratie dat publiceert (bij tibber_prices heet dit 'Beste Prijs Resterende Tijd'). Puur informatief — staat op 0 zodra er geen goedkope periode actief is, kan dus geen prijsvoorspelling vervangen, maar komt wel terug in de reden die verwarmen geeft bij zijn beslissingen.",
           "solar_power_sensor": "Actuele zonneopbrengst in watt.",
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
           "irradiance_sensor": "Directe instraling in W/m² — bijvoorbeeld van een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de zonneopbrengst-sensor hierboven wanneer beide zijn ingesteld: hoeft niet geschaald te worden met een piekvermogen, en werkt ook zonder eigen zonnepanelen. Wordt gebruikt om warmteverlies te leren uit zonnige idle-periodes in plaats van die te negeren.",

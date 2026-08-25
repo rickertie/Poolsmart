@@ -588,6 +588,34 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             return None
         return state.state == "on"
 
+    def _read_cheap_remaining_minutes(self) -> int | None:
+        """Minutes left in the current cheap period, if the sensor says so.
+
+        There is no standard shape for this either. tibber_prices publishes a
+        dedicated duration sensor whose state is in hours but which also
+        carries the same figure in minutes as a ``remaining_minutes``
+        attribute (see custom_components/poolsmart/price.py for the same
+        problem with the price forecast itself); that attribute is preferred
+        when present so no unit conversion is needed. Falls back to reading
+        the state itself as minutes for sensors that report that way instead.
+        """
+        entity_id = self._conf(c.CONF_CHEAP_REMAINING_SENSOR)
+        if not entity_id:
+            self.disabled_capabilities.add(
+                c.CAPABILITY_BY_ENTITY.get(c.CONF_CHEAP_REMAINING_SENSOR, c.CONF_CHEAP_REMAINING_SENSOR)
+            )
+            return None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in UNAVAILABLE:
+            return None
+        attr_value = state.attributes.get("remaining_minutes")
+        try:
+            if attr_value is not None:
+                return int(float(attr_value))
+            return int(float(state.state))
+        except (TypeError, ValueError):
+            return None
+
     def _switch_is_on(self, key: str) -> bool:
         entity_id = self._conf(key)
         if not entity_id:
@@ -755,6 +783,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         irradiance = self._read(c.CONF_IRRADIANCE_SENSOR, "irradiance")
         grid_power = self._read(c.CONF_GRID_POWER_SENSOR, "grid_power")
         cheap_now = self._read_binary(c.CONF_CHEAP_PRICE_SENSOR)
+        cheap_remaining_minutes = self._read_cheap_remaining_minutes()
         covered = self._read_binary(c.CONF_COVER_ENTITY)
         pump_on = self._switch_is_on(c.CONF_PUMP_SWITCH)
         heat_pump_on = self._switch_is_on(c.CONF_HP_SWITCH)
@@ -827,6 +856,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             irradiance_w_m2=irradiance.value,
             grid_power_w=grid_power.value,
             cheap_price_now=cheap_now,
+            cheap_price_remaining_minutes=cheap_remaining_minutes,
             covered=covered,
             target_temp=self._target_temp,
             filtration_done_h=self.store.runtime_hours(now),

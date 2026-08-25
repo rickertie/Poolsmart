@@ -17,10 +17,35 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Symptom | Likely Cause | Fix |
 |---|---|---|
 | Status shows `idle` during expected filtration | No demand at this time | Normal — check next scheduled block on the panel |
-| "Waiting for cheaper electricity" all day | Price sensor missing or no forecast data | Verify your price sensor has `forecast` attributes |
+| "Waiting for cheaper electricity" all day | Price sensor missing or no forecast data | Verify your price sensor has recognised forecast attributes (see below) — or map a cheap-period signal instead |
 | Heating never starts in cold weather | Heat pump below minimum air temperature | Normal — envelope gate prevents operation below the heat pump's rated minimum |
 | Pump runs but no flow detected | Flow meter not mapped or filter clogged | Check flow meter sensor; clean filter if delta-T is high |
 | Flow warning despite adequate flow | Datasheet minimum too high for your plumbing | Enable "Verified for this installation" in configuration |
+
+#### "No usable price forecast" with hass.tibber_prices
+
+If heating's decision reason mentions no usable price forecast and your price
+sensor comes from [hass.tibber_prices](https://github.com/jpawlowski/hass.tibber_prices),
+this is expected, not a misconfiguration to chase: that integration splits
+price data across dozens of narrow sensors (`current_interval_price`,
+`lowest_price_today`, `next_avg_3h`, ...) instead of attaching a raw
+today/tomorrow interval list to any one entity, which is the shape PoolSmart's
+forecast parser looks for. Pointing `price_sensor` at
+`current_interval_price` still gets you the current price correctly — it just
+never produces a forecast.
+
+The supported path for this integration is the cheap-period signal, not the
+forecast:
+
+- **Cheap price period signal** → `binary_sensor.<name>_best_price_period`
+- **Cheap price time remaining** (optional) → `sensor.<name>_best_price_remaining_minutes`,
+  shown in the friendly name as something like "Best Price Remaining Time".
+  Purely informational: it reads 0 whenever no cheap period is active, so it
+  cannot substitute for a forecast, but it shows up in heating's decision
+  reason while a cheap period is active.
+
+See [Dynamic Electricity Price Integrations](planning.md#dynamic-electricity-price-integrations)
+for how the cheap-period signal interacts with the fixed price ceiling.
 
 ### Sensor Issues
 

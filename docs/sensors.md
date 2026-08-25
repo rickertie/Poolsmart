@@ -119,6 +119,7 @@ Settings → Devices & services → PoolSmart → Configure → Entities.
 | Flow meter | `sensor.<device>_flow` | Flow protection, filtration timing |
 | Electricity price | your tariff integration | Price optimisation |
 | Cheap price period | your tariff integration's binary sensor | Beats the price ceiling |
+| Cheap price time remaining | your tariff integration's remaining-minutes sensor, if it has one (optional) | Shown in heating's decision reason while a cheap period is active; see [Planning](planning.md#cheap-period-signal) |
 | Solar irradiance | a pyranometer or weather-station radiation sensor (e.g. a KNMI-style entity) | Learning heat loss from sunny idle periods, and the plausibility ceiling on a heating session's rise |
 | Current solar production | your inverter's power sensor, plus "Solar panel peak power" under **When to heat** | Same as above, only used when no irradiance sensor is mapped |
 

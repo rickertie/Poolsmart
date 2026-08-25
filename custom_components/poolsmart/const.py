@@ -120,6 +120,12 @@ CONF_PUMP_POWER_SENSOR = "pump_power_sensor"
 CONF_HP_POWER_SENSOR = "hp_power_sensor"
 CONF_PRICE_SENSOR = "price_sensor"
 CONF_CHEAP_PRICE_SENSOR = "cheap_price_sensor"
+#: Optional companion to CONF_CHEAP_PRICE_SENSOR: how many minutes are left in
+#: the *current* cheap period, when one is active. Informational only -- it
+#: reads 0 whenever no cheap period is active, i.e. precisely when heating is
+#: refused on price, so it cannot substitute for a price forecast. See #22
+#: and docs/troubleshooting.md.
+CONF_CHEAP_REMAINING_SENSOR = "cheap_remaining_sensor"
 CONF_SOLAR_POWER_SENSOR = "solar_power_sensor"
 CONF_SOLAR_FORECAST_SENSOR = "solar_forecast_sensor"
 #: Total household power draw -- a smart-meter/energy-dashboard sensor,
@@ -185,6 +191,7 @@ OPTIONAL_ENTITY_KEYS = (
     CONF_HP_POWER_SENSOR,
     CONF_PRICE_SENSOR,
     CONF_CHEAP_PRICE_SENSOR,
+    CONF_CHEAP_REMAINING_SENSOR,
     CONF_PH_SENSOR,
     CONF_CHLORINE_SENSOR,
     CONF_TOTAL_CHLORINE_SENSOR,
@@ -217,6 +224,7 @@ CAPABILITY_BY_ENTITY = {
     CONF_HP_POWER_SENSOR: "energy_and_cost",
     CONF_PRICE_SENSOR: "price_optimisation",
     CONF_CHEAP_PRICE_SENSOR: "cheap_period_signal",
+    CONF_CHEAP_REMAINING_SENSOR: "cheap_period_remaining",
     CONF_SOLAR_POWER_SENSOR: "solar_optimisation",
     CONF_SOLAR_FORECAST_SENSOR: "solar_forecast",
     CONF_WEATHER_ENTITY: "weather_forecast_planning",

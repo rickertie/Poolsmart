@@ -372,6 +372,7 @@ def _optional_entities(source: str, has_solar: bool = False) -> vol.Schema:
     fields[vol.Optional(c.CONF_CHEAP_PRICE_SENSOR)] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
     )
+    fields[vol.Optional(c.CONF_CHEAP_REMAINING_SENSOR)] = ANY_SENSOR
     fields[vol.Optional(c.CONF_SOLAR_POWER_SENSOR)] = POWER_SENSOR
     fields[vol.Optional(c.CONF_SOLAR_FORECAST_SENSOR)] = ANY_SENSOR
 
@@ -629,6 +630,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
                     domain=["binary_sensor", "input_boolean"]
                 )
             )
+            fields[vol.Optional(c.CONF_CHEAP_REMAINING_SENSOR)] = ANY_SENSOR
         return self.async_show_form(
             step_id="optional_solar",
             data_schema=vol.Schema(fields),
@@ -904,6 +906,7 @@ class PoolSmartOptionsFlow(OptionsFlow):
                     domain=["binary_sensor", "input_boolean"]
                 )
             ),
+            field(c.CONF_CHEAP_REMAINING_SENSOR): ANY_SENSOR,
             field(c.CONF_SOLAR_POWER_SENSOR): POWER_SENSOR,
             field(c.CONF_SOLAR_FORECAST_SENSOR): ANY_SENSOR,
             field(c.CONF_IRRADIANCE_SENSOR): IRRADIANCE_SENSOR,

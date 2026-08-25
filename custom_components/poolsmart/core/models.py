@@ -205,6 +205,13 @@ class PoolState:
     #: the rest of the day, rather than only how the current price compares to a
     #: fixed ceiling.
     cheap_price_now: bool | None = None
+    #: Minutes left in the *current* cheap period, from the same kind of
+    #: integration, if it publishes one. ``None`` when not configured or
+    #: unavailable; ``0`` whenever no cheap period is active right now --
+    #: including while heating is being refused on price, so this cannot
+    #: stand in for a price forecast. Informational: it does not change
+    #: whether ``cheap_price_now`` is honoured, only how that is reported.
+    cheap_price_remaining_minutes: int | None = None
     solar_forecast_w: tuple[tuple[datetime, float], ...] = ()
 
     # -- Targets and plan --------------------------------------------------

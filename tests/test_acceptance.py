@@ -89,7 +89,7 @@ def make_state(now: datetime, **overrides) -> PoolState:
 
 
 def run_tick(state: PoolState, config: PoolConfig, done_h: float, previous=None,
-             active_block=None) -> Decision:
+             active_block=None, trace=None) -> Decision:
     faults = safety.evaluate(state, config)
     status = filt.evaluate(
         state.now,
@@ -100,7 +100,9 @@ def run_tick(state: PoolState, config: PoolConfig, done_h: float, previous=None,
         measured_flow_m3h=state.measured_flow_m3h,
     )
     available, reason = safety.heat_pump_available(state, config, faults)
-    return ladder.decide(state, config, status, faults, available, reason, previous)
+    return ladder.decide(
+        state, config, status, faults, available, reason, previous, trace=trace
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1257,6 +1259,93 @@ def test_t50d_max_price_hard_mode_also_blocks_the_plan_fallback():
     )
     decision = run_tick(state, config, done_h=20.0)
     assert decision.heat_pump is False, decision.reason
+
+
+def test_t50e_cheap_signal_reason_reports_remaining_minutes_when_known():
+    """The accept reason names how long the cheap window has left, if known.
+
+    cheap_price_remaining_minutes is a companion to cheap_price_now: it is 0
+    (or unset) whenever no cheap period is active, so it only ever shows up
+    here -- while the override it explains is actually in effect.
+    """
+    config = make_config(energy=EnergySettings(max_price=0.20))
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    base = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.338,
+        solar_power_w=0.0,
+        heating_session_active=True,
+        plan_price_informed=False,
+        measured_flow_m3h=1.02,
+    )
+
+    marked = base.replace(cheap_price_now=True, cheap_price_remaining_minutes=12)
+    decision = run_tick(marked, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+    assert "(ends in 12 min)" in decision.reason
+
+    # Unknown/zero remaining time: the original wording, unchanged.
+    unknown = base.replace(cheap_price_now=True, cheap_price_remaining_minutes=0)
+    decision = run_tick(unknown, config, done_h=20.0)
+    assert decision.heat_pump is True, decision.reason
+    assert "ends in" not in decision.reason
+
+
+def test_t50f_price_refusal_message_does_not_misdirect_when_signal_is_active():
+    """If the cheap signal is already on but was capped by its own ceiling,
+    the troubleshooting message must not tell the user to "use the cheap
+    period signal" -- they already are. It should instead point at the
+    cheap-price mode/ceiling, and mention time left if known.
+    """
+    config = make_config(
+        energy=EnergySettings(
+            max_price=0.20,
+            cheap_price_mode=CheapPriceMode.CHEAP_WINS_CAPPED,
+            cheap_price_ceiling=0.30,
+        )
+    )
+    now = datetime(2026, 8, 1, 14, 0, tzinfo=TZ)
+    state = make_state(
+        now,
+        water_temp=SensorReading(24.0, 10, "water"),
+        target_temp=28.0,
+        price_total=0.338,
+        solar_power_w=0.0,
+        heating_session_active=True,
+        plan_price_informed=False,
+        cheap_price_now=True,
+        cheap_price_remaining_minutes=12,
+        measured_flow_m3h=1.02,
+    )
+    trace = ladder.Trace()
+    decision = run_tick(state, config, done_h=20.0, trace=trace)
+    assert decision.heat_pump is False, decision.reason
+
+    price_entries = [
+        e for e in trace.blockers
+        if e.branch is Branch.HEATING and e.verdict is ladder.Verdict.PRICE
+    ]
+    assert price_entries, "expected a HEATING/PRICE trace entry"
+    detail = price_entries[0].detail
+    assert "already marks this as a cheap period" in detail
+    assert "12 min left in this cheap period" in detail
+    assert "use the cheap period signal" not in detail
+
+    # Without the cheap signal at all, the original advice still applies.
+    no_signal = state.replace(
+        cheap_price_now=None, cheap_price_remaining_minutes=None
+    )
+    trace2 = ladder.Trace()
+    decision2 = run_tick(no_signal, config, done_h=20.0, trace=trace2)
+    assert decision2.heat_pump is False, decision2.reason
+    entries2 = [
+        e for e in trace2.blockers
+        if e.branch is Branch.HEATING and e.verdict is ladder.Verdict.PRICE
+    ]
+    assert entries2, "expected a HEATING/PRICE trace entry"
+    assert "use the cheap period signal" in entries2[0].detail
 
 
 # ---------------------------------------------------------------------------

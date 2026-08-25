@@ -1,11 +1,22 @@
 """Reading a price forecast out of whatever integration the user happens to use.
 
-There is no standard shape for this. Tibber integrations, Nord Pool, ENTSO-E and
-EPEX cards all publish lists of intervals under different attribute names with
-different key names inside. Rather than supporting one and failing on the rest,
-this parser accepts the shapes that occur in practice and gives up quietly when
-it recognises none of them -- at which point the planner simply heats when it
-needs to, which is the documented behaviour without price data.
+There is no standard shape for this. Nord Pool, ENTSO-E and EPEX cards publish
+lists of intervals under different attribute names with different key names
+inside. Rather than supporting one and failing on the rest, this parser accepts
+the shapes that occur in practice and gives up quietly when it recognises none
+of them -- at which point the planner simply heats when it needs to, which is
+the documented behaviour without price data.
+
+hass.tibber_prices (github.com/jpawlowski/hass.tibber_prices) does NOT produce
+one of the recognised shapes: it splits price data across dozens of narrow
+sensors (current_interval_price, lowest_price_today, next_avg_3h, ...) rather
+than attaching a raw today/tomorrow interval list to any one entity's state
+sensor. Pointing price_sensor at it will read the current price and its
+energy_price/tax attributes correctly, but extract_forecast() below will
+always return empty for it -- this is not a misconfiguration to chase. Map its
+best_price_period binary sensor to cheap_price_sensor instead (optionally with
+its best_price_remaining_minutes sensor as cheap_remaining_sensor); see
+docs/planning.md and docs/troubleshooting.md.
 """
 
 from __future__ import annotations
@@ -41,7 +52,6 @@ LIST_ATTRIBUTES = (
     "forecast",
     "prices",
     "data",
-    # Seen on tibber_prices and similar
     "intervals",
     "today_intervals",
     "tomorrow_intervals",

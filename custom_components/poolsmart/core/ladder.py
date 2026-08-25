@@ -52,6 +52,19 @@ def _negative_price(state: PoolState, config: PoolConfig) -> tuple[bool, float |
     return price < 0, price
 
 
+def _cheap_period_reason(state: PoolState) -> str:
+    """Reason text for a cheap-signal override, noting time left if known.
+
+    ``cheap_price_remaining_minutes`` is 0 whenever no cheap period is active,
+    so it is only ever appended here -- exactly the branch where it is
+    actually informative, i.e. while the override is in effect.
+    """
+    remaining = state.cheap_price_remaining_minutes
+    if remaining:
+        return f"the tariff integration marks this as a cheap period (ends in {remaining} min)"
+    return "the tariff integration marks this as a cheap period"
+
+
 def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
     """Whether the current price and solar situation permit heating.
 
@@ -72,7 +85,7 @@ def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
                 or state.price_total is None
                 or state.price_total <= hard_limit
             ):
-                return True, "the tariff integration marks this as a cheap period"
+                return True, _cheap_period_reason(state)
             # Falls through: max_price is a hard ceiling in this mode, so a
             # "cheap" hour that still exceeds it is judged below like any
             # other price, instead of being waved through.
@@ -83,10 +96,10 @@ def _price_acceptable(state: PoolState, config: PoolConfig) -> tuple[bool, str]:
                 or state.price_total is None
                 or state.price_total <= ceiling
             ):
-                return True, "the tariff integration marks this as a cheap period"
+                return True, _cheap_period_reason(state)
             # Falls through: the cheap signal's own ceiling was crossed.
         else:
-            return True, "the tariff integration marks this as a cheap period"
+            return True, _cheap_period_reason(state)
 
     limit = config.energy.max_price
     if state.mode is Mode.ECO and limit is not None:
@@ -489,12 +502,32 @@ def _walk(
                 )
             detail = why
             if state.heating_session_active and not state.plan_price_informed:
-                detail = (
-                    f"{why}. There is no usable price forecast, so heating waits for "
-                    "the price to come down rather than running regardless. Check "
-                    "that the price sensor publishes a forecast, or use the cheap "
-                    "period signal."
-                )
+                if state.cheap_price_now is True:
+                    # The cheap signal is active but was itself judged too
+                    # expensive (its own ceiling, or max_price under
+                    # CheapPriceMode.MAX_PRICE_HARD) -- pointing at "use the
+                    # cheap period signal" here would be telling the user to
+                    # do something they are already doing.
+                    remaining_note = (
+                        f" ({state.cheap_price_remaining_minutes} min left in "
+                        "this cheap period)"
+                        if state.cheap_price_remaining_minutes
+                        else ""
+                    )
+                    detail = (
+                        f"{why}. The tariff integration already marks this as "
+                        f"a cheap period{remaining_note}, but it still "
+                        "exceeds the configured ceiling for that signal. "
+                        "Check the cheap-price mode and ceiling under When "
+                        "to heat, or raise the price limit."
+                    )
+                else:
+                    detail = (
+                        f"{why}. There is no usable price forecast, so heating waits for "
+                        "the price to come down rather than running regardless. Check "
+                        "that the price sensor publishes a forecast, or use the cheap "
+                        "period signal."
+                    )
             trace.record(Branch.HEATING, Verdict.PRICE, detail)
 
     # -- 6. Filtration deadline -------------------------------------------

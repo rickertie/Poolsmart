@@ -75,6 +75,7 @@
           "cover_entity": "Pool cover",
           "flow_unit": "Flow meter unit",
           "cheap_price_sensor": "Cheap price period signal",
+          "cheap_remaining_sensor": "Cheap price time remaining",
           "pump_inlet_sensor": "Pump inlet temperature (optional)",
           "ph_sensor": "pH reading",
           "chlorine_sensor": "Free chlorine reading (mg/L)",
@@ -102,6 +103,7 @@
           "cover_entity": "A cover sensor, a switch, or an input_boolean you flip yourself. Heat loss is then learned separately for covered and uncovered, because averaging the two produces a figure that is wrong in both states — a cover typically halves the loss or better.",
           "flow_unit": "Only used when the sensor does not state its own unit. Most pool flow meters report litres per minute; 2 m³/h is 33 L/min.",
           "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. By default it outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed. Whether it actually outranks the ceiling, or is capped by it instead, is set by the cheap-price mode under When to heat.",
+          "cheap_remaining_sensor": "How many minutes are left in the current cheap period, if your tariff integration publishes one (tibber_prices calls this 'best price remaining time'). Purely informational — it reads 0 whenever no cheap period is active, so it cannot replace a price forecast, but it does show up in the reasons heating gives for its decisions.",
           "pump_inlet_sensor": "Water on its way out of the pool, before the pump. It measures the same water as the pool probe, so the two should agree — and when they do not, either a probe needs calibrating, the pool is stratified from too little circulation, or a probe is not in the water. This is the only check able to notice a reading that is simply wrong.",
           "ph_sensor": "A sensor or input_number holding your last pH measurement. Used to work out how much to add, using the pool volume you entered.",
           "chlorine_sensor": "A sensor or input_number holding your last free chlorine measurement in mg/L.",
@@ -179,14 +181,16 @@
           "solar_power_sensor": "Current solar production (W)",
           "solar_forecast_sensor": "Solar forecast",
           "collector_sensor": "Collector temperature",
-          "cheap_price_sensor": "Cheap price signal"
+          "cheap_price_sensor": "Cheap price signal",
+          "cheap_remaining_sensor": "Cheap price time remaining"
         },
         "data_description": {
           "irradiance_sensor": "A sensor already reading in W/m², such as a weather station's pyranometer or a KNMI-style solar-radiation entity. Preferred over the production sensor below when both are set: no peak figure needed, and it works even without solar panels of your own.",
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "Expected solar energy for the coming hours/days.",
           "collector_sensor": "Temperature at the solar collector outlet.",
-          "cheap_price_sensor": "Signal indicating whether now is a cheap moment (from a dynamic tariff integration)."
+          "cheap_price_sensor": "Signal indicating whether now is a cheap moment (from a dynamic tariff integration).",
+          "cheap_remaining_sensor": "Optional: minutes left in the current cheap period, if your tariff integration publishes one. Informational only, shown in heating's decision reasons."
         }
       },
       "optional_finish": {
@@ -522,6 +526,7 @@
           "air_temp_sensor": "Outdoor temperature",
           "price_sensor": "Electricity price (per kWh)",
           "cheap_price_sensor": "Cheap price period signal",
+          "cheap_remaining_sensor": "Cheap price time remaining",
           "solar_power_sensor": "Current solar production",
           "solar_forecast_sensor": "Solar forecast",
           "irradiance_sensor": "Solar irradiance (W/m²)",
@@ -532,6 +537,7 @@
           "air_temp_sensor": "Outdoor air at the installation. Without it the operating envelope cannot be checked and frost protection falls back on the weather entity.",
           "price_sensor": "A sensor whose state is the price per kWh. Dynamic tariff integrations provide this.",
           "cheap_price_sensor": "An on/off sensor that says whether now is a cheap moment, published by most dynamic tariff integrations. By default it outranks the fixed price ceiling because it knows where this hour sits within today's prices: a day whose cheapest hour is above your limit would otherwise never heat, and a cheap hour on an expensive day would be missed. Whether it actually outranks the ceiling, or is capped by it instead, is set by the cheap-price mode under When to heat.",
+          "cheap_remaining_sensor": "How many minutes are left in the current cheap period, if your tariff integration publishes one (tibber_prices calls this 'best price remaining time'). Purely informational — it reads 0 whenever no cheap period is active, so it cannot replace a price forecast, but it does show up in the reasons heating gives for its decisions.",
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "irradiance_sensor": "Direct sunlight reading in W/m² — a weather station's pyranometer, a KNMI-style solar-radiation entity, or similar. Preferred over the solar power sensor above when both are mapped: it needs no peak figure to scale against, and works whether or not this pool has solar panels of its own. Used to learn heat loss from sunny idle periods instead of discarding them.",

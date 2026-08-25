@@ -108,6 +108,10 @@ def _fake_coordinator(mod, options, entity_states):
         fake, key, default
     )
     fake._read_binary = lambda key: mod.PoolSmartCoordinator._read_binary(fake, key)
+    fake.disabled_capabilities = set()
+    fake._read_cheap_remaining_minutes = (
+        lambda: mod.PoolSmartCoordinator._read_cheap_remaining_minutes(fake)
+    )
     return fake
 
 
@@ -167,6 +171,59 @@ def test_swim_time_falls_back_to_static_when_entity_is_unavailable():
     deadline = mod.PoolSmartCoordinator._next_swim_deadline(fake, now)
 
     assert deadline.time() == time(17, 0)
+
+
+def test_cheap_remaining_sensor_prefers_the_remaining_minutes_attribute():
+    """tibber_prices' remaining-time sensor reports its state in hours but
+    carries the same figure in minutes as an attribute -- that attribute
+    should be preferred so no unit conversion is needed."""
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    fake = _fake_coordinator(
+        mod,
+        options={
+            const.CONF_CHEAP_REMAINING_SENSOR: "sensor.thuis_beste_prijs_resterende_tijd"
+        },
+        entity_states={
+            "sensor.thuis_beste_prijs_resterende_tijd": types.SimpleNamespace(
+                state="0.2", attributes={"remaining_minutes": 12}
+            )
+        },
+    )
+
+    assert mod.PoolSmartCoordinator._read_cheap_remaining_minutes(fake) == 12
+
+
+def test_cheap_remaining_sensor_falls_back_to_state_without_the_attribute():
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    fake = _fake_coordinator(
+        mod,
+        options={const.CONF_CHEAP_REMAINING_SENSOR: "sensor.remaining"},
+        entity_states={
+            "sensor.remaining": types.SimpleNamespace(state="15", attributes={})
+        },
+    )
+
+    assert mod.PoolSmartCoordinator._read_cheap_remaining_minutes(fake) == 15
+
+
+def test_cheap_remaining_sensor_is_none_when_unconfigured_or_unavailable():
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+
+    unconfigured = _fake_coordinator(mod, options={}, entity_states={})
+    assert mod.PoolSmartCoordinator._read_cheap_remaining_minutes(unconfigured) is None
+    assert "cheap_period_remaining" in unconfigured.disabled_capabilities
+
+    unavailable = _fake_coordinator(
+        mod,
+        options={const.CONF_CHEAP_REMAINING_SENSOR: "sensor.remaining"},
+        entity_states={
+            "sensor.remaining": types.SimpleNamespace(state="unavailable", attributes={})
+        },
+    )
+    assert mod.PoolSmartCoordinator._read_cheap_remaining_minutes(unavailable) is None
 
 
 def test_swim_skip_entity_excludes_today_even_before_the_time_has_passed():

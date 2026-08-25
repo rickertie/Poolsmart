@@ -84,7 +84,15 @@ against, whichever source supplied it, is not only acted on:
 
 PoolSmart parses hourly price attributes automatically from popular Home
 Assistant integrations (such as Nordpool, EnergyZero, Frank Energie, ENTSO-E,
-or custom template sensors).
+or custom template sensors) that attach a raw today/tomorrow interval list to
+one sensor's attributes.
+
+**hass.tibber_prices is not one of these.** It splits price data across dozens
+of narrow sensors instead of a single interval list, so the forecast parser
+below never finds anything to plan against, however the price sensor is
+mapped. If you use it, skip straight to
+[Cheap-Period Signal](#cheap-period-signal) below — that is the supported
+path for this integration, not a fallback.
 
 ### Price Optimization Logic
 
@@ -100,6 +108,24 @@ or custom template sensors).
 3. **Fallback mode:** If no valid price entity or forecast attribute is found,
    PoolSmart falls back to **heating on demand** whenever temperature drops
    below hysteresis.
+
+### Cheap-Period Signal
+
+An alternative to the forecast above, and the only usable price optimisation
+for an integration like hass.tibber_prices that does not publish one. Map an
+on/off "is this a cheap moment" sensor under **Weather and price** and
+heating trusts it directly instead of only comparing against the fixed price
+ceiling — see [Configuration](configuration.md) for `cheap_price_sensor` and
+how `cheap_price_mode` decides whether it outranks the ceiling outright or is
+capped by one.
+
+An optional companion, `cheap_remaining_sensor`, maps a "minutes left in the
+current cheap period" sensor where one exists (hass.tibber_prices calls its
+version "Best Price Remaining Time"). It is purely informational: it reads 0
+whenever no cheap period is active — including exactly when heating is being
+refused on price, which is why it cannot stand in for a forecast — but while a
+cheap period **is** active it shows up in heating's decision reason, e.g.
+*"the tariff integration marks this as a cheap period (ends in 12 min)"*.
 
 ---
 
