@@ -168,6 +168,52 @@ def test_load_records_last_synced_at_for_diagnostics():
     assert store.open_interval_since is None
 
 
+class _RecordingInnerStore:
+    """A Store helper that records the payload it is given.
+
+    Accessing ``path`` fails on purpose: a save must go through
+    ``async_save``, which adds Home Assistant's version/data wrapper and
+    writes atomically, not by writing the raw state to the file directly.
+    """
+
+    def __init__(self):
+        self.saved = None
+
+    @property
+    def path(self):
+        raise AssertionError(
+            "state must be saved through Store.async_save, not _store.path"
+        )
+
+    async def async_save(self, data):
+        self.saved = data
+
+
+def test_save_hands_the_raw_state_to_the_store_helper():
+    """Saving must let Store add its version/data wrapper.
+
+    Writing the raw dict straight to ``_store.path`` omits that wrapper, so
+    the next ``async_load`` finds no version key and resets every learned
+    value, log and today's filtration intervals.
+    """
+    store, _ = _new_store()
+    inner = _RecordingInnerStore()
+    store._store = inner
+    store._save_lock = asyncio.Lock()
+    store._last_saved_at = 0.0
+    store.quota_date = datetime(2026, 8, 24).date()
+    store.accepted_suggestions = []
+
+    asyncio.run(store.async_save(force=True))
+
+    assert inner.saved is not None
+    assert inner.saved["data_version"] == 1
+    # The wrapper belongs to Store, not to the payload handed to it.
+    assert "version" not in inner.saved
+    assert "data" not in inner.saved
+    assert store.last_synced_at is not None
+
+
 def test_corrupt_monthly_aggregates_do_not_touch_logs_or_learned():
     store, _ = _new_store()
     payload = {
