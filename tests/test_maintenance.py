@@ -33,6 +33,7 @@ def _new_store():
     store.monthly_aggregates = {}
     store.last_water_test = None
     store.near_miss_log = types.SimpleNamespace(tallies={})
+    store.accepted_suggestions = []
     return store
 
 
@@ -191,9 +192,10 @@ def test_close_open_interval_uses_synced_at_when_available():
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
     synced_at = datetime(2026, 8, 1, 13, 58, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 14, 5, tzinfo=TZ)
     store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
 
-    store._close_open_interval(synced_at)
+    store._close_open_interval(synced_at, now)
 
     assert store.intervals[0].end == synced_at
 
@@ -203,9 +205,10 @@ def test_close_open_interval_falls_back_without_synced_at():
     store_module = ha_stubs.load_store()
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 14, 5, tzinfo=TZ)
     store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
 
-    store._close_open_interval(None)
+    store._close_open_interval(None, now)
 
     assert store.intervals[0].end == start
 
@@ -215,9 +218,26 @@ def test_close_open_interval_ignores_a_synced_at_before_the_interval_started():
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
     stale_synced_at = datetime(2026, 8, 1, 6, 0, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 14, 5, tzinfo=TZ)
     store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
 
-    store._close_open_interval(stale_synced_at)
+    store._close_open_interval(stale_synced_at, now)
+
+    assert store.intervals[0].end == start
+
+
+def test_close_open_interval_ignores_a_synced_at_after_now():
+    """A system clock moved backward between the save and this load must not
+    credit runtime that has not happened yet -- the same conservative
+    fallback as a missing synced_at."""
+    store_module = ha_stubs.load_store()
+    store = store_module.PoolStore.__new__(store_module.PoolStore)
+    start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
+    future_synced_at = datetime(2026, 8, 1, 20, 0, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 14, 5, tzinfo=TZ)
+    store.intervals = [store_module.RuntimeInterval(start=start, end=None)]
+
+    store._close_open_interval(future_synced_at, now)
 
     assert store.intervals[0].end == start
 
@@ -227,9 +247,10 @@ def test_close_open_interval_leaves_already_closed_intervals_alone():
     store = store_module.PoolStore.__new__(store_module.PoolStore)
     start = datetime(2026, 8, 1, 8, 0, tzinfo=TZ)
     end = datetime(2026, 8, 1, 9, 0, tzinfo=TZ)
+    now = datetime(2026, 8, 1, 14, 5, tzinfo=TZ)
     store.intervals = [store_module.RuntimeInterval(start=start, end=end)]
 
-    store._close_open_interval(datetime(2026, 8, 1, 12, 0, tzinfo=TZ))
+    store._close_open_interval(datetime(2026, 8, 1, 12, 0, tzinfo=TZ), now)
 
     assert store.intervals[0].end == end
 

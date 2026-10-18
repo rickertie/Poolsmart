@@ -280,6 +280,7 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                     "hours_planned": round(plan.hours_planned, 2),
                     "expected_cost": plan.expected_cost,
                     "ready_at": plan.ready_at.isoformat() if plan.ready_at else None,
+                    "deadline": plan.deadline.isoformat() if plan.deadline else None,
                     "slots": [
                         {
                             "start": s.isoformat(),
@@ -302,6 +303,8 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
                 "max_price": config.energy.max_price,
                 "solar_threshold_w": config.energy.solar_threshold_w,
                 "power_limit_w": config.energy.power_limit_w,
+                "min_daily_hours": config.filtration.min_hours_fallback,
+                "eco_price_factor": config.energy.eco_price_factor,
             },
             "derived": {
                 "daily_filtration_hours": round(config.daily_filtration_hours(water, measured), 3),

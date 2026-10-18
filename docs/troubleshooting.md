@@ -46,7 +46,7 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Integration shows `unavailable` after restart | ESPHome device not reachable | Check ESPHome device status; verify WiFi |
 | Configuration changes have no effect | Options not saved | Click "Submit" and reload the integration |
 | Entities disappeared after upgrade | Entity ID migration | Check the log for rename messages; update automations |
-| Pump runs a full filtration block again right after a Home Assistant update or restart | Fixed in 1.12.2 — filtration state is now flushed to disk before Home Assistant shuts down, not only when the integration itself is reloaded | Update to 1.12.2 or later |
+| Pump runs a full filtration block again right after a Home Assistant update or restart | Two separate causes, both fixed: state is flushed to disk before shutdown as of 1.12.2, and a single unreadable stored interval no longer wipes the whole day's credit as of 1.12.5 | Update to 1.12.5 or later; if it still happens, check `PoolSmart state restored` in the log or the diagnostics file's `persistence` section (see [below](#using-the-diagnostics-tab)) for what the last restart actually found on disk |
 
 ### Single-Pool Limitation for Services
 
@@ -127,6 +127,13 @@ The management panel (`/poolsmart`) has a **Diagnostics** tab that shows:
 - **Decision log** — Recent decisions with timestamps and reasons
 - **Derived figures** — Calculated values (COP, heat loss, daily runtime)
 - **Active faults** — Any subsystem that failed in the last tick
+- **Persistence** — What the last restart actually found on disk: quota
+  date, filtration hours credited, interval count, whether the pump had an
+  interval still open, and when the last write reached disk. The same
+  numbers are logged once at INFO level on every restore as `PoolSmart
+  state restored: ...`, visible in the log with no debug logging needed —
+  useful for a "lost today's filtration credit" report without asking
+  anyone to enable debug logging first.
 
 This is the first place to look when something unexpected happens.
 

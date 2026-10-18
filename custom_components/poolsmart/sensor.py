@@ -147,10 +147,34 @@ SENSORS: tuple[PoolSensorDescription, ...] = (
                 # In seasonal mode this is a date several days out. Showing an
                 # honest date beats showing a time that cannot be met.
                 "is_multi_day": c.plan.mode.value == "seasonal",
+                # The swim time this was actually planned against, so it is
+                # visible on the dashboard that a configured deadline was picked
+                # up at all -- see issue #17's input_datetime helper.
+                "deadline": c.plan.deadline.isoformat() if c.plan.deadline else None,
+                "on_time": (
+                    c.plan.ready_at <= c.plan.deadline
+                    if c.plan.ready_at and c.plan.deadline
+                    else None
+                ),
                 **{f"detail_{k}": v for k, v in c.plan.detail.items()},
             }
             if c.plan
             else {}
+        ),
+    ),
+    PoolSensorDescription(
+        key="swim_deadline",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda c: c.plan.deadline if c.plan else None,
+        attributes_fn=lambda c: (
+            {}
+            if c.plan and c.plan.deadline
+            else {
+                "unavailable_because": (
+                    "no swim time is configured, or none of the configured "
+                    "times still lie ahead today or in the coming week"
+                )
+            }
         ),
     ),
     PoolSensorDescription(

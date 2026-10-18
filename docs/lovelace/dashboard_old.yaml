@@ -746,39 +746,44 @@ views:
           action: more-info
           entity: sensor.pool_dose_advice
 
-      # ---- Doseeradvies ----------------------------------------------------
-      - type: conditional
-        conditions:
-          - condition: template
-            value_template: >-
-              {{ state_attr('sensor.pool_dose_advice','ph_dose') is not none }}
-        card:
-          type: markdown
-          content: >
-            {%- set d = state_attr('sensor.pool_dose_advice','ph_dose') -%}
-            ### {{ d.amount }} {{ d.unit }} {{ d.label }}
+      # ---- Doseeradvies ------------------------------------------------------
+      # One always-visible card rather than two `conditional` ones gated on
+      # `condition: template`: the Lovelace conditional card's own conditions
+      # list rejects that condition type outright ("Configuration error:
+      # Conditions are invalid") even though the exact same template works
+      # fine as a card field elsewhere on this dashboard. Branching inside the
+      # markdown template itself sidesteps the conditional card entirely.
+      - type: markdown
+        content: >
+          {%- set ph = state_attr('sensor.pool_dose_advice','ph_dose') -%}
+          {%- set cl = state_attr('sensor.pool_dose_advice','chlorine_dose') -%}
+          {%- if states('sensor.pool_dose_advice') == 'no readings' -%}
+          🧪 Nog geen meting vastgelegd — voer hieronder een meting in.
+          {%- elif ph is none and cl is none -%}
+          ✅ Geen dosering nodig op dit moment.
+          {%- else -%}
+          {%- if ph is not none -%}
+          ### {{ ph.amount }} {{ ph.unit }} {{ ph.label }}
 
-            {{ d.reason }}
+          {{ ph.reason }}
 
-            {% if d.partial %}⚠️ Eerst naar {{ d.aiming_for }} — een correctie van
-            deze grootte schiet in één keer door. Meet na een uur opnieuw.{% endif %}
+          {% if ph.partial %}⚠️ Eerst naar {{ ph.aiming_for }} — een correctie van
+          deze grootte schiet in één keer door. Meet na een uur opnieuw.{% endif %}
 
-            _{{ d.instructions }}_
+          _{{ ph.instructions }}_
+          {% endif %}
 
-      - type: conditional
-        conditions:
-          - condition: template
-            value_template: >-
-              {{ state_attr('sensor.pool_dose_advice','chlorine_dose') is not none }}
-        card:
-          type: markdown
-          content: >
-            {%- set d = state_attr('sensor.pool_dose_advice','chlorine_dose') -%}
-            ### {{ d.amount }} {{ d.unit }} {{ d.label }}
+          {% if cl is not none -%}
+          ### {{ cl.amount }} {{ cl.unit }} {{ cl.label }}
 
-            {{ d.reason }}
+          {{ cl.reason }}
 
-            _{{ d.instructions }}_
+          {% if cl.partial %}⚠️ Eerst naar {{ cl.aiming_for }} — een correctie van
+          deze grootte schiet in één keer door. Meet na een uur opnieuw.{% endif %}
+
+          _{{ cl.instructions }}_
+          {%- endif -%}
+          {%- endif -%}
 
       # ---- Meting invoeren -------------------------------------------------
       - type: entities

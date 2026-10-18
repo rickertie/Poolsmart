@@ -37,6 +37,49 @@ temperature, the optimizer operates in one of two distinct modes:
 
 ---
 
+## Swim Time
+
+Everything above answers "how long will heating take"; this is where "by
+when" comes from.
+
+**Static fields.** `swim_time` (and an optional `swim_time_2`, for a second
+window on the same days) under **When to heat** set a fixed time of day, and
+**Days** picks which weekdays they apply to.
+
+**Dashboard helper.** `swim_time_entity` points at an `input_datetime`
+helper and, when it holds a usable value, replaces both static fields
+rather than adding to them — so anyone in the house can set today's time
+from the dashboard without opening this integration's options. It reads two
+different ways depending on what the helper has turned on:
+
+| Helper has | Reads as | Applies |
+| :--- | :--- | :--- |
+| Time only | A time of day, same as `swim_time` | On the configured **Days**, every week |
+| Date **and** time | A one-off appointment | Only on that date, regardless of **Days** — and stops applying once the date has passed |
+
+The one-off form is for the household that does not swim on a fixed weekly
+rhythm: turning on both date and time on the helper and picking, say, next
+Wednesday at 14:00, heats for that occasion alone without permanently
+adding Wednesday to the recurring schedule. Nobody has to remember to clear
+it afterwards — a date that has passed is simply stale and falls back to
+the static fields, exactly like an empty helper.
+
+`swim_skip_entity`, an `input_boolean`, excludes today from every source —
+entity or static, recurring or one-off — when turned on, for "not swimming
+today" without touching the schedule itself.
+
+**Seeing what was picked up.** The deadline a plan was actually computed
+against, whichever source supplied it, is not only acted on:
+
+- `sensor.<name>_swim_deadline` shows it directly.
+- `sensor.<name>_ready_at`'s attributes add `deadline` and an `on_time`
+  flag, so "will it make it in time" has a visible answer next to "when
+  will it be ready".
+- The panel's Planning tab shows swim time next to Ready at, with an
+  on-track/won't-make-it note.
+
+---
+
 ## Dynamic Electricity Price Integrations
 
 PoolSmart parses hourly price attributes automatically from popular Home

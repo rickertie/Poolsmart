@@ -192,6 +192,86 @@ def test_swim_skip_entity_excludes_today_even_before_the_time_has_passed():
     assert deadline.time() == time(20, 0)
 
 
+def test_swim_time_entity_with_a_date_is_a_one_off_appointment():
+    """A helper with both date and time set -- "swim next Wednesday at
+    14:00" -- must win outright, including on a day not in swim_days,
+    rather than being read as a recurring time of day."""
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    now = datetime(2026, 6, 1, 8, 0, tzinfo=UTC)  # Monday
+    fake = _fake_coordinator(
+        mod,
+        options={
+            const.CONF_SWIM_TIME: "10:00",
+            const.CONF_SWIM_TIME_ENTITY: "input_datetime.poolsmart_swim_time",
+            # Only Monday is a normal swim day; Wednesday is not.
+            const.CONF_SWIM_DAYS: [0],
+        },
+        entity_states={
+            "input_datetime.poolsmart_swim_time": types.SimpleNamespace(
+                state="2026-06-03 14:00:00"
+            )
+        },
+    )
+
+    deadline = mod.PoolSmartCoordinator._next_swim_deadline(fake, now)
+
+    assert deadline == datetime(2026, 6, 3, 14, 0, tzinfo=UTC)
+
+
+def test_swim_time_entity_with_a_past_date_falls_back_like_an_unset_helper():
+    """A one-off appointment that has already passed must not linger --
+    it falls through to the static fields exactly as an empty helper would,
+    without needing to be cleared by hand."""
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    now = datetime(2026, 6, 4, 8, 0, tzinfo=UTC)  # after last Wednesday's 14:00
+    fake = _fake_coordinator(
+        mod,
+        options={
+            const.CONF_SWIM_TIME: "10:00",
+            const.CONF_SWIM_TIME_ENTITY: "input_datetime.poolsmart_swim_time",
+        },
+        entity_states={
+            "input_datetime.poolsmart_swim_time": types.SimpleNamespace(
+                state="2026-06-03 14:00:00"
+            )
+        },
+    )
+
+    deadline = mod.PoolSmartCoordinator._next_swim_deadline(fake, now)
+
+    assert deadline.time() == time(10, 0)
+
+
+def test_swim_skip_entity_cancels_a_one_off_appointment_set_for_today():
+    mod = ha_stubs.load("coordinator", "coordinator.py")
+    const = ha_stubs.load("const", "const.py")
+    now = datetime(2026, 6, 3, 8, 0, tzinfo=UTC)  # Wednesday, before 14:00
+    fake = _fake_coordinator(
+        mod,
+        options={
+            const.CONF_SWIM_TIME: "10:00",
+            const.CONF_SWIM_TIME_ENTITY: "input_datetime.poolsmart_swim_time",
+            const.CONF_SWIM_SKIP_ENTITY: "input_boolean.poolsmart_skip_swim_today",
+        },
+        entity_states={
+            "input_datetime.poolsmart_swim_time": types.SimpleNamespace(
+                state="2026-06-03 14:00:00"
+            ),
+            "input_boolean.poolsmart_skip_swim_today": types.SimpleNamespace(
+                state="on"
+            ),
+        },
+    )
+
+    deadline = mod.PoolSmartCoordinator._next_swim_deadline(fake, now)
+
+    # Falls back to the static field on a later day, not today's appointment.
+    assert deadline.date() > now.date()
+    assert deadline.time() == time(10, 0)
+
+
 # ---------------------------------------------------------------------------
 # Issue #16 -- weather_entity as an outdoor-temperature fallback
 # ---------------------------------------------------------------------------
