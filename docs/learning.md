@@ -53,7 +53,7 @@ After each heating session, PoolSmart updates three core parameters:
    band is sufficient.
 
 <p align="center">
-  <img src="../images/cop-curve.svg" width="550" alt="COP curve showing how efficiency varies with outdoor temperature">
+  <img src="images/cop-curve.svg" width="550" alt="COP curve showing how efficiency varies with outdoor temperature">
 </p>
 
 ![Self-learning feedback loop showing how sessions improve the model](images/learning-feedback-loop.svg)

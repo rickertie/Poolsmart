@@ -19,7 +19,7 @@ it, and whether there is a solar collector alongside. Those answers decide which
 of the later questions make sense at all.
 
 <p align="center">
-  <img src="../images/HeatPump.svg" width="220" alt="An installed pool heat pump unit">
+  <img src="images/HeatPump.svg" width="220" alt="An installed pool heat pump unit">
 </p>
 
 A heat pump is the source everything else in this document is written against —
@@ -35,7 +35,7 @@ exist because a heat pump has weather-dependent limits the other sources don't.
 | No heating | Filtration, water chemistry and frost protection only |
 
 <p align="center">
-  <img src="../images/heating-sources-comparison.svg" width="550" alt="Heating sources comparison showing efficiency and operating characteristics">
+  <img src="images/heating-sources-comparison.svg" width="550" alt="Heating sources comparison showing efficiency and operating characteristics">
 </p>
 
 These are not simplifications of a heat pump's behaviour; they are the absence
@@ -53,8 +53,8 @@ PoolSmart operates that valve — it only tells you which position is currently
 worth having.
 
 <p align="center">
-  <img src="../images/3wayValve.svg" width="260" alt="Manual three-way valve installed in the solar collector return line">
-  <img src="../images/3wayValve-schema.svg" width="320" alt="Wiring and plumbing schema for the three-way valve routing flow between the pool and the solar collector">
+  <img src="images/3wayValve.svg" width="260" alt="Manual three-way valve installed in the solar collector return line">
+  <img src="images/3wayValve-schema.svg" width="320" alt="Wiring and plumbing schema for the three-way valve routing flow between the pool and the solar collector">
 </p>
 <p align="center"><em>The valve itself, and how it routes flow between the pool and the collector loop.</em></p>
 
@@ -88,7 +88,7 @@ measurement within days, but those first days are when someone is deciding
 whether this works at all.
 
 <p align="center">
-  <img src="../images/heat-loss-comparison.svg" width="500" alt="Heat loss comparison across different pool constructions">
+  <img src="images/heat-loss-comparison.svg" width="500" alt="Heat loss comparison across different pool constructions">
 </p>
 
 ---

@@ -42,7 +42,7 @@ halves (never below one day) for twelve hours after rain was last observed,
 and the water tab shows a "test soon" nudge for the same window.
 
 <p align="center">
-  <img src="../images/chemistry-intervals.svg" width="500" alt="Chemistry test intervals based on water temperature">
+  <img src="images/chemistry-intervals.svg" width="500" alt="Chemistry test intervals based on water temperature">
 </p>
 
 ### Circulation That Matches the Product

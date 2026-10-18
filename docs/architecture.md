@@ -14,7 +14,7 @@ that improves predictions over time, see [Learning](learning.md).
 ## The Priority Decision Ladder
 
 <p align="center">
-  <img src="../images/priority-ladder.svg" width="600" alt="Priority Decision Ladder flowchart">
+  <img src="images/priority-ladder.svg" width="600" alt="Priority Decision Ladder flowchart">
 </p>
 
 Every 30 seconds, PoolSmart evaluates the current state of your pool against a

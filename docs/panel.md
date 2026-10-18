@@ -41,7 +41,7 @@ thing.
 Provides a real-time summary of the pool state, active operating mode, live temperatures, and the primary reason behind the decision engine's last action.
 
 <p align="center">
-  <img src="../images/panel-overview.svg" width="750" alt="PoolSmart Overview Tab">
+  <img src="images/panel-overview.svg" width="750" alt="PoolSmart Overview Tab">
 </p>
 
 ---
@@ -50,7 +50,7 @@ Provides a real-time summary of the pool state, active operating mode, live temp
 Displays the automated heating schedule, real-time dynamic energy price forecasts, and target temperatures for scheduled swim sessions. Swim time — whichever source supplied it, recurring or a one-off appointment (see [Planning](planning.md#swim-time)) — sits next to Ready at with an on-track/won't-make-it note, so it is visible that a configured time was picked up and whether the plan meets it.
 
 <p align="center">
-  <img src="../images/panel-planning.svg" width="750" alt="PoolSmart Planning Tab">
+  <img src="images/panel-planning.svg" width="750" alt="PoolSmart Planning Tab">
 </p>
 
 ---
@@ -59,7 +59,7 @@ Displays the automated heating schedule, real-time dynamic energy price forecast
 Logs past heating and filtration cycles, displaying evaluated metrics, learned parameter updates, and reasons for any rejected runs. Each session carries Auto/Include/Exclude review controls, with a "worth a look" flag on sessions the automatic verdict is likely to have gotten wrong. See [Learning](learning.md#reviewing-a-session).
 
 <p align="center">
-  <img src="../images/panel-sessions.svg" width="750" alt="PoolSmart Sessions Tab">
+  <img src="images/panel-sessions.svg" width="750" alt="PoolSmart Sessions Tab">
 </p>
 
 ---
@@ -68,7 +68,7 @@ Logs past heating and filtration cycles, displaying evaluated metrics, learned p
 Visualizes the self-learning engine's performance models, including heat loss calculations, heating rate estimations, and the active COP curve with confidence margins. Monthly heating rate, heat loss, and COP each get a line chart covering the last 12 months, and COP by outdoor temperature gets a bar chart, alongside the underlying tables. Below that sits storage statistics, maintenance actions (reprocess history, clear debug traces, clear all history), and export/import, including a selective export and an advanced full-replace option. See [Learning](learning.md#maintenance-exportimport).
 
 <p align="center">
-  <img src="../images/panel-learning.svg" width="750" alt="PoolSmart Learning Tab">
+  <img src="images/panel-learning.svg" width="750" alt="PoolSmart Learning Tab">
 </p>
 
 ---
@@ -81,7 +81,7 @@ needing to open the main Home Assistant integration configuration wizard.
 Everything else still lives under Configure.
 
 <p align="center">
-  <img src="../images/panel-settings.svg" width="750" alt="PoolSmart Settings Tab">
+  <img src="images/panel-settings.svg" width="750" alt="PoolSmart Settings Tab">
 </p>
 
 ---
@@ -90,7 +90,7 @@ Everything else still lives under Configure.
 Exposes full decision ladder traces, detailed event logs, system fault notifications, and an export button for diagnostic data.
 
 <p align="center">
-  <img src="../images/panel-diagnostics.svg" width="750" alt="PoolSmart Diagnostics Tab">
+  <img src="images/panel-diagnostics.svg" width="750" alt="PoolSmart Diagnostics Tab">
 </p>
 
 ---

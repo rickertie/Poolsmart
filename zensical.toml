@@ -100,7 +100,7 @@ toggle.icon = "material/brightness-4"
 toggle.name = "Switch to light mode"
 
 [project.extra]
-generator = false
+generator = true
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"

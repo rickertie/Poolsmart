@@ -102,7 +102,7 @@ exists, because the decision the pool is actually running on remains valid even
 if an optional subsystem hiccuped.
 
 <p align="center">
-  <img src="../images/operating-envelope.svg" width="500" alt="Heat pump operating envelope showing temperature thresholds">
+  <img src="images/operating-envelope.svg" width="500" alt="Heat pump operating envelope showing temperature thresholds">
 </p>
 
 Anything that did fail shows up under Diagnostics in the panel and in the status
