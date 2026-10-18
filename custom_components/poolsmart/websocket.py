@@ -370,14 +370,15 @@ def ws_snapshot(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     }
 )
 @websocket_api.require_admin
-@callback
-def ws_clear_log(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
+@websocket_api.async_response
+async def ws_clear_log(hass: HomeAssistant, connection, msg: dict[str, Any]) -> None:
     """Empty the decision log."""
     coordinator = _coordinator(hass, msg.get("entry_id"))
     if coordinator is None:
         connection.send_error(msg["id"], "not_found", "No pool is configured")
         return
-    coordinator.store.decision_log = []
+    coordinator.store.decision_log.clear()
+    await coordinator.store.async_save(force=True)
     connection.send_result(msg["id"], {"cleared": True})
 
 
@@ -407,7 +408,7 @@ async def ws_set_mode(hass: HomeAssistant, connection, msg: dict[str, Any]) -> N
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "poolsmart/set_target",
-        vol.Required("target"): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=40.0)),
+        vol.Required("target"): vol.All(vol.Coerce(float), vol.Range(min=10.0, max=40.0)),
         vol.Optional("entry_id"): str,
     }
 )
@@ -418,6 +419,13 @@ async def ws_set_target(hass: HomeAssistant, connection, msg: dict[str, Any]) ->
     coordinator = _coordinator(hass, msg.get("entry_id"))
     if coordinator is None:
         connection.send_error(msg["id"], "not_found", "No pool is configured")
+        return
+    if msg["target"] > coordinator.pool_config.comfort.max_temp:
+        connection.send_error(
+            msg["id"],
+            "invalid_target",
+            f"Target temperature cannot exceed {coordinator.pool_config.comfort.max_temp:.1f} C",
+        )
         return
     try:
         await coordinator.async_set_target(msg["target"])

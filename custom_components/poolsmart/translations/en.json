@@ -3,14 +3,15 @@
     "step": {
       "user": {
         "title": "What kind of pool is this?",
-        "description": "These answers decide which questions the rest of the setup asks.",
+        "description": "These answers decide which questions the rest of the setup asks. Price optimisation is optional: without an electricity price integration, PoolSmart still heats when the pool needs it.",
         "data": {
           "name": "Name",
           "unit_system": "Units",
           "sanitiser": "How the water is sanitised",
           "heating_source": "How is the water heated?",
           "pool_kind": "Pool construction",
-          "has_solar_collector": "Also has a solar collector"
+          "has_solar_collector": "Also has a solar collector",
+          "use_price_optimisation": "I have a dynamic electricity price integration and want price optimisation"
         },
         "data_description": {
           "unit_system": "Calculations stay metric either way; this only changes how doses and volumes are shown.",
@@ -18,7 +19,8 @@
           "pool_kind": "An uninsulated inflatable loses heat several times faster than a built-in pool. A frame pool like Intex Metal Frame sits in between. Pick the one that matches your pool — it is only a starting point, and the real figure is measured within days.",
           "heating_source": "Changes which questions follow.",
           "has_solar_collector": "Tick if you have a solar collector alongside another heater.",
-          "name": "How this pool appears in Home Assistant."
+          "name": "How this pool appears in Home Assistant.",
+          "use_price_optimisation": "Tick only if Home Assistant provides a current electricity price and you want PoolSmart to favour cheaper heating times. Leave unticked if you do not have a price integration or do not want this feature: PoolSmart will still heat when the pool needs it, following your temperature target and safety rules. You can change this later under Configure."
         }
       },
       "pump": {
@@ -253,7 +255,13 @@
       }
     }
   },
+  "error": {
+    "target_above_max": "The target temperature must not exceed the maximum temperature."
+  },
   "options": {
+    "error": {
+      "target_above_max": "The target temperature must not exceed the maximum temperature."
+    },
     "step": {
       "swimming": {
         "title": "Swimming times",
@@ -535,7 +543,7 @@
           "solar_power_sensor": "Current solar production in watts.",
           "solar_forecast_sensor": "A solar forecast, if you have one.",
           "irradiance_sensor": "Direct sunlight reading in W/m² — a weather station's pyranometer, a KNMI-style solar-radiation entity, or similar. Preferred over the solar power sensor above when both are mapped: it needs no peak figure to scale against, and works whether or not this pool has solar panels of its own. Used to learn heat loss from sunny idle periods instead of discarding them.",
-          "grid_power_sensor": "A smart-meter or energy-dashboard sensor reading total household power in watts, independent of the pool's own equipment. Paired with the house power limit under When to heat to pause heating above a cap — useful for peak tariffs or a grid/contract limit. Leave blank and the limiter is simply absent."
+          "grid_power_sensor": "A smart-meter or energy-dashboard sensor reading total household power in watts, independent of the pool's own equipment. Paired with the house power limit under When to heat to pause heating above a cap — useful for peak tariffs or a grid/contract limit. If configured but unavailable, PoolSmart notifies you and continues heating without checking the limit. Leave blank to disable the optional limiter."
         }
       },
       "heating": {

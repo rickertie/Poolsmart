@@ -38,6 +38,11 @@ sentence.
 Raised and cleared, so the duration is visible rather than inferred from
 timestamps.
 
+A flow reading of zero after the pump starts is reported as a warning after the
+two-minute startup grace period. It notifies the user but does not stop the
+pump or heat pump; check the sensor and circulation equipment. Other critical
+faults keep their normal safety behaviour.
+
 ---
 
 ## Restore Summary
@@ -62,11 +67,10 @@ when the last save happened, are also in the diagnostics file's
 
 ## Notifications You Can Answer
 
-Notifications to a mobile app carry buttons. "Heating postponed" offers *Heat now
-anyway* and *Do not heat today*; a flow fault offers *Circulate only* and *Switch
-everything off*; the weekly review offers *Apply the suggestion*. Tapping one
-acts immediately. Other notify platforms ignore the extra data and receive the
-text as normal.
+Notifications to a mobile app can carry buttons. "Heating postponed" offers
+*Heat now anyway* and *Do not heat today*; the weekly review offers *Apply the
+suggestion*. Flow warnings are informational and do not offer control buttons.
+Other notify platforms ignore extra action data and receive the text as normal.
 
 <p align="center">
   <img src="images/notification-actions-mockup.svg" width="320" alt="Mobile notification with two action buttons: Heat now anyway, Do not heat today">

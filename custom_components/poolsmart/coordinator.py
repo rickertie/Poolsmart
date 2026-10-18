@@ -251,6 +251,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
         #: Whether the demand limiter was blocking heating as of the last
         #: tick, so pause/resume is only notified on the transition. See #13.
         self._demand_limited: bool = False
+        self._demand_sensor_unavailable: bool = False
         self._forecast_fetched_at: datetime | None = None
         self._last_obstacle: tuple | None = None
         self._last_obstacle_at: datetime | None = None
@@ -826,6 +827,7 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             solar_power_w=solar.value,
             irradiance_w_m2=irradiance.value,
             grid_power_w=grid_power.value,
+            grid_power_sensor_configured=bool(self._conf(c.CONF_GRID_POWER_SENSOR)),
             cheap_price_now=cheap_now,
             covered=covered,
             target_temp=self._target_temp,
@@ -963,6 +965,21 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
 
     async def _notify_demand_limit_transition(self, state: PoolState) -> None:
         """Notify only on the pause/resume edge, not on every blocked tick."""
+        sensor_unavailable = (
+            state.grid_power_sensor_configured and state.grid_power_w is None
+        )
+        if sensor_unavailable != self._demand_sensor_unavailable:
+            self._demand_sensor_unavailable = sensor_unavailable
+            if sensor_unavailable:
+                try:
+                    await self.notifier.async_send_demand_sensor_unavailable(
+                        "The configured house power sensor has no usable reading. "
+                        "Heating continues, but the household power limit cannot "
+                        "be checked until the sensor recovers."
+                    )
+                except Exception:  # noqa: BLE001
+                    _LOGGER.exception("Could not notify about unavailable power sensor")
+
         demand_entry = next(
             (
                 e

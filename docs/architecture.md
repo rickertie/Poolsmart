@@ -66,7 +66,10 @@ hard electrical or contract limit rather than to optimise cost. Once the
 heat pump is already running, the meter's own reading is used as-is, which
 is what lets the same gate pause an already-active session if the rest of
 the house's draw climbs over the cap mid-session, not just block a new one
-from starting.
+from starting. An exceeded cap can stop the heat pump immediately, even during
+its configured minimum run time; protecting the electrical limit takes priority
+over avoiding a short run. The circulation pump remains governed by the
+decision ladder.
 
 ---
 

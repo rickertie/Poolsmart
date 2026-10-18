@@ -260,29 +260,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def _target_coordinator(hass: HomeAssistant, action: str) -> PoolSmartCoordinator | None:
-    """The one coordinator a per-pool service call should act on.
-
-    None of the services below take a target: they were written when a single
-    pool was the only case anyone tested. With two or more config entries,
-    looping over every coordinator means a dose recorded for one pool gets
-    logged against all of them, and an export silently overwrites itself once
-    per pool, leaving only the last one's history on disk. Refusing is safer
-    than guessing which pool was meant.
-    """
-    coordinators = list(hass.data.get(DOMAIN, {}).values())
+def _target_coordinator(
+    hass: HomeAssistant, action: str, entry_id: str | None = None
+) -> PoolSmartCoordinator | None:
+    """Resolve a per-pool service call without guessing between installations."""
+    coordinators: dict[str, PoolSmartCoordinator] = hass.data.get(DOMAIN, {})
+    if entry_id:
+        coordinator = coordinators.get(entry_id)
+        if coordinator is None:
+            raise ServiceValidationError(
+                f"Cannot {action}: PoolSmart entry {entry_id!r} is not loaded"
+            )
+        return coordinator
     if len(coordinators) == 1:
-        return coordinators[0]
+        return next(iter(coordinators.values()))
     if not coordinators:
-        _LOGGER.error("Cannot %s: no PoolSmart pool is set up", action)
-    else:
-        _LOGGER.error(
-            "Cannot %s: %d PoolSmart pools are set up and this service cannot "
-            "yet target one of them specifically",
-            action,
-            len(coordinators),
-        )
-    return None
+        raise ServiceValidationError(f"Cannot {action}: no PoolSmart pool is set up")
+    raise ServiceValidationError(
+        f"Cannot {action}: choose a PoolSmart pool using its config entry"
+    )
 
 
 @callback
@@ -317,7 +313,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Refusing dose with unrecognised unit %r", unit)
             return
 
-        coordinator = _target_coordinator(hass, "record a dose")
+        coordinator = _target_coordinator(hass, "record a dose", call.data.get("entry_id"))
         if coordinator is None:
             return
         chemistry = coordinator.water_chemistry
@@ -336,7 +332,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, "record_dose", _record)
 
     async def _reset(call) -> None:
-        coordinator = _target_coordinator(hass, "reset a learned value")
+        coordinator = _target_coordinator(hass, "reset a learned value", call.data.get("entry_id"))
         if coordinator is None:
             return
         if coordinator.store.reset_learned(call.data["value"]):
@@ -368,12 +364,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 f"Setting value {call.data.get('value')!r} is not a number"
             ) from None
 
-        coordinator = _target_coordinator(hass, "change a setting")
-        if coordinator is None:
-            raise ServiceValidationError(
-                "Cannot change a setting: no PoolSmart pool is set up, or more "
-                "than one is and this service cannot yet target one specifically"
-            )
+        coordinator = _target_coordinator(hass, "change a setting", call.data.get("entry_id"))
 
         bounds = {
             "target_temp": (10.0, coordinator.pool_config.comfort.max_temp),
@@ -416,7 +407,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Refusing unknown review %r", review)
             return
 
-        coordinator = _target_coordinator(hass, "review a session")
+        coordinator = _target_coordinator(hass, "review a session", call.data.get("entry_id"))
         if coordinator is None:
             return
         session_start = str(call.data["session_start"])
@@ -441,7 +432,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("%s", err)
             return
 
-        coordinator = _target_coordinator(hass, "export learned history")
+        coordinator = _target_coordinator(hass, "export learned history", call.data.get("entry_id"))
         if coordinator is None:
             return
         payload = export_payload(coordinator.store, call.data.get("sections"))
@@ -481,7 +472,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Refusing to import %s: %s", path, why)
             return
 
-        coordinator = _target_coordinator(hass, "import learned history")
+        coordinator = _target_coordinator(hass, "import learned history", call.data.get("entry_id"))
         if coordinator is None:
             return
         taken = coordinator.store.adopt(payload)
@@ -520,7 +511,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Refusing to import %s: %s", path, why)
             return
 
-        coordinator = _target_coordinator(hass, "replace learned history")
+        coordinator = _target_coordinator(hass, "replace learned history", call.data.get("entry_id"))
         if coordinator is None:
             return
         replaced = await coordinator.async_replace_history(
@@ -535,7 +526,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
     async_register_admin_service(hass, DOMAIN, "replace_learning", _replace)
 
     async def _rebuild_learning(call) -> None:
-        coordinator = _target_coordinator(hass, "reprocess learning history")
+        coordinator = _target_coordinator(hass, "reprocess learning history", call.data.get("entry_id"))
         if coordinator is None:
             return
         await coordinator.async_rebuild_learning()
@@ -544,7 +535,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, "rebuild_learning", _rebuild_learning)
 
     async def _clear_debug_log(call) -> None:
-        coordinator = _target_coordinator(hass, "clear the debug log")
+        coordinator = _target_coordinator(hass, "clear the debug log", call.data.get("entry_id"))
         if coordinator is None:
             return
         await coordinator.async_clear_debug_log()
@@ -558,7 +549,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
                 "Refusing to clear all history: confirm was not set to true"
             )
             return
-        coordinator = _target_coordinator(hass, "clear all history")
+        coordinator = _target_coordinator(hass, "clear all history", call.data.get("entry_id"))
         if coordinator is None:
             return
         await coordinator.async_clear_all_history()

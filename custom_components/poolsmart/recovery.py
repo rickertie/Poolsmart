@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -97,15 +98,22 @@ def _inspect(path: Path) -> Orphan | None:
     """Read one storage file without disturbing it."""
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
+        modified = datetime.fromtimestamp(path.stat().st_mtime)
     except (OSError, ValueError):
         return None
 
-    data = raw.get("data") or {}
+    if not isinstance(raw, dict):
+        return None
+    data = raw.get("data")
+    if not isinstance(data, dict):
+        return None
     learned = data.get("learned") or {}
+    if not isinstance(learned, dict):
+        return None
     return Orphan(
         path=str(path),
         entry_id=path.name.rsplit(".", 1)[-1],
-        modified=datetime.fromtimestamp(path.stat().st_mtime),
+        modified=modified,
         sessions=learned.get("session_count", 0) or 0,
         heat_loss=learned.get("heat_loss_c_per_h"),
         heating_rate=learned.get("heating_rate_c_per_h"),
@@ -144,7 +152,13 @@ def read_learned(path: str) -> dict | None:
     except (OSError, ValueError) as err:
         _LOGGER.warning("Could not read learned history from %s: %s", path, err)
         return None
-    return (raw.get("data") or {}).get("learned")
+    if not isinstance(raw, dict):
+        return None
+    data = raw.get("data")
+    if not isinstance(data, dict):
+        return None
+    learned = data.get("learned")
+    return learned if isinstance(learned, dict) else None
 
 
 def read_history(path: str) -> dict:
@@ -161,10 +175,20 @@ def read_history(path: str) -> dict:
         _LOGGER.warning("Could not read history from %s: %s", path, err)
         return {}
 
-    data = raw.get("data") or {}
+    if not isinstance(raw, dict):
+        return {}
+    data = raw.get("data")
+    if not isinstance(data, dict):
+        return {}
     return {
         key: data[key]
-        for key in ("learned", "session_log", "dose_log", "last_water_test")
+        for key in (
+            "learned",
+            "session_log",
+            "dose_log",
+            "last_water_test",
+            "accepted_suggestions",
+        )
         if key in data
     }
 
@@ -218,7 +242,7 @@ def validate_import(payload: dict) -> tuple[bool, str]:
     """
     if not isinstance(payload, dict):
         return False, "the file does not contain an export"
-    if payload.get("version") != 1:
+    if type(payload.get("version")) is not int or payload.get("version") != 1:
         return False, f"unsupported export version {payload.get('version')!r}"
     if not set(EXPORT_SECTIONS) & payload.keys():
         return False, "the export contains none of: " + ", ".join(EXPORT_SECTIONS)
@@ -229,6 +253,132 @@ def validate_import(payload: dict) -> tuple[bool, str]:
             return False, f"{key} is not a list"
 
     learned = payload.get("learned") or {}
+    if "exported" in payload:
+        try:
+            datetime.fromisoformat(payload["exported"])
+        except (TypeError, ValueError):
+            return False, "exported is not a valid ISO datetime"
+
+    def finite_number(value: object) -> bool:
+        return (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(value)
+        )
+
+    for field_name in ("cop_by_air_bucket", "cop_sessions_by_bucket", "cop_updated_at"):
+        if field_name in learned and not isinstance(learned[field_name], dict):
+            return False, f"learned.{field_name} is not an object"
+
+    for key, cop in learned.get("cop_by_air_bucket", {}).items():
+        if not isinstance(key, str) or not finite_number(cop) or not 1.0 <= cop <= 10.0:
+            return False, f"invalid COP value {cop!r} for bucket {key!r}"
+    for key, count in learned.get("cop_sessions_by_bucket", {}).items():
+        if not isinstance(key, str) or type(count) is not int or count < 0:
+            return False, f"invalid COP session count {count!r} for bucket {key!r}"
+    for field_name in (
+        "heating_rate_updated_at",
+        "heat_loss_updated_at",
+        "heat_loss_covered_updated_at",
+        "ph_correction_updated_at",
+        "chlorine_correction_updated_at",
+    ):
+        value = learned.get(field_name)
+        if value is not None:
+            try:
+                datetime.fromisoformat(value)
+            except (TypeError, ValueError):
+                return False, f"learned.{field_name} is not a valid ISO datetime"
+
+    for field_name in (
+        "heat_loss_samples",
+        "heat_loss_covered_samples",
+        "heating_rate_sessions",
+        "session_count",
+        "ph_correction_sessions",
+        "chlorine_correction_sessions",
+    ):
+        value = learned.get(field_name, 0)
+        if type(value) is not int or value < 0:
+            return False, f"learned.{field_name} must be a non-negative integer"
+
+    for field_name, (lo, hi) in {
+        "ph_correction": (0.2, 5.0),
+        "chlorine_correction": (0.2, 5.0),
+    }.items():
+        value = learned.get(field_name, 1.0)
+        if not finite_number(value) or not lo <= value <= hi:
+            return False, f"learned.{field_name} is outside the plausible range of {lo} to {hi}"
+    for key, value in learned.get("cop_updated_at", {}).items():
+        if not isinstance(key, str):
+            return False, "learned.cop_updated_at contains a non-string key"
+        try:
+            datetime.fromisoformat(value)
+        except (TypeError, ValueError):
+            return False, f"learned.cop_updated_at[{key!r}] is not a valid ISO datetime"
+
+    for key in ("session_log", "dose_log", "accepted_suggestions"):
+        if key in payload and any(not isinstance(item, dict) for item in payload[key]):
+            return False, f"{key} must contain only objects"
+
+    for index, item in enumerate(payload.get("session_log", [])):
+        for date_key in ("start", "end"):
+            value = item.get(date_key)
+            if value is not None:
+                try:
+                    datetime.fromisoformat(value)
+                except (TypeError, ValueError):
+                    return False, f"session_log[{index}].{date_key} is not a valid ISO datetime"
+        for number_key in (
+            "duration_h", "water_start", "water_end", "air_avg", "energy_kwh",
+            "thermal_kwh", "heating_rate", "measured_cop",
+        ):
+            value = item.get(number_key)
+            if value is not None and not finite_number(value):
+                return False, f"session_log[{index}].{number_key} must be a finite number"
+        if not isinstance(item.get("faults", []), list):
+            return False, f"session_log[{index}].faults must be a list"
+        if "measurements" in item and not isinstance(item["measurements"], dict):
+            return False, f"session_log[{index}].measurements must be an object"
+
+    for index, item in enumerate(payload.get("dose_log", [])):
+        try:
+            datetime.fromisoformat(item["at"])
+        except (KeyError, TypeError, ValueError):
+            return False, f"dose_log[{index}].at is not a valid ISO datetime"
+        if not isinstance(item.get("product"), str) or not isinstance(item.get("unit"), str):
+            return False, f"dose_log[{index}] must include product and unit text"
+        for number_key in ("amount", "measured_before", "measured_after", "expected_change"):
+            value = item.get(number_key)
+            if value is not None and not finite_number(value):
+                return False, f"dose_log[{index}].{number_key} must be a finite number"
+
+    for index, item in enumerate(payload.get("accepted_suggestions", [])):
+        for required in ("id", "setting", "new_value", "accepted_at"):
+            if required not in item:
+                return False, f"accepted_suggestions[{index}] is missing {required}"
+        if not isinstance(item["id"], str) or not isinstance(item["setting"], str):
+            return False, f"accepted_suggestions[{index}] id and setting must be text"
+        if not finite_number(item["new_value"]):
+            return False, f"accepted_suggestions[{index}].new_value must be a finite number"
+        if item.get("old_value") is not None and not finite_number(item["old_value"]):
+            return False, f"accepted_suggestions[{index}].old_value must be a finite number"
+        if not isinstance(item.get("before", {}), dict):
+            return False, f"accepted_suggestions[{index}].before must be an object"
+        for date_key in ("accepted_at", "outcome_at"):
+            value = item.get(date_key)
+            if value is not None:
+                try:
+                    datetime.fromisoformat(value)
+                except (TypeError, ValueError):
+                    return False, f"accepted_suggestions[{index}].{date_key} is not a valid ISO datetime"
+
+    if "last_water_test" in payload and payload["last_water_test"] is not None:
+        try:
+            datetime.fromisoformat(payload["last_water_test"])
+        except (TypeError, ValueError):
+            return False, "last_water_test is not a valid ISO datetime"
+
     bounds: dict[str, tuple[float, float]] = {
         "heat_loss_c_per_h": (0.01, 2.0),
         "heat_loss_covered_c_per_h": (0.01, 2.0),
@@ -239,13 +389,7 @@ def validate_import(payload: dict) -> tuple[bool, str]:
         value = learned.get(field_name)
         if value is None:
             continue
-        if not isinstance(value, (int, float)) or not lo <= value <= hi:
+        if not finite_number(value) or not lo <= value <= hi:
             return False, f"{field_name} of {value!r} is outside the plausible range of {lo} to {hi}"
-
-    buckets = learned.get("cop_by_air_bucket")
-    if isinstance(buckets, dict):
-        for key, cop in buckets.items():
-            if not isinstance(cop, (int, float)) or not 1.0 <= cop <= 10.0:
-                return False, f"COP of {cop!r} in bucket {key!r} is outside the plausible range of 1.0 to 10.0"
 
     return True, "usable"

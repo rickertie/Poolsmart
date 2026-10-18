@@ -61,6 +61,7 @@ EVENT_ACTIONS: dict[str, tuple[tuple[str, str], ...]] = {
     #: bypass it (core.ladder._demand_allows_heating). See issue #13.
     "demand_limited": (),
     "demand_resumed": (),
+    "demand_sensor_unavailable": (),
 }
 
 
@@ -305,6 +306,11 @@ class NotificationManager:
 
     async def async_send_demand_resumed(self, message: str) -> None:
         await self._send("demand_resumed", "Pool: heating resumed", message)
+
+    async def async_send_demand_sensor_unavailable(self, message: str) -> None:
+        await self._send(
+            "demand_sensor_unavailable", "Pool: power sensor unavailable", message
+        )
 
 
 class ActionHandler:

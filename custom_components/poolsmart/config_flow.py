@@ -162,6 +162,7 @@ def _kind_schema(d: dict) -> vol.Schema:
                     translation_key="sanitiser",
                 )
             ),
+            vol.Required("use_price_optimisation", default=False): bool,
         }
     )
 
@@ -324,8 +325,8 @@ def _required_entities(source: str) -> vol.Schema:
     return vol.Schema(fields)
 
 
-def _core_environmental_fields() -> dict:
-    return {
+def _core_environmental_fields(use_price_optimisation: bool = True) -> dict:
+    fields = {
         vol.Optional(c.CONF_AIR_TEMP_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_INLET_SENSOR): TEMP_SENSOR,
         vol.Optional(c.CONF_PUMP_OUTLET_SENSOR): TEMP_SENSOR,
@@ -337,12 +338,14 @@ def _core_environmental_fields() -> dict:
             )
         ),
         vol.Optional(c.CONF_PUMP_POWER_SENSOR): POWER_SENSOR,
-        vol.Optional(c.CONF_PRICE_SENSOR): ANY_SENSOR,
         vol.Optional(c.CONF_WEATHER_ENTITY): WEATHER,
         vol.Optional(c.CONF_COVER_ENTITY): selector.EntitySelector(
             selector.EntitySelectorConfig(domain=["cover", "binary_sensor", "input_boolean"])
         ),
     }
+    if use_price_optimisation:
+        fields[vol.Optional(c.CONF_PRICE_SENSOR)] = ANY_SENSOR
+    return fields
 
 
 def _chemistry_fields() -> dict:
@@ -406,6 +409,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         self._data: dict[str, Any] = {}
         self._defaults: dict[str, Any] = {}
         self._orphans: list = []
+        self._use_price_optimisation = False
 
     def _progress(self, step_id: str) -> dict:
         """Return progress placeholders for the current step."""
@@ -436,6 +440,10 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         if not self._defaults:
             self._defaults = await async_load_defaults(self.hass)
         if user_input is not None:
+            user_input = dict(user_input)
+            self._use_price_optimisation = bool(
+                user_input.pop("use_price_optimisation", False)
+            )
             old_source = self._data.get(c.CONF_HEATING_SOURCE)
             old_kind = self._data.get(c.CONF_POOL_KIND)
             self._data.update(user_input)
@@ -462,6 +470,13 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_pool(self, user_input: dict | None = None) -> ConfigFlowResult:
         if user_input is not None:
+            if float(user_input[c.CONF_TARGET_TEMP]) > float(user_input[c.CONF_MAX_TEMP]):
+                return self.async_show_form(
+                    step_id="pool",
+                    data_schema=_pool_schema(self._defaults),
+                    errors={"base": "target_above_max"},
+                    description_placeholders=self._progress("pool"),
+                )
             self._data.update(derive_pool_shape(dict(user_input)))
             return await self.async_step_pump()
         return self.async_show_form(
@@ -575,7 +590,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         from .core.config import SOURCE_TRAITS, HeatingSource
 
         fields: dict = {}
-        fields.update(_core_environmental_fields())
+        fields.update(_core_environmental_fields(self._use_price_optimisation))
         if source == "heat_pump" and SOURCE_TRAITS[HeatingSource(source)].get("air_temp_limits"):
             fields[vol.Optional(c.CONF_HP_INLET_SENSOR)] = TEMP_SENSOR
             fields[vol.Optional(c.CONF_HP_OUTLET_SENSOR)] = TEMP_SENSOR
@@ -623,7 +638,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         }
         if has_solar or source == "solar":
             fields[vol.Optional(c.CONF_COLLECTOR_SENSOR)] = TEMP_SENSOR
-        if source == "heat_pump":
+        if source == "heat_pump" and self._use_price_optimisation:
             fields[vol.Optional(c.CONF_CHEAP_PRICE_SENSOR)] = selector.EntitySelector(
                 selector.EntitySelectorConfig(
                     domain=["binary_sensor", "input_boolean"]
@@ -920,10 +935,6 @@ class PoolSmartOptionsFlow(OptionsFlow):
         them here, on a screen that is the same for every pool, would mean
         asking a pool without heating about a heat pump that does not exist.
         """
-        if user_input is not None:
-            data = derive_pool_shape(dict(user_input))
-            return self._save(data)
-
         current = {**self.config_entry.data, **self.config_entry.options}
 
         def num(key, default, low, high, step=0.01):
@@ -976,6 +987,17 @@ class PoolSmartOptionsFlow(OptionsFlow):
                 ),
             }
         )
+        if user_input is not None:
+            target = float(current.get(c.CONF_TARGET_TEMP, 28.0))
+            max_temp = float(user_input.get(c.CONF_MAX_TEMP, current.get(c.CONF_MAX_TEMP, 32.0)))
+            if target > max_temp:
+                return self.async_show_form(
+                    step_id="pool",
+                    data_schema=schema,
+                    errors={"base": "target_above_max"},
+                )
+            data = derive_pool_shape(dict(user_input))
+            return self._save(data)
         return self.async_show_form(step_id="pool", data_schema=schema)
 
     async def async_step_heating(
@@ -1220,125 +1242,130 @@ class PoolSmartOptionsFlow(OptionsFlow):
         when is heating worth doing -- and separating the target temperature
         from the price ceiling meant visiting two screens to change one policy.
         """
-        if user_input is not None:
-            return self._save(user_input)
-
         from .core.config import CheapPriceMode
 
         current = {**self.config_entry.data, **self.config_entry.options}
-        return self.async_show_form(
-            step_id="when_to_heat",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        c.CONF_TARGET_TEMP,
-                        default=current.get(c.CONF_TARGET_TEMP, 28.0),
-                    ): _positive(10, 40, 0.5),
-                    vol.Optional(
-                        c.CONF_MAX_TEMP, default=current.get(c.CONF_MAX_TEMP, 32.0)
-                    ): _positive(10, 40, 0.5),
-                    vol.Optional(
-                        c.CONF_MIN_WATER_TEMP,
-                        default=current.get(c.CONF_MIN_WATER_TEMP, 10.0),
-                    ): _positive(0, 25, 0.5),
-                    vol.Optional(
-                        c.CONF_FROST_AIR_TEMP,
-                        default=current.get(c.CONF_FROST_AIR_TEMP, 3.0),
-                    ): _positive(-10, 10, 0.5),
-                    vol.Optional(
-                        c.CONF_MAX_PRICE,
-                        default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
-                    ): _positive(*c.MAX_PRICE_BOUNDS, 0.01),
-                    vol.Optional(
-                        c.CONF_CHEAP_PRICE_MODE,
-                        default=current.get(
-                            c.CONF_CHEAP_PRICE_MODE, CheapPriceMode.CHEAP_WINS
-                        ),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[
-                                CheapPriceMode.CHEAP_WINS,
-                                CheapPriceMode.MAX_PRICE_HARD,
-                                CheapPriceMode.CHEAP_WINS_CAPPED,
-                            ],
-                            translation_key="cheap_price_mode",
-                        )
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    c.CONF_TARGET_TEMP,
+                    default=current.get(c.CONF_TARGET_TEMP, 28.0),
+                ): _positive(10, 40, 0.5),
+                vol.Optional(
+                    c.CONF_MAX_TEMP, default=current.get(c.CONF_MAX_TEMP, 32.0)
+                ): _positive(10, 40, 0.5),
+                vol.Optional(
+                    c.CONF_MIN_WATER_TEMP,
+                    default=current.get(c.CONF_MIN_WATER_TEMP, 10.0),
+                ): _positive(0, 25, 0.5),
+                vol.Optional(
+                    c.CONF_FROST_AIR_TEMP,
+                    default=current.get(c.CONF_FROST_AIR_TEMP, 3.0),
+                ): _positive(-10, 10, 0.5),
+                vol.Optional(
+                    c.CONF_MAX_PRICE,
+                    default=current.get(c.CONF_MAX_PRICE, c.DEFAULT_MAX_PRICE),
+                ): _positive(*c.MAX_PRICE_BOUNDS, 0.01),
+                vol.Optional(
+                    c.CONF_CHEAP_PRICE_MODE,
+                    default=current.get(
+                        c.CONF_CHEAP_PRICE_MODE, CheapPriceMode.CHEAP_WINS
                     ),
-                    vol.Optional(
-                        c.CONF_CHEAP_PRICE_CEILING,
-                        description={
-                            "suggested_value": current.get(c.CONF_CHEAP_PRICE_CEILING)
-                        },
-                    ): _positive(*c.MAX_PRICE_BOUNDS, 0.01),
-                    vol.Optional(
-                        c.CONF_ECO_PRICE_FACTOR,
-                        default=current.get(c.CONF_ECO_PRICE_FACTOR, 0.7),
-                    ): _positive(0.1, 1.0, 0.05),
-                    vol.Optional(
-                        c.CONF_NEGATIVE_PRICE_BASIS,
-                        default=current.get(c.CONF_NEGATIVE_PRICE_BASIS, "total"),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=["total", "market"],
-                            translation_key="negative_price_basis",
-                        )
-                    ),
-                    vol.Optional(
-                        c.CONF_SOLAR_THRESHOLD_W,
-                        description={
-                            "suggested_value": current.get(c.CONF_SOLAR_THRESHOLD_W)
-                        },
-                    ): _positive(0, 20000, 50),
-                    vol.Optional(
-                        c.CONF_SOLAR_PEAK_W,
-                        description={
-                            "suggested_value": current.get(c.CONF_SOLAR_PEAK_W)
-                        },
-                    ): _positive(0, 20000, 50),
-                    vol.Optional(
-                        c.CONF_SOLAR_MARGIN_W,
-                        default=current.get(c.CONF_SOLAR_MARGIN_W, 200),
-                    ): _positive(0, 5000, 50),
-                    vol.Optional(
-                        c.CONF_SOLAR_HYSTERESIS_W,
-                        default=current.get(c.CONF_SOLAR_HYSTERESIS_W, 300),
-                    ): _positive(0, 5000, 50),
-                    vol.Optional(
-                        c.CONF_POWER_LIMIT_W,
-                        description={
-                            "suggested_value": current.get(c.CONF_POWER_LIMIT_W)
-                        },
-                    ): _positive(0, 30000, 50),
-                    vol.Optional(
-                        c.CONF_SWIM_TIME,
-                        default=current.get(c.CONF_SWIM_TIME, "16:00"),
-                    ): str,
-                    vol.Optional(
-                        c.CONF_SWIM_TIME_2,
-                        default=current.get(c.CONF_SWIM_TIME_2, ""),
-                    ): str,
-                    vol.Optional(
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            CheapPriceMode.CHEAP_WINS,
+                            CheapPriceMode.MAX_PRICE_HARD,
+                            CheapPriceMode.CHEAP_WINS_CAPPED,
+                        ],
+                        translation_key="cheap_price_mode",
+                    )
+                ),
+                vol.Optional(
+                    c.CONF_CHEAP_PRICE_CEILING,
+                    description={
+                        "suggested_value": current.get(c.CONF_CHEAP_PRICE_CEILING)
+                    },
+                ): _positive(*c.MAX_PRICE_BOUNDS, 0.01),
+                vol.Optional(
+                    c.CONF_ECO_PRICE_FACTOR,
+                    default=current.get(c.CONF_ECO_PRICE_FACTOR, 0.7),
+                ): _positive(0.1, 1.0, 0.05),
+                vol.Optional(
+                    c.CONF_NEGATIVE_PRICE_BASIS,
+                    default=current.get(c.CONF_NEGATIVE_PRICE_BASIS, "total"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["total", "market"],
+                        translation_key="negative_price_basis",
+                    )
+                ),
+                vol.Optional(
+                    c.CONF_SOLAR_THRESHOLD_W,
+                    description={
+                        "suggested_value": current.get(c.CONF_SOLAR_THRESHOLD_W)
+                    },
+                ): _positive(0, 20000, 50),
+                vol.Optional(
+                    c.CONF_SOLAR_PEAK_W,
+                    description={
+                        "suggested_value": current.get(c.CONF_SOLAR_PEAK_W)
+                    },
+                ): _positive(0, 20000, 50),
+                vol.Optional(
+                    c.CONF_SOLAR_MARGIN_W,
+                    default=current.get(c.CONF_SOLAR_MARGIN_W, 200),
+                ): _positive(0, 5000, 50),
+                vol.Optional(
+                    c.CONF_SOLAR_HYSTERESIS_W,
+                    default=current.get(c.CONF_SOLAR_HYSTERESIS_W, 300),
+                ): _positive(0, 5000, 50),
+                vol.Optional(
+                    c.CONF_POWER_LIMIT_W,
+                    description={
+                        "suggested_value": current.get(c.CONF_POWER_LIMIT_W)
+                    },
+                ): _positive(0, 30000, 50),
+                vol.Optional(
+                    c.CONF_SWIM_TIME,
+                    default=current.get(c.CONF_SWIM_TIME, "16:00"),
+                ): str,
+                vol.Optional(
+                    c.CONF_SWIM_TIME_2,
+                    default=current.get(c.CONF_SWIM_TIME_2, ""),
+                ): str,
+                vol.Optional(
+                    c.CONF_SWIM_DAYS,
+                    default=current.get(
                         c.CONF_SWIM_DAYS,
-                        default=current.get(
-                            c.CONF_SWIM_DAYS,
-                            ["0", "1", "2", "3", "4", "5", "6"],
-                        ),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=WEEKDAYS,
-                            multiple=True,
-                            mode=selector.SelectSelectorMode.LIST,
-                        )
+                        ["0", "1", "2", "3", "4", "5", "6"],
                     ),
-                    #: A dashboard tile beats reopening this flow every time
-                    #: swim time changes -- see issue #17. Falls back to
-                    #: swim_time/swim_time_2 above when left unset, so this
-                    #: is additive rather than a replacement for them.
-                    _entity_field(current, c.CONF_SWIM_TIME_ENTITY): SWIM_TIME_SELECTOR,
-                    _entity_field(current, c.CONF_SWIM_SKIP_ENTITY): SWITCH,
-                }
-            ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=WEEKDAYS,
+                        multiple=True,
+                        mode=selector.SelectSelectorMode.LIST,
+                    )
+                ),
+                #: A dashboard tile beats reopening this flow every time
+                #: swim time changes -- see issue #17. Falls back to
+                #: swim_time/swim_time_2 above when left unset, so this
+                #: is additive rather than a replacement for them.
+                _entity_field(current, c.CONF_SWIM_TIME_ENTITY): SWIM_TIME_SELECTOR,
+                _entity_field(current, c.CONF_SWIM_SKIP_ENTITY): SWITCH,
+            }
         )
+        if user_input is not None:
+            target = float(user_input.get(c.CONF_TARGET_TEMP, current.get(c.CONF_TARGET_TEMP, 28.0)))
+            max_temp = float(user_input.get(c.CONF_MAX_TEMP, current.get(c.CONF_MAX_TEMP, 32.0)))
+            if target > max_temp:
+                return self.async_show_form(
+                    step_id="when_to_heat",
+                    data_schema=schema,
+                    errors={"base": "target_above_max"},
+                )
+            return self._save(user_input)
+        return self.async_show_form(step_id="when_to_heat", data_schema=schema)
 
     async def async_step_water(
         self, user_input: dict | None = None

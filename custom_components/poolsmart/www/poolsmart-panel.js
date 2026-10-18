@@ -227,6 +227,8 @@ class PoolSmartPanel extends HTMLElement {
     super();
     this._tab = "overview";
     this._snapshot = null;
+    this._entries = [];
+    this._selectedEntryId = null;
     this._error = null;
     this._loading = true;
     this._refreshing = false;
@@ -256,8 +258,15 @@ class PoolSmartPanel extends HTMLElement {
     this._refreshing = true;
     this._render();
     try {
+      this._entries = await this._hass.connection.sendMessagePromise({
+        type: "poolsmart/entries",
+      });
+      if (!this._entries.some((entry) => entry.entry_id === this._selectedEntryId)) {
+        this._selectedEntryId = this._entries[0]?.entry_id ?? null;
+      }
       this._snapshot = await this._hass.connection.sendMessagePromise({
         type: "poolsmart/snapshot",
+        entry_id: this._selectedEntryId,
       });
       this._error = null;
       this._loading = false;
@@ -291,7 +300,10 @@ class PoolSmartPanel extends HTMLElement {
       btn.style.opacity = "0.6";
     }
     try {
-      await this._hass.callService(domain, service, data);
+      const scopedData = domain === "poolsmart"
+        ? { ...(data || {}), entry_id: this._snapshot?.entry_id }
+        : data;
+      await this._hass.callService(domain, service, scopedData);
       setTimeout(() => this._refresh(), 800);
     } finally {
       if (btn) {
@@ -415,6 +427,7 @@ class PoolSmartPanel extends HTMLElement {
         .review-btn:disabled { cursor:default; }
       </style>
       <h1>${esc(s ? s.title : "PoolSmart")}</h1>
+      ${this._entries.length > 1 ? `<label class="sub">Pool <select id="pool-select">${this._entries.map((entry) => `<option value="${esc(entry.entry_id)}" ${entry.entry_id === this._selectedEntryId ? "selected" : ""}>${esc(entry.title)}</option>`).join("")}</select></label>` : ""}
       ${
         this._error
           ? `<div class="error-banner" role="alert" aria-live="assertive">
@@ -475,6 +488,10 @@ class PoolSmartPanel extends HTMLElement {
         this._callService(domain, service, JSON.parse(b.dataset.payload || "{}"));
       })
     );
+    this.shadowRoot.querySelector("#pool-select")?.addEventListener("change", (event) => {
+      this._selectedEntryId = event.target.value;
+      this._refresh();
+    });
     if (this._tab === "learning" && !this._storageStats && !this._storageStatsLoading) {
       this._loadStorageStats();
     }
@@ -504,7 +521,7 @@ class PoolSmartPanel extends HTMLElement {
           return;
         }
         try {
-          await this._hass.callService("poolsmart", "set_setting", { key, value });
+          await this._callService("poolsmart", "set_setting", { key, value });
           setStatus(this.t("saved"));
           setTimeout(() => this._refresh(), 800);
         } catch (err) {
@@ -533,7 +550,7 @@ class PoolSmartPanel extends HTMLElement {
         )
       )
         return;
-      await this._hass.callService("poolsmart", "clear_debug_log", {});
+      await this._callService("poolsmart", "clear_debug_log", {});
       setStatus("Debug traces cleared.");
       setTimeout(() => this._refresh(), 800);
     });
@@ -547,7 +564,7 @@ class PoolSmartPanel extends HTMLElement {
         return;
       if (!confirm("Really sure? There is no way to get this back unless you have an export."))
         return;
-      await this._hass.callService("poolsmart", "clear_all_history", { confirm: true });
+      await this._callService("poolsmart", "clear_all_history", { confirm: true });
       setStatus("All history cleared.");
       setTimeout(() => this._refresh(), 800);
     });
@@ -563,7 +580,7 @@ class PoolSmartPanel extends HTMLElement {
       const path = root.querySelector("#export-path")?.value.trim();
       const data = { sections };
       if (path) data.path = path;
-      await this._hass.callService("poolsmart", "export_learning", data);
+      await this._callService("poolsmart", "export_learning", data);
       setStatus(`Exported: ${sections.join(", ")}.`);
     });
 
@@ -573,7 +590,7 @@ class PoolSmartPanel extends HTMLElement {
         setStatus("Enter a file path to import.");
         return;
       }
-      await this._hass.callService("poolsmart", "import_learning", { path });
+      await this._callService("poolsmart", "import_learning", { path });
       setStatus(`Imported from ${path}.`);
       setTimeout(() => this._refresh(), 800);
     });
@@ -595,7 +612,7 @@ class PoolSmartPanel extends HTMLElement {
         )
       )
         return;
-      await this._hass.callService("poolsmart", "replace_learning", { path, confirm: true });
+      await this._callService("poolsmart", "replace_learning", { path, confirm: true });
       setStatus(`Replaced history from ${path}.`);
       setTimeout(() => this._refresh(), 800);
     });

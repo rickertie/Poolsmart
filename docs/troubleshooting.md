@@ -19,7 +19,7 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Status shows `idle` during expected filtration | No demand at this time | Normal — check next scheduled block on the panel |
 | "Waiting for cheaper electricity" all day | Price sensor missing or no forecast data | Verify your price sensor has `forecast` attributes |
 | Heating never starts in cold weather | Heat pump below minimum air temperature | Normal — envelope gate prevents operation below the heat pump's rated minimum |
-| Pump runs but no flow detected | Flow meter not mapped or filter clogged | Check flow meter sensor; clean filter if delta-T is high |
+| Pump runs but no flow detected | Flow meter not mapped, still in its startup grace period, or filter/pump issue | PoolSmart waits two minutes after the pump starts, then sends a warning without stopping the pump. Check the flow meter, pump and filter; clean the filter if delta-T is high |
 | Flow warning despite adequate flow | Datasheet minimum too high for your plumbing | Enable "Verified for this installation" in configuration |
 
 ### Sensor Issues
@@ -29,7 +29,7 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Temperature shows `unavailable` | Sensor entity not mapped or offline | Check sensor mapping in Configure → Sensors |
 | Temperature reading seems wrong | Wrong sensor mapped or offset needed | Remap in options; check probe calibration in [Sensors](sensors.md) |
 | Water and air temperature swapped | Sensors mapped to wrong fields | Swap in Configure → Sensors and switches |
-| Flow meter shows zero when pump is running | Pulse counter not connected or miscalibrated | Run the bucket test (see [Sensors](sensors.md)) |
+| Flow meter shows zero when pump is running | Pulse counter not connected or miscalibrated | After the two-minute startup grace period PoolSmart sends a warning but keeps the pump running. Check the pulse counter and run the bucket test (see [Sensors](sensors.md)) |
 
 ### Chemistry
 
@@ -50,24 +50,10 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 
 ### Single-Pool Limitation for Services
 
-All PoolSmart services (`record_dose`, `reset_learned`, `export_learning`,
-`import_learning`, `replace_learning`, `rebuild_learning`,
-`set_session_review`, `clear_debug_log`, `clear_all_history`,
-`set_setting`) only work when **exactly one** PoolSmart config entry is loaded.
-
-If you set up two or more pools and call a service, it is refused with an error
-like:
-
-> Cannot record a dose: 2 PoolSmart pools are set up and this service cannot
-> yet target one of them specifically.
-
-This is a safety measure. The services were written for a single pool, and
-running them against every coordinator would, for example, log a dose recorded
-for one pool against all of them, or let an export overwrite itself once per pool
-— leaving only the last pool's history on disk.
-
-**Workaround:** Use only one PoolSmart config entry for now. Multi-pool service
-targeting is planned for a future release.
+With multiple PoolSmart pools, choose the intended pool in the service's **Pool**
+field. Calls from the management panel use the pool selected at the top of the
+panel automatically. When only one pool is configured, the field can be left
+blank for existing automations.
 
 ### House Power Limit Notifications
 
@@ -87,6 +73,11 @@ electrical cap:
   exceeding a contract cap.
 - Once the equipment is **running**, the meter reading already includes it, so
   no extra is added and the system uses the real figure.
+
+If the power sensor is configured but becomes unavailable, PoolSmart sends a
+notification and continues heating. The household power limit cannot be checked
+until the sensor reports a usable value again. If no power sensor is configured,
+the optional demand limiter is inactive.
 
 **Common causes of false positives:**
 

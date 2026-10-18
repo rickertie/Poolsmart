@@ -3,22 +3,24 @@
     "step": {
       "user": {
         "title": "Wat voor bad is dit?",
-        "description": "Deze antwoorden bepalen welke vragen de rest van de installatie stelt.",
+        "description": "Deze antwoorden bepalen welke vragen de rest van de installatie stelt. Prijsoptimalisatie is optioneel: zonder stroomprijsintegratie blijft PoolSmart gewoon op warmtevraag verwarmen.",
         "data": {
           "name": "Naam",
           "unit_system": "Eenheden",
           "sanitiser": "Hoe het water ontsmet wordt",
           "heating_source": "Hoe wordt het water verwarmd?",
           "pool_kind": "Type bad",
-          "has_solar_collector": "Heeft ook een zonnecollector"
+          "has_solar_collector": "Heeft ook een zonnecollector",
+          "use_price_optimisation": "Ik heb een dynamische stroomprijsintegratie en wil prijsoptimalisatie gebruiken"
         },
         "data_description": {
           "unit_system": "Berekeningen blijven hoe dan ook metrisch; dit verandert alleen hoe doseringen en inhoud getoond worden.",
           "sanitiser": "Bepaalt welke metingen zinvol zijn om te vragen. Een broomveld tonen bij een chloorbad levert een veld op waar je over nadenkt, dat je leeg laat, en dat vervolgens als ontbrekend wordt gemeld.",
-          "pool_kind": "Een ongeïsoleerd opblaasbaar bad verliest warmte een veelvoud sneller dan een ingebouwd bad. Een framebad zoals Intex Metal Frame zit ertussenin. Kies die die bij uw bad past — het is alleen een startpunt, en de echte waarde wordt binnen dagen gemeten.",
+          "pool_kind": "Een ongeïsoleerd opblaasbaar bad verliest veel sneller warmte dan een ingebouwd bad. Een framebad, zoals de Intex Metal Frame, zit ertussenin. Kies het type dat het beste bij je bad past. Dit is een begininschatting; PoolSmart leert het werkelijke warmteverlies uit metingen.",
           "heating_source": "Bepaalt welke vragen volgen.",
           "has_solar_collector": "Aanvinken als je een zonnecollector naast een andere verwarming hebt.",
-          "name": "Hoe dit bad in Home Assistant heet."
+          "name": "Hoe dit bad in Home Assistant heet.",
+          "use_price_optimisation": "Alleen aanvinken als Home Assistant een actuele stroomprijs levert en je PoolSmart op goedkopere momenten wilt laten verwarmen. Niet aanvinken als je geen prijsintegratie hebt of dit niet wilt: PoolSmart blijft dan gewoon verwarmen wanneer het bad warmte nodig heeft, volgens je temperatuurdoel en veiligheidsregels. Je kunt dit later wijzigen via Configureren."
         }
       },
       "pump": {
@@ -199,7 +201,7 @@
       },
       "adopt": {
         "title": "Geleerde geschiedenis gevonden",
-        "description": "{count} eerdere installatie(s) hebben geleerde geschiedenis achtergelaten. Overnemen bespaat het opbouwen van weken aan metingen."
+        "description": "{count} eerdere installatie(s) bevatten al leergegevens. Neem die gegevens over om te voorkomen dat PoolSmart weken aan metingen opnieuw moet verzamelen."
       },
       "heating": {
         "title": "Verwarmingstoestel",
@@ -253,7 +255,13 @@
       }
     }
   },
+  "error": {
+    "target_above_max": "De doeltemperatuur mag niet hoger zijn dan de maximumtemperatuur."
+  },
   "options": {
+    "error": {
+      "target_above_max": "De doeltemperatuur mag niet hoger zijn dan de maximumtemperatuur."
+    },
     "step": {
       "swimming": {
         "title": "Zwemtijden",
@@ -535,7 +543,7 @@
           "solar_power_sensor": "Actuele zonneopbrengst in watt.",
           "solar_forecast_sensor": "Een zonneverwachting, als je die hebt.",
           "irradiance_sensor": "Directe instraling in W/m² — bijvoorbeeld van een pyranometer op een weerstation of een KNMI-achtige zoninstralingssensor. Heeft voorrang op de zonneopbrengst-sensor hierboven wanneer beide zijn ingesteld: hoeft niet geschaald te worden met een piekvermogen, en werkt ook zonder eigen zonnepanelen. Wordt gebruikt om warmteverlies te leren uit zonnige idle-periodes in plaats van die te negeren.",
-          "grid_power_sensor": "Een slimme-meter- of energiedashboard-sensor die het totale huisverbruik in watt meet, los van de eigen apparatuur van het bad. Wordt gecombineerd met de huisverbruikslimiet onder Wanneer verwarmen om verwarmen te pauzeren boven een grens — handig bij piektarieven of een netaansluitings-/contractlimiet. Laat leeg en de begrenzer is simpelweg afwezig."
+          "grid_power_sensor": "Een slimme-meter- of energiedashboard-sensor die het totale huisverbruik in watt meet, los van de eigen apparatuur van het bad. Wordt gecombineerd met de huisverbruikslimiet onder Wanneer verwarmen om verwarmen te pauzeren boven een grens — handig bij piektarieven of een netaansluitings-/contractlimiet. Als de sensor is ingesteld maar tijdelijk geen waarde geeft, meldt PoolSmart dit en blijft verwarmen; de limiet wordt dan niet gecontroleerd. Laat leeg om de optionele begrenzer uit te schakelen."
         }
       },
       "heating": {

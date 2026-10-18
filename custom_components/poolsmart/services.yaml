@@ -4,9 +4,14 @@ record_dose:
     Log a chemical dose and start circulating so it disperses. The reading before
     dosing is stored so the next water test can show what the dose achieved,
     which is how the recommendation learns this pool's own response.
-    Refused when more than one PoolSmart pool is configured — multi-pool
-    targeting is not yet supported.
+    Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     product:
       name: Product
       required: true
@@ -52,9 +57,14 @@ set_setting:
   description: >-
     Change one of the settings otherwise only reachable through Configure.
     Meant for the panel's Settings tab, where these are the values people
-    adjust most often -- see issue #23. Refused when more than one
-    PoolSmart pool is configured — multi-pool targeting is not yet supported.
+    adjust most often -- see issue #23. Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     key:
       name: Setting
       required: true
@@ -89,9 +99,14 @@ reset_learned:
     Clear a single learned figure without discarding the rest. A value that has
     drifted somewhere implausible should not cost you the whole learning
     history, particularly the heat loss, which takes days of idle periods to
-    rebuild. Refused when more than one PoolSmart pool is configured —
-    multi-pool targeting is not yet supported.
+    rebuild. Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     value:
       name: Which value
       required: true
@@ -115,9 +130,14 @@ export_learning:
     Write the learned values, session log and dose log to a file. Useful before
     rebuilding a system, or to carry a pool's history to another Home Assistant.
     Today's quota and the current mode are deliberately left out: they describe
-    a moment rather than a pool. Refused when more than one PoolSmart pool is
-    configured — multi-pool targeting is not yet supported.
+    a moment rather than a pool. Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     path:
       name: File path
       required: false
@@ -146,9 +166,14 @@ import_learning:
   description: >-
     Read a previously exported file. Values this pool has already measured for
     itself are kept, because they were measured on the actual installation.
-    Refused when more than one PoolSmart pool is configured — multi-pool
-    targeting is not yet supported.
+    Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     path:
       name: File path
       required: true
@@ -162,9 +187,14 @@ replace_learning:
     Overwrite learned history from a file instead of merging it. Unlike Import,
     this discards what this pool has already measured for itself in favour of
     the file — for recovering a backup exactly as it was, not routine use.
-    Requires Confirm to be on. Refused when more than one PoolSmart pool is
-    configured — multi-pool targeting is not yet supported.
+    Requires Confirm to be on. Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     path:
       name: File path
       required: true
@@ -200,25 +230,42 @@ rebuild_learning:
     Recompute the heating rate and COP curve from the whole session log, and
     recover COP session counts. Useful after a batch of session reviews or an
     import, so the effect is immediate rather than waiting on the next session.
-    Refused when more than one PoolSmart pool is configured — multi-pool
-    targeting is not yet supported.
+    Choose the pool to apply this to; leave blank when only one pool is configured.
+  fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
 
 clear_debug_log:
   name: Clear debug log
   description: >-
     Empty the decision log and the near-miss tally. Diagnostic trails only —
-    this never touches learned values, sessions, or doses. Refused when more
-    than one PoolSmart pool is configured — multi-pool targeting is not yet
-    supported.
+    this never touches learned values, sessions, or doses. Choose the pool to
+    clear; leave blank when only one pool is configured.
+  fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
 
 clear_all_history:
   name: Clear all history (advanced)
   description: >-
     Permanently delete every learned value, session, dose, and log entry.
     Today's live filtration progress and current mode/target are left alone.
-    Cannot be undone. Requires Confirm to be on. Refused when more than one
-    PoolSmart pool is configured — multi-pool targeting is not yet supported.
+    Cannot be undone. Requires Confirm to be on. Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     confirm:
       name: Confirm
       description: Must be on. This permanently deletes history and cannot be undone.
@@ -234,9 +281,14 @@ set_session_review:
     the pool was topped up mid-session -- this is how you correct it. The
     heating rate and COP curve are recomputed immediately from every session
     that currently counts, so the correction takes effect right away rather
-    than only shaping future sessions. Refused when more than one PoolSmart
-    pool is configured — multi-pool targeting is not yet supported.
+    than only shaping future sessions. Choose the pool to apply this to; leave blank when only one pool is configured.
   fields:
+    entry_id:
+      name: Pool
+      required: false
+      selector:
+        config_entry:
+          integration: poolsmart
     session_start:
       name: Session
       description: >-

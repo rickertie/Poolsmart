@@ -2,10 +2,11 @@
 
 <span class="ps-hero__kicker">HACS · ESPHome · Home Assistant 2024+</span>
 
-PoolSmart turns your pool into a self-optimizing system. Automate filtration scheduling,
-heat pump control, solar optimization, and water chemistry dosing — all integrated with
-Home Assistant. A priority-based decision engine evaluates your pool state every 30 seconds,
-balancing energy costs, swim schedules, and equipment protection.
+PoolSmart helps Home Assistant manage your pool's filtration, heating, and water treatment.
+It schedules filtration, controls compatible heaters, and can use electricity prices and
+solar production when planning heating. Every 30 seconds, it checks the pool's current
+readings and applies the highest-priority action, while respecting equipment and safety
+limits. Optional sensors and price data add features; they are not required for basic use.
 
 > 🤖 **_Disclaimer: Co-written with AI. If your pool turns into a foam party, blame the LLM (or check your pH)._**
 
@@ -28,37 +29,37 @@ balancing energy costs, swim schedules, and equipment protection.
 <div class="ps-card ps-card--accent" markdown>
 <div class="ps-card__icon">:material-pump:</div>
 <p class="ps-card__title">Smart filtration</p>
-<p class="ps-card__text">Runtime from pool volume × turnover ÷ measured flow. Self-corrects as filter pressure rises; heating runtime counts toward the quota.</p>
+<p class="ps-card__text">Estimates the daily pump run time from pool volume, turnover needs, and available flow data. Updates its estimate as flow changes; heating circulation counts toward the daily total.</p>
 </div>
 
 <div class="ps-card" markdown>
 <div class="ps-card__icon">:material-heat-pump-outline:</div>
 <p class="ps-card__title">Price- & solar-aware heating</p>
-<p class="ps-card__text">Picks the cheapest COP-weighted hours before swim time. Heats on free solar surplus or negative prices, pauses on house-power cap.</p>
+<p class="ps-card__text">Plans heating against your temperature target and swim time. When configured, it can account for electricity prices, solar power, and a household power limit.</p>
 </div>
 
 <div class="ps-card" markdown>
 <div class="ps-card__icon">:material-brain:</div>
 <p class="ps-card__title">Self-learning</p>
-<p class="ps-card__text">Learns heat loss, heating rate, and COP per 5 °C band. Manual session review with weighted smoothing and outlier rejection.</p>
+<p class="ps-card__text">Refines heat-loss, heating-rate, and heat-pump efficiency estimates from recorded sessions. Review a session before including or excluding it from learning.</p>
 </div>
 
 <div class="ps-card" markdown>
 <div class="ps-card__icon">:material-test-tube:</div>
 <p class="ps-card__title">Water chemistry</p>
-<p class="ps-card__text">pH readings become dosing instructions. Intervals scale with water temperature; logs and reminders included.</p>
+<p class="ps-card__text">Turns water-test readings into dose estimates for configured products. Test reminders adapt to water temperature, and recorded doses can be reviewed later.</p>
 </div>
 
 <div class="ps-card" markdown>
 <div class="ps-card__icon">:material-solar-power-variant:</div>
 <p class="ps-card__title">Solar optimization</p>
-<p class="ps-card__text">Uses any irradiance or solar-production sensor — panels not required. Sunny idle periods teach heat loss instead of being discarded.</p>
+<p class="ps-card__text">Can use sunlight or solar-production readings when planning heat. Sunlight data can also help estimate heat loss; the pool does not need its own solar panels.</p>
 </div>
 
 <div class="ps-card" markdown>
 <div class="ps-card__icon">:material-shield-check-outline:</div>
 <p class="ps-card__title">Equipment protection</p>
-<p class="ps-card__text">Compressor minimum off/run times, frost protection, flow adequacy by delta-T, and emergency stop — none negotiable by schedule.</p>
+<p class="ps-card__text">Applies configured compressor timing, frost and flow safeguards, and the emergency stop. These protections take priority over scheduled heating.</p>
 </div>
 
 </div>
@@ -114,17 +115,17 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Architecture & decision core | [Architecture](architecture.md) | Priority ladder, filtration math, AI layer |
-| Heating planning & prices | [Planning](planning.md) | Maintenance vs seasonal mode, price integrations |
-| Self-learning model | [Learning](learning.md) | Learned parameters, validation rules, session logging |
+| How decisions are made | [Architecture](architecture.md) | Decision priorities, filtration calculations, and advisory features |
+| Heating plans and electricity prices | [Planning](planning.md) | Heating modes, swim-time planning, and price integrations |
+| How PoolSmart learns | [Learning](learning.md) | Learned estimates, session checks, and review controls |
 
 ### Subsystems
 
 | Topic | Document | Covers |
 |---|---|---|
-| Filtration | [Filtration](filtration.md) | Turnover, daily minimum, filter media, delta-T |
-| Heating sources | [Heating](heating.md) | Heat pump, electric, solar, gas |
-| Water chemistry | [Chemistry](chemistry.md) | Dosing, test intervals, circulation timing |
+| Filtration | [Filtration](filtration.md) | How PoolSmart estimates run time and accounts for flow and filter media |
+| Heating sources | [Heating](heating.md) | What PoolSmart supports for heat pumps, electric, solar, gas, and unheated pools |
+| Water treatment | [Chemistry](chemistry.md) | Dose estimates, test reminders, circulation, and dose history |
 
 ### Setup & configuration
 
@@ -171,7 +172,7 @@ See [Panel](panel.md) for the full reference. For everyday household use, instal
 
 ## Known limitations
 
-- **Services require a single pool.** All PoolSmart services (dose recording, history import/export, learning reset, etc.) only work when exactly one PoolSmart pool is configured. With two or more pools, service calls are refused. See [Troubleshooting](troubleshooting.md#single-pool-limitation-for-services).
+- **Services can target multiple pools.** Choose the intended pool in a service call; the management panel targets its currently selected pool. See [Troubleshooting](troubleshooting.md#targeting-services-to-a-pool).
 - **House power limit needs the right sensor.** The demand limiter expects a whole-house power sensor (e.g. from your smart meter), not the pool's own consumption. See [Configuration](configuration.md#house-power-limit).
 
 ---

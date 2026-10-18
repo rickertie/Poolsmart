@@ -125,7 +125,11 @@ def _demand_allows_heating(state: PoolState, config: PoolConfig) -> tuple[bool, 
     climbs over the cap.
     """
     limit = config.energy.power_limit_w
-    if limit is None or state.grid_power_w is None:
+    if limit is None:
+        return True, "no demand limiter configured"
+    if state.grid_power_w is None:
+        if state.grid_power_sensor_configured:
+            return True, "house power sensor is configured but unavailable; demand limit cannot be checked"
         return True, "no demand limiter configured"
 
     additional = 0.0
@@ -654,8 +658,9 @@ def _compressor_guard(
     dragging the compressor through the exception with them. Off at 20:01 and on
     again at 20:04 is not something to do to a heat pump.
 
-    Only an emergency stop overrides this, and that switches off, which is always
-    safe.
+    Emergency stop and an exceeded house-power cap may stop it immediately. The
+    cap protects a hard electrical limit; its safety takes priority over the
+    minimum run time. Both exceptions only switch heating off, which is safe.
     """
     if candidate.branch is Branch.EMERGENCY_STOP:
         return candidate
@@ -694,7 +699,13 @@ def _compressor_guard(
         target_reached = (
             state.water_temp.available and state.water_temp.value >= state.target_temp
         )
-        if started is not None and not target_reached:
+        demand_ok, _demand_reason = _demand_allows_heating(state, config)
+        # The house power cap protects a hard electrical/contract limit. It
+        # must be able to stop a running compressor immediately, even inside
+        # the minimum-run window; that window only protects against ordinary
+        # planning changes.
+        demand_limit_exceeded = not demand_ok
+        if started is not None and not target_reached and not demand_limit_exceeded:
             elapsed = (state.now - started).total_seconds() / 60
             required = config.comfort.compressor_min_on_minutes
             if elapsed < required and candidate.branch is not Branch.EMERGENCY_STOP:

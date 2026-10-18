@@ -32,11 +32,17 @@ another being filled in first, so there is no "right order" to work through them
 | Notifications | Which message goes to which device |
 | Advanced | Timings and tolerances for when a measurement misbehaves |
 
-Picking the wrong temperature sensor during setup is easy to do, so the entity could be easly replaced in the menu.
+If you selected the wrong temperature sensor during setup, replace it here. Choose the correct entity under **Sensors and switches** and save the change.
 
 ---
 
 ## Optional Entities
+
+During the first setup, PoolSmart asks whether you have a dynamic electricity
+price integration and want price optimisation. Select **No** if you do not have
+one, or do not want to use it. PoolSmart will still heat when the pool needs it,
+based on the target temperature and safety rules; it will simply not wait for a
+cheaper price. You can add a price sensor later under Configure.
 
 Every optional entity may be left blank. The matching capability is switched off
 and listed in diagnostics rather than failing.

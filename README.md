@@ -20,10 +20,11 @@
 
 ---
 
-PoolSmart turns your pool into a self-optimizing system. Automate filtration scheduling,
-heat pump control, solar optimization, and water chemistry dosing — all integrated with
-Home Assistant. A priority-based decision engine evaluates your pool state every 30 seconds,
-balancing energy costs, swim schedules, and equipment protection.
+PoolSmart helps Home Assistant manage your pool's filtration, heating, and water treatment.
+It schedules filtration, controls compatible heaters, and can use electricity prices and
+solar production when planning heating. Every 30 seconds, it checks the pool's current
+readings and applies the highest-priority action, while respecting equipment and safety
+limits. Optional sensors and price data add features; they are not required for basic use.
 
 > 🤖 **_Disclaimer: Co-written with AI. If your pool turns into a foam party, blame the LLM (or check your pH)._**
 
@@ -37,8 +38,8 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | | | |
 |---|---|---|
-| **Smart filtration** — runtime from pool volume and measured flow | **Heat pump control** — plans around dynamic prices and solar surplus | **Self-learning** — learns heat loss, heating rate, and COP, with manual session review |
-| **Water chemistry** — pH readings become dosing instructions | **Solar optimization** — heats with free surplus, and learns heat loss from sunny idle periods too, using any irradiance sensor — solar panels not required | **Price-aware scheduling** — works backwards from swim time, with a configurable rule for how a cheap-price signal relates to your maximum price |
+| **Filtration scheduling** — estimates the daily run time from pool volume, turnover needs, and available flow data | **Heating control** — schedules compatible heaters around temperature targets, electricity prices, and available solar power | **Learning** — refines heat-loss, heating-rate, and efficiency estimates from reviewed sessions |
+| **Water treatment** — turns water-test readings into product-specific dose estimates and reminders | **Solar-aware planning** — uses solar production or sunlight readings to inform heating, even if the pool has no solar panels | **Price-aware scheduling** — can plan heating before a configured swim time using your price sensor and price limits |
 | **Compressor protection** — minimum off/run times enforced | **AI advisory** — suggests settings, applies nothing without approval | **Dashboards** — detailed three-tab view and simple household page |
 
 ---
@@ -94,9 +95,9 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Architecture & decision core | [Architecture](docs/architecture.md) | Priority ladder, filtration math, AI layer |
-| Heating planning & prices | [Planning](docs/planning.md) | Maintenance vs. seasonal mode, price integrations |
-| Self-learning model | [Learning](docs/learning.md) | Learned parameters, validation rules, session logging |
+| How decisions are made | [Architecture](docs/architecture.md) | Decision priorities, filtration calculations, and advisory features |
+| Heating plans and electricity prices | [Planning](docs/planning.md) | Heating modes, swim-time planning, and price integrations |
+| How PoolSmart learns | [Learning](docs/learning.md) | Learned estimates, session checks, and review controls |
 
 </details>
 
@@ -105,9 +106,9 @@ balancing energy costs, swim schedules, and equipment protection.
 
 | Topic | Document | Covers |
 |---|---|---|
-| Filtration | [Filtration](docs/filtration.md) | Turnover, daily minimum, filter media, delta-T |
-| Heating sources | [Heating](docs/heating.md) | Heat pump, electric, solar, gas |
-| Water chemistry | [Chemistry](docs/chemistry.md) | Dosing, test intervals, circulation timing |
+| Filtration | [Filtration](docs/filtration.md) | How PoolSmart estimates run time and accounts for flow and filter media |
+| Heating sources | [Heating](docs/heating.md) | What PoolSmart supports for heat pumps, electric, solar, gas, and unheated pools |
+| Water treatment | [Chemistry](docs/chemistry.md) | Dose estimates, test reminders, circulation, and dose history |
 
 </details>
 
