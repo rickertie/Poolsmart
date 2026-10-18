@@ -37,7 +37,7 @@ The water and outdoor temperatures ride along as attributes on
 should point at your own sensor.
 
 <p align="center">
-  <img src="images/data-flow.svg" width="550" alt="Data flow and entity relationship map">
+  <img src="../images/data-flow.svg" width="550" alt="Data flow and entity relationship map">
 </p>
 
 ---

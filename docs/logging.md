@@ -73,7 +73,7 @@ suggestion*. Flow warnings are informational and do not offer control buttons.
 Other notify platforms ignore extra action data and receive the text as normal.
 
 <p align="center">
-  <img src="images/notification-actions-mockup.svg" width="320" alt="Mobile notification with two action buttons: Heat now anyway, Do not heat today">
+  <img src="../images/notification-actions-mockup.svg" width="320" alt="Mobile notification with two action buttons: Heat now anyway, Do not heat today">
 </p>
 
 On iOS, the Companion app sometimes shows action buttons only after a
@@ -94,7 +94,7 @@ below the winner genuinely were not evaluated — saying "not reached" is a fact
 about how it works, not an omission.
 
 <p align="center">
-  <img src="images/panel-diagnostics.svg" width="600" alt="PoolSmart Diagnostics tab showing every branch of the priority ladder with its verdict">
+  <img src="../images/panel-diagnostics.svg" width="600" alt="PoolSmart Diagnostics tab showing every branch of the priority ladder with its verdict">
 </p>
 
 ---

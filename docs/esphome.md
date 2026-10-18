@@ -58,7 +58,7 @@ calculations by over 30%.
 ### 2. Flow Meter Calibration (The Bucket Test)
 
 <p align="center">
-  <img src="images/bucket-test-calibration.svg" width="500" alt="Flow Meter Calibration — Bucket Test setup">
+  <img src="../images/bucket-test-calibration.svg" width="500" alt="Flow Meter Calibration — Bucket Test setup">
 </p>
 
 The datasheet pulse ratio (30 × Q) is a starting point, but pipe geometry and

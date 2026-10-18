@@ -11,7 +11,7 @@ see [Sensors](sensors.md). For the decision ladder that executes filtration
 blocks, see [Architecture](architecture.md).
 
 <p align="center">
-  <img src="images/waterPump.svg" width="260" alt="Circulation pump installed in the pool's filtration loop">
+  <img src="../images/waterPump.svg" width="260" alt="Circulation pump installed in the pool's filtration loop">
 </p>
 <p align="center"><em>Every formula below describes this pump: its rated flow, what the filter medium takes off that flow, and how much of the pool it actually turns over.</em></p>
 
@@ -34,7 +34,7 @@ reach 95%, four reach 98%. Three is where the gains flatten, so that is the
 default.
 
 <p align="center">
-  <img src="images/turnover-infographic.svg" width="500" alt="Turnover infographic showing cumulative filtration effectiveness">
+  <img src="../images/turnover-infographic.svg" width="500" alt="Turnover infographic showing cumulative filtration effectiveness">
 </p>
 
 ### Rule 2: Daily Minimum (time-based)

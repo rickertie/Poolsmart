@@ -16,14 +16,14 @@ sensors to integration fields, see [Sensors](sensors.md).
 | Component | Photo | Function | Application |
 | :--- | :---: | :--- | :--- |
 | **Seeed XIAO ESP32-C6** | — | Main microcontroller running ESPHome. | Compact, native Wi-Fi 6 / Bluetooth. |
-| **5× DS18B20 probes** | <img src="images/DS18B20.svg" width="90"> | Temperature sensors for pool, pump, heat pump, and outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
+| **5× DS18B20 probes** | <img src="../images/DS18B20.svg" width="90"> | Temperature sensors for pool, pump, heat pump, and outdoor. | Waterproof stainless-steel Dallas 1-Wire probes. |
 | **DN50 pulse flow sensor** | — | Measures volume flow rate through the heat pump loop. | Yanmis DN50 Hall-effect pulse sensor. |
 | **4.7 kΩ resistor** | — | Pull-up resistor for the 1-Wire bus. | Connects between 3.3 V and GPIO22. |
 | **10 kΩ + 20 kΩ resistors** | — | Voltage divider for the flow meter signal. | Steps 5 V pulses down to 3.3 V for GPIO19. |
 | **Waterproof enclosure** | — | IP65+ junction box near the pool pump setup. | Protects ESP32 board and wiring. |
 | **Bestway Flowclear** | — | Circulation filter pump. | Measured at ~3.6 m³/h. |
 | **W'eau Mini Power (3 kW)** | — | Heat pump for water heating. | ~0.58 kW electric input. |
-| **Intex Metal Frame** | <img src="images/Pool.svg" width="90"> | Pool structure (3,834 L at 66 cm water level). | 300 × 200 × 75 cm. |
+| **Intex Metal Frame** | <img src="../images/Pool.svg" width="90"> | Pool structure (3,834 L at 66 cm water level). | 300 × 200 × 75 cm. |
 
 The pool itself is a 300 × 200 × 75 cm above-ground Intex Metal Frame pool; at
 the 66 cm operating water level it holds 3,834 L. See it installed and running
@@ -68,10 +68,10 @@ making it safe for the ESP32.
 
 | Component | Image | Mounting Details |
 | :--- | :---: | :--- |
-| **Filter pump** | <img src="images/Bestway_pump.svg" width="160"> | Installed in the main circulation loop. |
-| **Heat pump** | <img src="images/w_eau_mini_power_3kw_warmtepomp.svg" width="160"> | Installed downstream of the filter pump, so it only receives filtered water. |
-| **Temperature sensors** | <img src="images/Pipe_clamp.svg" width="160"> | DS18B20 probes attached to the PVC pipe using thermal paste and pipe clamps for accurate surface readings. |
-| **Flow meter** | <img src="images/Flow_meter.svg" width="160"> | DN50 Hall-effect flow meter installed in the return line from the heat pump. |
+| **Filter pump** | <img src="../images/Bestway_pump.svg" width="160"> | Installed in the main circulation loop. |
+| **Heat pump** | <img src="../images/w_eau_mini_power_3kw_warmtepomp.svg" width="160"> | Installed downstream of the filter pump, so it only receives filtered water. |
+| **Temperature sensors** | <img src="../images/Pipe_clamp.svg" width="160"> | DS18B20 probes attached to the PVC pipe using thermal paste and pipe clamps for accurate surface readings. |
+| **Flow meter** | <img src="../images/Flow_meter.svg" width="160"> | DN50 Hall-effect flow meter installed in the return line from the heat pump. |
 
 Attach each DS18B20 probe flat against the pipe with a thin layer of thermal
 paste, secure it with a stainless-steel pipe clamp, and cover the mount with
@@ -86,7 +86,7 @@ DN50 threads with PTFE tape to prevent leaks.
 ## Wiring Overview
 
 <p align="center">
-  <img src="images/esp32c6_wiring_overview.svg" width="550">
+  <img src="../images/esp32c6_wiring_overview.svg" width="550">
 </p>
 
 ---
