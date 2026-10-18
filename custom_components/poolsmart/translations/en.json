@@ -1,5 +1,8 @@
 {
   "config": {
+    "error": {
+      "target_above_max": "The target temperature must not exceed the maximum temperature."
+    },
     "step": {
       "user": {
         "title": "What kind of pool is this?",
@@ -254,9 +257,6 @@
         }
       }
     }
-  },
-  "error": {
-    "target_above_max": "The target temperature must not exceed the maximum temperature."
   },
   "options": {
     "error": {
