@@ -64,8 +64,6 @@ limits. Optional sensors and price data add features; they are not required for 
 
 </div>
 
-> 🤖 **Co-written with AI.** If your pool turns into a foam party, blame the LLM — or check your pH.
-
 <figure markdown>
   ![PoolSmart System Architecture — ESPHome sensors feed Home Assistant, the decision engine evaluates every 30 s, and controls pump, heat pump, and dosing](images/architecture-overview.svg){ width="700" loading="lazy" }
   <figcaption>ESPHome → Home Assistant → Decision Engine → pool equipment. One tick, one winner.</figcaption>
