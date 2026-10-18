@@ -162,7 +162,7 @@ def _kind_schema(d: dict) -> vol.Schema:
                     translation_key="sanitiser",
                 )
             ),
-            vol.Required("use_price_optimisation", default=False): bool,
+            vol.Required(c.CONF_USE_PRICE_OPTIMISATION, default=False): bool,
         }
     )
 
@@ -442,7 +442,7 @@ class PoolSmartConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input = dict(user_input)
             self._use_price_optimisation = bool(
-                user_input.pop("use_price_optimisation", False)
+                user_input.pop(c.CONF_USE_PRICE_OPTIMISATION, False)
             )
             old_source = self._data.get(c.CONF_HEATING_SOURCE)
             old_kind = self._data.get(c.CONF_POOL_KIND)

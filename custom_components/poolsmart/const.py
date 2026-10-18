@@ -6,6 +6,7 @@ from datetime import timedelta
 
 DOMAIN = "poolsmart"
 DEFAULT_NAME = "Pool"
+CONF_USE_PRICE_OPTIMISATION = "use_price_optimisation"
 
 #: Sidebar panel URL path.
 PANEL_URL = "poolsmart"

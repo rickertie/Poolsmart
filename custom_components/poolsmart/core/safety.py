@@ -112,17 +112,18 @@ def _flow_faults(state: PoolState, config: PoolConfig) -> list[Fault]:
     if state.pump_on and state.pump_runtime_seconds < config.safety.pump_startup_grace_seconds:
         return faults
 
-    # No flow is reported separately from falling below the heat pump's quoted
-    # minimum. The startup grace above prevents a transient during priming from
-    # notifying immediately. This is a warning only: the integration must not
-    # stop circulation based on a flow sensor that may itself be wrong.
+    # No flow is different from falling below the heat pump's quoted minimum:
+    # with the pump running it can damage the pump and must stop the equipment.
+    # The startup grace above prevents a transient during priming from
+    # triggering an emergency stop.
     if state.pump_on and flow <= 0.05:
         faults.append(
             Fault(
                 "no_flow_while_pump_running",
-                Severity.WARNING,
-                "The pump is switched on but no flow is measured. Check the flow "
-                "sensor and pump; PoolSmart will keep the pump running.",
+                Severity.CRITICAL,
+                "The pump is switched on but no flow is measured. PoolSmart has "
+                "stopped the equipment to protect the pump. Check the flow sensor "
+                "and pump before restarting.",
                 {"flow_m3h": flow},
             )
         )

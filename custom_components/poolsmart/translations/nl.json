@@ -1,5 +1,8 @@
 {
   "config": {
+    "error": {
+      "target_above_max": "De doeltemperatuur mag niet hoger zijn dan de maximumtemperatuur."
+    },
     "step": {
       "user": {
         "title": "Wat voor bad is dit?",
@@ -254,9 +257,6 @@
         }
       }
     }
-  },
-  "error": {
-    "target_above_max": "De doeltemperatuur mag niet hoger zijn dan de maximumtemperatuur."
   },
   "options": {
     "error": {

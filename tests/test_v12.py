@@ -500,8 +500,11 @@ def test_t97b_every_field_on_screen_has_a_label():
     source = (ROOT / "config_flow.py").read_text()
     options_flow = source[source.index("class PoolSmartOptionsFlow") :]
 
-    #: Stored under this key rather than shown as a field of its own.
+    #: Stored under these keys rather than shown as fields of their own.
     not_a_field = {"notify_targets"}
+    #: The options pool step reads this existing value to validate max_temp,
+    #: but it does not offer target_temp as an editable field.
+    not_a_field_by_step = {"pool": {"target_temp"}}
 
     for language in ("en", "nl"):
         translations = json.loads(
@@ -510,7 +513,11 @@ def test_t97b_every_field_on_screen_has_a_label():
         for step in re.findall(r"async def async_step_(\w+)\(", options_flow):
             if step == "init":
                 continue
-            asked = _fields_asked(options_flow, step) - not_a_field
+            asked = (
+                _fields_asked(options_flow, step)
+                - not_a_field
+                - not_a_field_by_step.get(step, set())
+            )
             labelled = set(
                 translations["options"]["step"].get(step, {}).get("data", {})
             )
