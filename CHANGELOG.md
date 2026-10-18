@@ -12,6 +12,37 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.13.0] — Safer Defaults, Clearer Choices
+
+### Added
+
+- PoolSmart services and the panel can target a specific configured pool when
+  multiple pools are installed.
+- Price optimisation is now optional during setup. Basic filtration and heating
+  setup no longer requires price-sensor configuration.
+- A notification reports when a configured household power sensor has no usable
+  reading, so users know the demand limit cannot currently be checked.
+
+### Changed
+
+- Flow and power-sensor behavior is described more clearly. A pump with no
+  measured flow now raises a warning while PoolSmart keeps circulation running;
+  an exceeded household power cap can stop heating immediately.
+- Pool target temperature is checked against the configured maximum during setup
+  and when options are changed.
+- Learning-history import validation now rejects malformed and implausible
+  values before applying them.
+- Setup, documentation, and panel wording have been clarified around optional
+  sensors, heating, and water treatment.
+
+### Fixed
+
+- Saved storage now records and restores the last confirmed sync time, allowing
+  filtration intervals left open by a restart to be closed at the last known
+  persisted point.
+- Recovery inspection handles malformed Home Assistant storage wrappers
+  without failing or adopting invalid history.
+
 ## [1.12.6] — HACS review-fix release
 
 ### Fixed
