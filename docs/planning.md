@@ -39,6 +39,10 @@ temperature, the optimizer operates in one of two distinct modes:
 
 ## Swim Time
 
+<p align="center">
+  <img src="images/swim-time.svg" width="700" alt="Swim Time: Kies zwemtijd; Bereken terug vanaf deadline; Plan verwarming">
+</p>
+
 Everything above answers "how long will heating take"; this is where "by
 when" comes from.
 
@@ -125,6 +129,10 @@ answer.
 ---
 
 ## Demand / Power Limiter
+
+<p align="center">
+  <img src="images/planning-demand-limiter.svg" width="700" alt="Demand / Power Limiter: Huisverbruik meten; Limiet bereikt?; Verwarming pauzeert">
+</p>
 
 The complementary gate to the solar threshold above: a house-power cap above
 which heating pauses, regardless of price or solar surplus. Map a smart-meter

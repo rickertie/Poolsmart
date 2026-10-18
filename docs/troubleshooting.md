@@ -14,6 +14,10 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 
 ### Pump or Heating Not Running
 
+<p align="center">
+  <img src="images/pump-not-running.svg" width="700" alt="Pump or Heating Not Running: Lees status + reden; Controleer vereiste sensoren; Volg actieve blokkade">
+</p>
+
 | Symptom | Likely Cause | Fix |
 |---|---|---|
 | Status shows `idle` during expected filtration | No demand at this time | Normal — check next scheduled block on the panel |
@@ -23,6 +27,10 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Flow warning despite adequate flow | Datasheet minimum too high for your plumbing | Enable "Verified for this installation" in configuration |
 
 ### Sensor Issues
+
+<p align="center">
+  <img src="images/sensor-issues.svg" width="700" alt="Sensor Issues: Entiteit beschikbaar?; Waarde aannemelijk?; Controleer mapping / hardware">
+</p>
 
 | Symptom | Likely Cause | Fix |
 |---|---|---|
@@ -56,6 +64,10 @@ panel automatically. When only one pool is configured, the field can be left
 blank for existing automations.
 
 ### House Power Limit Notifications
+
+<p align="center">
+  <img src="images/power-limit-notice.svg" width="700" alt="House Power Limit Notifications: Lees huisvermogen; Controleer zwembadlast; Vergelijk met ingestelde cap">
+</p>
 
 If you see notifications like:
 
@@ -131,6 +143,10 @@ This is the first place to look when something unexpected happens.
 ---
 
 ## Flow Warnings
+
+<p align="center">
+  <img src="images/flow-warnings.svg" width="700" alt="Flow Warnings: Meet flow; Controleer delta-T; Inspecteer filter en leidingen">
+</p>
 
 The heat pump's minimum flow is a **warning** by default rather than a stop.
 Datasheet minima are conservative and the appliance has its own flow switch as a

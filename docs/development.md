@@ -7,6 +7,10 @@
 This document covers how to run the test suite and contribute to PoolSmart.
 For the architecture of the decision core, see [Architecture](architecture.md).
 
+<p align="center">
+  <img src="images/development-workflow.svg" width="700" alt="Development workflow: change the core, run standalone tests, preview and build the docs, then contribute through GitHub">
+</p>
+
 ---
 
 ## Previewing the Documentation

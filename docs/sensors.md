@@ -39,6 +39,10 @@ and COP appear regardless of what hardware produced the readings.
 
 ## Calibrating the Temperature Probes
 
+<p align="center">
+  <img src="images/probe-calibration.svg" width="700" alt="Calibrating the Temperature Probes: Vergelijk probes; Meet afwijking; Kalibreer in HA">
+</p>
+
 DS18B20s are accurate to roughly ±0.5 °C. Fine for a room. Not fine here.
 
 A heat pump moving 3 kW through 1 m³/h of water produces about 2.5 °C of rise.
@@ -58,6 +62,10 @@ Worth redoing once a season.
 ---
 
 ## Calibrating the Flow Meter
+
+<p align="center">
+  <img src="images/flow-calibration.svg" width="700" alt="Calibrating the Flow Meter: Vang water op; Meet volume en tijd; Stel pulsen per liter in">
+</p>
 
 This is the measurement everything else leans on. Filtration duration is
 calculated directly from flow, so an error here becomes an error in how long the
@@ -105,6 +113,10 @@ the pin.
 ---
 
 ## Pointing the Integration at the Sensors
+
+<p align="center">
+  <img src="images/sensor-mapping.svg" width="700" alt="Pointing the Integration at the Sensors: Kies HA-entiteit; Koppel aan PoolSmart-veld; Controleer uitlezing">
+</p>
 
 Settings → Devices & services → PoolSmart → Configure → Entities.
 

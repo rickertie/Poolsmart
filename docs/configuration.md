@@ -38,6 +38,10 @@ If you selected the wrong temperature sensor during setup, replace it here. Choo
 
 ## Optional Entities
 
+<p align="center">
+  <img src="images/optional-entities.svg" width="700" alt="Optional Entities: Sensor gekoppeld; Extra functie beschikbaar; Geen sensor? functie uit">
+</p>
+
 During the first setup, PoolSmart asks whether you have a dynamic electricity
 price integration and want price optimisation. Select **No** if you do not have
 one, or do not want to use it. PoolSmart will still heat when the pool needs it,
@@ -60,6 +64,10 @@ and listed in diagnostics rather than failing.
 
 ## Heat Pump Thermostat Recommendation
 
+<p align="center">
+  <img src="images/thermostat-setting.svg" width="700" alt="Heat Pump Thermostat Recommendation: HA-doel 32 °C; Hardware 2 °C hoger; Software houdt regie">
+</p>
+
 Set the heat pump's own thermostat to the highest temperature you would ever want
 plus about two degrees. If your maximum is 32 °C, set it to 34 °C. Below that you
 keep full software control over any target, and above it the hardware intervenes
@@ -69,6 +77,10 @@ with your own numbers filled in.
 ---
 
 ## House Power Limit
+
+<p align="center">
+  <img src="images/house-power-limit.svg" width="700" alt="House Power Limit: Slimme meter; Huis + zwembadlast; Cap bewaakt">
+</p>
 
 PoolSmart can pause heating when your total household power draw approaches a
 cap you set. This protects a hard electrical limit or contract cap from being
@@ -85,6 +97,10 @@ You need two settings, both in **Configure → Sensors and switches** or
 | `power_limit_w` | When to heat | The maximum total household draw in watts. |
 
 ### How the limit works
+
+<p align="center">
+  <img src="images/power-limit-lookahead.svg" width="700" alt="How the limit works: Huidig huisverbruik; Tel uitgeschakeld toestel mee; Blokkeer start boven cap">
+</p>
 
 PoolSmart compares the current household draw against your limit. When the
 pool pump and/or heat pump are **off**, their rated power draw is added to

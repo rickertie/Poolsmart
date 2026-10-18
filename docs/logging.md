@@ -13,6 +13,10 @@ diagnostics, see [Panel](panel.md).
 
 ## Logbook Entries
 
+<p align="center">
+  <img src="images/logbook-entries.svg" width="700" alt="Logbook Entries: Beslissing; Obstakel; Fout met context">
+</p>
+
 Three kinds of entry appear in the standard Home Assistant **Logbook**, alongside
 everything else that happened in the house. That context is most of the value: a
 pump switching off at 20:00 means one thing alone and another next to "the shed
@@ -46,6 +50,10 @@ faults keep their normal safety behaviour.
 ---
 
 ## Restore Summary
+
+<p align="center">
+  <img src="images/restore-summary.svg" width="700" alt="Restore Summary: Herstart HA; Herstel opgeslagen status; Ga verder met context">
+</p>
 
 One line, logged at **INFO** level — visible with no debug logging enabled —
 the moment PoolSmart finishes reading its stored state back on every start or
@@ -100,6 +108,10 @@ about how it works, not an omission.
 ---
 
 ## Sharing a Problem
+
+<p align="center">
+  <img src="images/share-diagnostics.svg" width="700" alt="Sharing a Problem: Verzamel trace; Voeg sensoren en situatie toe; Deel veilig voor hulp">
+</p>
 
 Settings → Devices & services → PoolSmart → the three dots → **Download
 diagnostics**. That file has the trace, the decision log, a plain-sentence

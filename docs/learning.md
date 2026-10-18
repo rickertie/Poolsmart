@@ -13,6 +13,10 @@ being learned from, see [Architecture](architecture.md).
 
 ## What Is Learned?
 
+<p align="center">
+  <img src="images/learned-values.svg" width="700" alt="What Is Learned?: Verwarmen; Afkoelen; COP per buitentemp.">
+</p>
+
 After each heating session, PoolSmart updates three core parameters:
 
 1. **Heating rate (°C/h):** How fast your pool water warms up per hour of
@@ -62,6 +66,10 @@ After each heating session, PoolSmart updates three core parameters:
 
 ## The Three Rules That Keep the Model Honest
 
+<p align="center">
+  <img src="images/learning-guardrails.svg" width="700" alt="The Three Rules That Keep the Model Honest: Alleen schone sessies; Kleine updates; Fysieke grenzen">
+</p>
+
 To prevent corrupted sensors, hardware glitches, or open pool covers from
 ruining your baseline, PoolSmart enforces three strict validation rules:
 
@@ -85,6 +93,10 @@ ruining your baseline, PoolSmart enforces three strict validation rules:
 
 ## Diagnostics & Session Logging
 
+<p align="center">
+  <img src="images/learning-diagnostics.svg" width="700" alt="Diagnostics &amp;amp; Session Logging: Sessie opslaan; Controleren; Accepteren / afwijzen">
+</p>
+
 Rejected sessions are not deleted; they remain stored in the log history along
 with the explicit reason for rejection.
 
@@ -93,6 +105,10 @@ If the planning target dates stop updating or seem inaccurate, checking the
 step in troubleshooting.
 
 ### Reviewing a Session
+
+<p align="center">
+  <img src="images/review-session.svg" width="700" alt="Reviewing a Session: Automatisch oordeel; Jij controleert; Model rekent opnieuw">
+</p>
 
 The automatic accept/reject verdict is usually right, but it cannot know a
 probe glitched or the pool was topped up mid-session. The **Sessions** tab in
@@ -114,6 +130,10 @@ rather than sessions. The same override is available as the
 
 ### Backing Up Learned History
 
+<p align="center">
+  <img src="images/learning-backup.svg" width="700" alt="Backing Up Learned History: Na elke sessie; JSON-backup op HA; Importeer bij herstel">
+</p>
+
 After every finished session, PoolSmart writes a rolling
 `poolsmart_learning_backup.<entry_id>.json` file to the Home Assistant config
 directory — the same shape `poolsmart.export_learning` produces, kept current
@@ -122,6 +142,10 @@ beforehand. Restore from it (or from any manual export) with
 `poolsmart.import_learning`.
 
 ### Maintenance & Export/Import
+
+<p align="center">
+  <img src="images/learning-maintenance.svg" width="700" alt="Maintenance &amp;amp; Export/Import: Herbereken of beheer; Exporteer / importeer; Samenvoegen of vervangen">
+</p>
 
 The bottom of the **Learning** tab covers storage and bulk history operations.
 

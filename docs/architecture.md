@@ -47,6 +47,10 @@ so a critical deadline still wins exactly as before whenever heating doesn't.
 
 ### Heat Pump Operating Envelope
 
+<p align="center">
+  <img src="images/heat-pump-envelope.svg" width="700" alt="Heat Pump Operating Envelope: Buitenlucht; Onder minimum?; Verwarming uit">
+</p>
+
 In front of branches **4 (Free Electricity)** and **5 (Heating)** sits an
 operating envelope gate. If the outdoor air temperature drops below the heat
 pump's minimum operating limit (e.g., < 11 °C), heating is disabled. In this
@@ -54,6 +58,10 @@ state, Frost Protection (Branch 1) will only trigger simple **water circulation*
 which is sufficient to prevent freezing.
 
 ### Demand/Power Limiter
+
+<p align="center">
+  <img src="images/architecture-demand-limiter.svg" width="700" alt="Demand/Power Limiter: Huisvermogen; + zwembadlast; Boven limiet: pauze">
+</p>
 
 A second, independent gate sits alongside the operating envelope in front of
 branches **4** and **5**: with a house power sensor and a cap configured
@@ -75,6 +83,10 @@ decision ladder.
 
 ## Filtration Calculation
 
+<p align="center">
+  <img src="images/filtration-calculation.svg" width="700" alt="Filtration Calculation: Poolvolume; ÷ gemeten flow; Benodigde uren">
+</p>
+
 Filtration runtime is calculated dynamically based on physical metrics rather
 than hardcoded timers:
 
@@ -84,6 +96,10 @@ Block Duration        = Daily Runtime / Number of Scheduled Blocks
 ```
 
 ### Key Filtration Behaviors
+
+<p align="center">
+  <img src="images/filtration-behaviors.svg" width="700" alt="Key Filtration Behaviors: Flow gemeten; Filterweerstand mee; Sessies tellen mee">
+</p>
 
 - **Derating factor:** If pump flow is unmeasured (taken from a spec sheet), it is
   automatically derated by 25–40% to account for filter resistance.
@@ -96,6 +112,10 @@ Block Duration        = Daily Runtime / Number of Scheduled Blocks
 ---
 
 ## Entity Mapping & Fallbacks
+
+<p align="center">
+  <img src="images/entity-fallbacks.svg" width="700" alt="Entity Mapping &amp;amp; Fallbacks: Sensor gekoppeld; Functie actief; Leeg? veilige fallback">
+</p>
 
 All sensors and switches can be updated anytime under **Settings → Devices &
 Services → PoolSmart → Configure**.
@@ -120,6 +140,10 @@ cleanly and reports in diagnostics without breaking the integration:
 
 ## AI Advisory Layer
 
+<p align="center">
+  <img src="images/ai-advisory.svg" width="700" alt="AI Advisory Layer: Logs analyseren; Voorstel met reden; Jij beslist">
+</p>
+
 The optional AI layer acts strictly as a **non-blocking advisor**:
 
 1. Analyzes historical session logs and efficiency metrics.
@@ -141,6 +165,10 @@ piggybacking on that cadence rather than a separate timer.
 ---
 
 ## Compressor Protection
+
+<p align="center">
+  <img src="images/compressor-protection.svg" width="700" alt="Compressor Protection: Compressor stopt; Wachttijd loopt; Veilig herstarten">
+</p>
 
 Minimum off and run times for the heat pump are enforced separately from the
 ordinary decision hold, and no branch can override them. A hold protects a

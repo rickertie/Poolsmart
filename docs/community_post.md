@@ -14,6 +14,10 @@ thing people will not have seen before.*
 
 ## PoolSmart — a pool controller that explains itself
 
+<p align="center">
+  <img src="images/community-overview.svg" width="700" alt="PoolSmart overview: sensors feed a single decision ladder, which controls pool equipment and explains every decision">
+</p>
+
 I have an Intex frame pool with a small heat pump, a Zigbee plug on the pump and
 another on the heat pump, and a dynamic electricity tariff. I started with about
 forty automations and fourteen scripts. It worked, mostly, and every time it did
@@ -25,6 +29,10 @@ through HACS as a custom repository:
 👉 https://github.com/rickertie/Poolsmart
 
 ### The idea
+
+<p align="center">
+  <img src="images/community-idea.svg" width="700" alt="The idea: Sensoren meten; Eén prioriteitsladder beslist; Actie + uitleg zichtbaar">
+</p>
 
 ESPHome measures. Home Assistant decides. Every 30 seconds a single priority
 ladder is walked from the top, and the first branch that matches produces one

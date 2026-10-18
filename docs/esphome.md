@@ -14,6 +14,10 @@ see [Hardware](hardware.md). For mapping sensors to integration fields, see
 
 ## Why Calculate Metrics in the Integration?
 
+<p align="center">
+  <img src="images/metrics-location.svg" width="700" alt="Why Calculate Metrics in the Integration?: ESPHome meet; Home Assistant rekent; Zelfde logica voor alle sensoren">
+</p>
+
 PoolSmart follows a simple principle: **"ESPHome measures, Home Assistant
 decides."**
 
@@ -37,6 +41,10 @@ those numbers, and every decision about what to do.
 ## Calibration Procedures
 
 ### 1. Temperature Sensor Calibration (The Water Glass Test)
+
+<p align="center">
+  <img src="images/temperature-calibration.svg" width="700" alt="1. Temperature Sensor Calibration (The Water Glass Test): Meet in waterglas; Vergelijk met referentie; Corrigeer sensor">
+</p>
 
 DS18B20 sensors are accurate to ±0.5 °C. While fine for room temperatures, a
 0.4 °C error on a heat pump raising water by only 2.5 °C will skew COP

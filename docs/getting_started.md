@@ -61,6 +61,10 @@ See [Sensors](#mapping-your-sensors) below.
 
 ## Mapping Your Sensors
 
+<p align="center">
+  <img src="images/map-sensors.svg" width="700" alt="Mapping Your Sensors: Watermeting nodig; Koppel optionele sensoren; Ontbreekt? functie schakelt uit">
+</p>
+
 PoolSmart needs at least two readings to function:
 
 1. **Water temperature** — from your ESPHome probe or any temperature sensor
@@ -85,6 +89,10 @@ are auto-discovered. Otherwise, map them manually:
 ---
 
 ## What to Expect on Day One
+
+<p align="center">
+  <img src="images/first-day.svg" width="700" alt="What to Expect on Day One: Eerste beslissing; Dagelijkse filtratie; Leren in volgende sessies">
+</p>
 
 | Timeframe | What Happens |
 |---|---|
