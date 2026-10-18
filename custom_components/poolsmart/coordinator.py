@@ -1525,9 +1525,9 @@ class PoolSmartCoordinator(DataUpdateCoordinator):
             return
         service = "turn_on" if wanted else "turn_off"
         await self.hass.services.async_call(
-            "switch", service, {"entity_id": entity_id}, blocking=False
+            "homeassistant", service, {"entity_id": entity_id}, blocking=False
         )
-        _LOGGER.debug("Requested switch.%s for %s", service, entity_id)
+        _LOGGER.debug("Requested homeassistant.%s for %s", service, entity_id)
         if key == c.CONF_PUMP_SWITCH:
             self._desired_pump_state = wanted
             self._desired_pump_since = dt_util.now()

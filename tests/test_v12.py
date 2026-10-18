@@ -399,7 +399,7 @@ def test_t95_lifecycle_services():
 
     init_source = (ROOT / "__init__.py").read_text()
     for name in ("export_learning", "import_learning"):
-        assert f'async_register(DOMAIN, "{name}"' in init_source, name
+        assert f'async_register_admin_service(hass, DOMAIN, "{name}"' in init_source, name
 
 
 # ---------------------------------------------------------------------------

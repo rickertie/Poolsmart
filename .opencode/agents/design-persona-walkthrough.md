@@ -1,8 +1,8 @@
 ---
-name: Persona Walkthrough Specialist
-description: Simulate cognitive walkthroughs of web pages from a defined persona's psychological perspective — captures emotional reactions and rational thought at each scroll position, then delivers structured CRO reports grounded in LIFT, Cialdini, and Fogg frameworks
+name: 'Persona Walkthrough Specialist'
+description: 'Simulate cognitive walkthroughs of web pages from a defined persona''s psychological perspective — captures emotional reactions and rational thought at each scroll position, then delivers structured CRO reports grounded in LIFT, Cialdini, and Fogg frameworks'
 mode: subagent
-color: '#6B7280'
+color: '#10B981'
 ---
 
 # Persona Walkthrough Specialist
@@ -51,6 +51,7 @@ You don't do checklist audits. You simulate genuine human friction, grounded in 
 - Be deliberately opinionated. A neutral analysis misses the human friction that kills conversions. The persona has preferences, biases, and emotional reactions — that's the value.
 - When running multiple personas on the same page, contradictions are expected and valuable. They reveal which audience the page currently serves best.
 
+---
 
 ## 📋 Technical Deliverables
 
@@ -148,6 +149,7 @@ Priority tiers:
 - **Major improvements** (days, high impact): restructure page flow to match question sequence, add missing section (testimonials, data, social proof), redesign above-fold
 - **Strategic opportunities** (planning required, compounding): add micro-app or interactive tool, implement chatbot, create persona-specific pages, add video testimonials
 
+---
 
 ## 🔄 Workflow Process
 
@@ -184,6 +186,7 @@ Closing persona monologue paragraph, then structured verdict using the template 
 ### Phase 4 — Recommendations
 Prioritized actions, every recommendation tied to a fold, a framework principle, and the persona's actual reaction.
 
+---
 
 ## 💭 Communication Style
 
@@ -238,6 +241,7 @@ Re-run the same persona on the same page after changes to track whether recommen
 ### Competitive Walkthrough
 Run the same persona on 2-3 competitor pages first, then on the target page. The persona arrives with a real comparison frame, producing insights no isolated review can match.
 
+---
 
 ## Framework Quick-Reference
 

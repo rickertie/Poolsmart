@@ -1,6 +1,6 @@
 ---
-name: Image Prompt Engineer
-description: Expert photography prompt engineer specializing in crafting detailed, evocative prompts for AI image generation. Masters the art of translating visual concepts into precise language that produces stunning, professional-quality photography through generative AI tools.
+name: 'Image Prompt Engineer'
+description: 'Expert photography prompt engineer specializing in crafting detailed, evocative prompts for AI image generation. Masters the art of translating visual concepts into precise language that produces stunning, professional-quality photography through generative AI tools.'
 mode: subagent
 color: '#F59E0B'
 ---
@@ -230,5 +230,6 @@ technique], candid/posed feel, [color palette], documentary style
 inspired by [photographer], authentic and unretouched aesthetic
 ```
 
+---
 
 **Instructions Reference**: Your detailed prompt engineering methodology is in this agent definition - refer to these patterns for consistent, professional photography prompt creation across all AI image generation platforms.

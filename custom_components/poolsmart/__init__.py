@@ -17,6 +17,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_FINAL_WRITE, Platform
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify
 
@@ -35,6 +36,9 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SWITCH,
 ]
+
+#: Learned-history exports/imports live here, never next to configuration.yaml.
+LEARNING_SUBDIR = "poolsmart"
 
 
 def _resolve_config_path(hass: HomeAssistant, path: str) -> Path:
@@ -56,6 +60,26 @@ def _resolve_config_path(hass: HomeAssistant, path: str) -> Path:
         raise ValueError(
             f"refusing to touch {candidate}: import/export paths must stay inside "
             "the Home Assistant configuration directory"
+        )
+    return candidate
+
+
+def _resolve_learning_path(hass: HomeAssistant, path: str | None) -> Path:
+    """Resolve a learned-history path inside the dedicated ``poolsmart`` subdir.
+
+    Only files under ``config/poolsmart/`` may be touched, and relative names are
+    forced into that subdirectory. Anything else is refused outright so a caller
+    cannot overwrite configuration.yaml, secrets.yaml or anything under .storage.
+    """
+    base = Path(hass.config.path()).resolve() / LEARNING_SUBDIR
+    candidate = Path(path or f"{DOMAIN}_learning.json").expanduser()
+    if not candidate.is_absolute():
+        candidate = base / candidate
+    candidate = candidate.resolve()
+    if not candidate.is_relative_to(base):
+        raise ValueError(
+            f"refusing to touch {candidate}: learning paths must stay inside "
+            f"the {LEARNING_SUBDIR} directory"
         )
     return candidate
 
@@ -406,9 +430,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         from .recovery import export_payload
 
         try:
-            path = _resolve_config_path(
-                hass, call.data.get("path") or "poolsmart_learning.json"
-            )
+            path = _resolve_learning_path(hass, call.data.get("path"))
         except ValueError as err:
             _LOGGER.error("%s", err)
             return
@@ -418,19 +440,21 @@ def _async_register_services(hass: HomeAssistant) -> None:
             return
         payload = export_payload(coordinator.store, call.data.get("sections"))
 
+        path.parent.mkdir(parents=True, exist_ok=True)
+
         def _write() -> None:
             path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
         await hass.async_add_executor_job(_write)
         _LOGGER.info("Exported learned history to %s", path)
 
-    hass.services.async_register(DOMAIN, "export_learning", _export)
+    async_register_admin_service(hass, DOMAIN, "export_learning", _export)
 
     async def _import(call) -> None:
         from .recovery import validate_import
 
         try:
-            path = _resolve_config_path(hass, call.data["path"])
+            path = _resolve_learning_path(hass, call.data["path"])
         except (ValueError, KeyError) as err:
             _LOGGER.error("Refusing to import: %s", err)
             return
@@ -459,7 +483,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
         await coordinator.async_request_refresh()
         _LOGGER.info("Imported learned history from %s: %s", path, taken)
 
-    hass.services.async_register(DOMAIN, "import_learning", _import)
+    async_register_admin_service(hass, DOMAIN, "import_learning", _import)
 
     async def _replace(call) -> None:
         from .recovery import validate_import
@@ -471,7 +495,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             return
 
         try:
-            path = _resolve_config_path(hass, call.data["path"])
+            path = _resolve_learning_path(hass, call.data["path"])
         except (ValueError, KeyError) as err:
             _LOGGER.error("Refusing to import: %s", err)
             return
@@ -502,7 +526,7 @@ def _async_register_services(hass: HomeAssistant) -> None:
             replaced,
         )
 
-    hass.services.async_register(DOMAIN, "replace_learning", _replace)
+    async_register_admin_service(hass, DOMAIN, "replace_learning", _replace)
 
     async def _rebuild_learning(call) -> None:
         coordinator = _target_coordinator(hass, "reprocess learning history")

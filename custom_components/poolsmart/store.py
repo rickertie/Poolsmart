@@ -10,14 +10,11 @@ the last timestamp that was written.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-import os
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from homeassistant.core import HomeAssistant
@@ -450,28 +447,6 @@ class PoolStore:
                     interval.end = interval.start
                 _LOGGER.debug("Closed a filtration interval left open by a restart")
 
-    async def _async_save_atomic(self, data: dict, path: str) -> None:
-        """Write data to disk with a temp-file-then-rename pattern.
-
-        A crash mid-write can leave a truncated JSON file that cannot be parsed
-        on the next load. Writing to a temporary file and renaming it over the
-        target replaces the old contents atomically: the rename is a single
-        metadata operation on the filesystem, not a copy, so it either
-        completes or it does not.
-        """
-        loop = asyncio.get_running_loop()
-        target = Path(path)
-        tmp = target.with_suffix(".tmp")
-
-        def _write() -> None:
-            with tmp.open("w", encoding="utf-8") as fh:
-                json.dump(data, fh, indent=2, default=str)
-                fh.flush()
-                os.fsync(fh.fileno())
-            os.replace(tmp, target)
-
-        await loop.run_in_executor(None, _write)
-
     async def async_save(self, *, force: bool = False) -> None:
         """Persist the state, debounced and serialised.
 
@@ -536,7 +511,7 @@ class PoolStore:
 
         async with self._save_lock:
             self._last_saved_at = time.monotonic()
-            await self._async_save_atomic(data, self._store.path)
+            await self._store.async_save(data)
 
     # -- Filtration quota --------------------------------------------------
 

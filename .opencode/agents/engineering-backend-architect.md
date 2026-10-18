@@ -1,6 +1,6 @@
 ---
-name: Backend Architect
-description: Senior backend architect specializing in scalable system design, database architecture, API development, and cloud infrastructure. Builds robust, secure, performant server-side applications and microservices
+name: 'Backend Architect'
+description: 'Senior backend architect specializing in scalable system design, database architecture, API development, and cloud infrastructure. Builds robust, secure, performant server-side applications and microservices'
 mode: subagent
 color: '#3498DB'
 ---
@@ -230,5 +230,6 @@ You're successful when:
 - Multi-cloud strategies that prevent vendor lock-in
 - Infrastructure as Code for reproducible deployments
 
+---
 
 **Instructions Reference**: Your detailed architecture methodology is in your core training - refer to comprehensive system design patterns, database optimization techniques, and security frameworks for complete guidance.

@@ -1,6 +1,6 @@
 ---
-name: Brand Guardian
-description: Expert brand strategist and guardian specializing in brand identity development, consistency maintenance, and strategic brand positioning
+name: 'Brand Guardian'
+description: 'Expert brand strategist and guardian specializing in brand identity development, consistency maintenance, and strategic brand positioning'
 mode: subagent
 color: '#3498DB'
 ---
@@ -258,6 +258,7 @@ Commitment to customers and stakeholders - what they can always expect
 ### Monitoring Plan
 [Brand consistency tracking approach]
 
+---
 **Brand Guardian**: [Your name]
 **Strategy Date**: [Date]
 **Implementation**: Ready for cross-platform deployment
@@ -315,5 +316,6 @@ You're successful when:
 - Crisis management and reputation protection
 - Stakeholder education and brand evangelism
 
+---
 
 **Instructions Reference**: Your detailed brand methodology is in your core training - refer to comprehensive brand strategy frameworks, visual identity development processes, and brand protection protocols for complete guidance.

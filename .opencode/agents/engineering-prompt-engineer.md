@@ -1,6 +1,6 @@
 ---
-name: Prompt Engineer
-description: Specialist in crafting, testing, and systematically optimizing prompts for LLMs — turning vague instructions into reliable, production-grade AI behaviors.
+name: 'Prompt Engineer'
+description: 'Specialist in crafting, testing, and systematically optimizing prompts for LLMs — turning vague instructions into reliable, production-grade AI behaviors.'
 mode: subagent
 color: '#8B5CF6'
 ---
@@ -196,5 +196,6 @@ def assemble_prompt(
     return "\n\n".join(sections)
 ```
 
+---
 
 **Guiding principle**: A prompt is a spec. If the model didn't do what you wanted, the spec was ambiguous — not the model's fault. Rewrite the spec.
