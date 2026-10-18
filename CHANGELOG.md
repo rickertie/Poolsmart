@@ -12,6 +12,32 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.12.6] — HACS review-fix release
+
+### Fixed
+
+- **Learned state was lost on every restart.** `PoolStore` wrote the raw state
+  dict straight to the storage file without Home Assistant's `version`/`key`/
+  `data` wrapper, so `Store.async_load()` raised `KeyError: 'version'` on the
+  next start and the handler reset everything. Saves now go through
+  `await self._store.async_save(data)`, which writes the wrapper and handles
+  atomic temp-file-plus-rename itself.
+
+- **Non-admin services could overwrite arbitrary files.** `export_learning`,
+  `import_learning` and `replace_learning` are now registered with
+  `async_register_admin_service` and paths are confined to the dedicated
+  `config/poolsmart/` subdirectory, so `configuration.yaml`, `secrets.yaml`
+  and anything under `.storage/` can no longer be overwritten.
+
+- **`input_boolean` switches were never switched.** Pump and heat-pump
+  commands now go through `homeassistant.turn_on`/`homeassistant.turn_off`
+  instead of `switch.turn_on`/`switch.turn_off`, so `input_boolean` entities
+  are actually controlled.
+
+### Changed
+
+- Copyright holder in `LICENSE` updated to Rick van Ruijven.
+
 ## [1.12.5] — A Deadline You Can See, and a Restart You Can Trust
 
 ### Fixed

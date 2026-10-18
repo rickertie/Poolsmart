@@ -551,8 +551,6 @@ class PoolStore:
         async with self._save_lock:
             self._last_saved_at = time.monotonic()
             await self._store.async_save(data)
-            await self._async_save_atomic(data, self._store.path)
-            self.last_synced_at = synced_at
 
     # -- Filtration quota --------------------------------------------------
 
