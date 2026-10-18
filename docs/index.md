@@ -27,37 +27,37 @@ limits. Optional sensors and price data add features; they are not required for 
 <div class="ps-grid ps-grid--3" markdown>
 
 <div class="ps-card ps-card--accent" markdown>
-<div class="ps-card__icon">:material-pump:</div>
+<div class="ps-card__icon" markdown="1">:material-pump:</div>
 <p class="ps-card__title">Smart filtration</p>
 <p class="ps-card__text">Estimates the daily pump run time from pool volume, turnover needs, and available flow data. Updates its estimate as flow changes; heating circulation counts toward the daily total.</p>
 </div>
 
 <div class="ps-card" markdown>
-<div class="ps-card__icon">:material-heat-pump-outline:</div>
+<div class="ps-card__icon" markdown="1">:material-heat-pump-outline:</div>
 <p class="ps-card__title">Price- & solar-aware heating</p>
 <p class="ps-card__text">Plans heating against your temperature target and swim time. When configured, it can account for electricity prices, solar power, and a household power limit.</p>
 </div>
 
 <div class="ps-card" markdown>
-<div class="ps-card__icon">:material-brain:</div>
+<div class="ps-card__icon" markdown="1">:material-brain:</div>
 <p class="ps-card__title">Self-learning</p>
 <p class="ps-card__text">Refines heat-loss, heating-rate, and heat-pump efficiency estimates from recorded sessions. Review a session before including or excluding it from learning.</p>
 </div>
 
 <div class="ps-card" markdown>
-<div class="ps-card__icon">:material-test-tube:</div>
+<div class="ps-card__icon" markdown="1">:material-test-tube:</div>
 <p class="ps-card__title">Water chemistry</p>
 <p class="ps-card__text">Turns water-test readings into dose estimates for configured products. Test reminders adapt to water temperature, and recorded doses can be reviewed later.</p>
 </div>
 
 <div class="ps-card" markdown>
-<div class="ps-card__icon">:material-solar-power-variant:</div>
+<div class="ps-card__icon" markdown="1">:material-solar-power-variant:</div>
 <p class="ps-card__title">Solar optimization</p>
 <p class="ps-card__text">Can use sunlight or solar-production readings when planning heat. Sunlight data can also help estimate heat loss; the pool does not need its own solar panels.</p>
 </div>
 
 <div class="ps-card" markdown>
-<div class="ps-card__icon">:material-shield-check-outline:</div>
+<div class="ps-card__icon" markdown="1">:material-shield-check-outline:</div>
 <p class="ps-card__title">Equipment protection</p>
 <p class="ps-card__text">Applies configured compressor timing, frost and flow safeguards, and the emergency stop. These protections take priority over scheduled heating.</p>
 </div>
