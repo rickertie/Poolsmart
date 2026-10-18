@@ -14,9 +14,9 @@ that supplies the COP curve and heat loss figures the planner relies on, see
 
 ## Maintenance vs. Seasonal Mode
 
-<p align="center">
-  <img src="images/heating-timeline.svg" width="600" alt="Heating planning timeline showing maintenance vs seasonal mode">
-</p>
+<figure markdown>
+  ![Heating planning timeline showing maintenance vs seasonal mode](images/heating-timeline.svg){ width="600" }
+</figure>
 
 Depending on the difference between the target temperature and current water
 temperature, the optimizer operates in one of two distinct modes:
