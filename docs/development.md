@@ -9,6 +9,27 @@ For the architecture of the decision core, see [Architecture](architecture.md).
 
 ---
 
+## Previewing the Documentation
+
+The documentation site is built with Zensical. Install the locked documentation
+dependencies and start the local preview from the repository root:
+
+```bash
+uv sync --group docs
+uv run zensical serve
+```
+
+To check the production build, including broken links, run:
+
+```bash
+uv run zensical build --strict
+```
+
+The site configuration lives in `zensical.toml`; source pages and assets live in
+`docs/`. GitHub Actions builds and deploys the site to GitHub Pages.
+
+---
+
 ## Running Tests
 
 The decision core in `custom_components/poolsmart/core/` has no Home Assistant

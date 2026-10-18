@@ -1,0 +1,153 @@
+[project]
+site_name = "PoolSmart"
+site_description = "Intelligent swimming pool controller for Home Assistant — ESPHome measures, HA decides."
+site_url = "https://rickertie.github.io/Poolsmart/"
+site_author = "PoolSmart contributors"
+repo_url = "https://github.com/rickertie/Poolsmart"
+repo_name = "rickertie/Poolsmart"
+edit_uri = "edit/main/docs/"
+copyright = "PoolSmart is licensed under AGPL-3.0-or-later"
+docs_dir = "docs"
+site_dir = "site"
+use_directory_urls = true
+exclude_docs = """
+.AI_RECOMMENDATIONS/
+promotion/
+images/README.md
+brand-image.md
+community_post.md
+"""
+extra_css = ["stylesheets/extra.css"]
+extra_javascript = ["javascripts/extra.js"]
+nav = [
+  { Home = "index.md" },
+  { "Getting Started" = "getting_started.md" },
+  { "Core Concepts" = [
+    { Architecture = "architecture.md" },
+    { "Planning & Prices" = "planning.md" },
+    { "Self-Learning" = "learning.md" },
+  ] },
+  { Subsystems = [
+    { Filtration = "filtration.md" },
+    { Heating = "heating.md" },
+    { "Water Chemistry" = "chemistry.md" },
+  ] },
+  { "Setup & Configuration" = [
+    { "Hardware & Wiring" = "hardware.md" },
+    { ESPHome = "esphome.md" },
+    { "Sensors & Calibration" = "sensors.md" },
+    { Configuration = "configuration.md" },
+    { "Wizard Defaults" = "defaults.md" },
+  ] },
+  { Reference = [
+    { Entities = "entities.md" },
+    { "Management Panel" = "panel.md" },
+    { "Lovelace Dashboards" = "lovelace/README.md" },
+    { "Logging & Diagnostics" = "logging.md" },
+    { Troubleshooting = "troubleshooting.md" },
+    { Development = "development.md" },
+    { "ESPHome Example YAML" = "esphome/pool_sensors.yaml" },
+  ] },
+  { Changelog = "https://github.com/rickertie/Poolsmart/blob/main/CHANGELOG.md" },
+]
+
+[project.theme]
+variant = "modern"
+logo = "assets/logo.png"
+favicon = "assets/logo.png"
+custom_dir = "overrides"
+language = "en"
+font.text = "Inter"
+font.code = "JetBrains Mono"
+icon.logo = "logo"
+features = [
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.instant.progress",
+  "navigation.tracking",
+  "navigation.sections",
+  "navigation.expand",
+  "navigation.indexes",
+  "navigation.footer",
+  "navigation.path",
+  "navigation.top",
+  "navigation.prune",
+  "toc.follow",
+  "toc.integrate",
+  "content.code.copy",
+  "content.code.annotate",
+  "content.action.edit",
+  "content.action.view",
+  "search.suggest",
+  "search.highlight",
+  "search.share",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[project.extra]
+generator = false
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/rickertie/Poolsmart"
+name = "GitHub repository"
+
+[[project.extra.social]]
+icon = "fontawesome/solid/puzzle-piece"
+link = "https://github.com/rickertie/Poolsmart#installation"
+name = "Install via HACS"
+
+[project.plugins.search]
+separator = '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+[project.plugins.social]
+cards = false
+
+[project.markdown_extensions]
+# Python Markdown extensions
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+toc.toc_depth = 3
+
+# Zensical's built-in Material Design and Twemoji icon rendering
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+
+# Code highlighting and Mermaid diagrams
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+
+# Content tabs and task lists
+pymdownx.keys = {}
+pymdownx.tabbed.alternate_style = true
+pymdownx.tabbed.combine_header_slug = true
+pymdownx.tabbed.slugify.object = "pymdownx.slugs.slugify"
+pymdownx.tabbed.slugify.kwds.case = "lower"
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.details = {}

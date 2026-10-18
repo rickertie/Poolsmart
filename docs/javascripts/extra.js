@@ -6,7 +6,7 @@
       if (a.hostname !== location.hostname && !a.getAttribute("aria-label")) {
         var label = (a.textContent || a.getAttribute("aria-label") || "External link").trim();
         a.setAttribute("aria-label", label + " (opens in new tab)");
-        if (!a.hasAttribute("target")) return; // let MkDocs handle target
+        if (!a.hasAttribute("target")) return; // preserve the theme's link behavior
       }
     });
     // Ensure tables have captions for screen readers if missing header scope already handled by Material

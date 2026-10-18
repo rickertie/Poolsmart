@@ -48,7 +48,7 @@ For the management panel's Diagnostics tab, see [Panel](panel.md).
 | Entities disappeared after upgrade | Entity ID migration | Check the log for rename messages; update automations |
 | Pump runs a full filtration block again right after a Home Assistant update or restart | Two separate causes, both fixed: state is flushed to disk before shutdown as of 1.12.2, and a single unreadable stored interval no longer wipes the whole day's credit as of 1.12.5 | Update to 1.12.5 or later; if it still happens, check `PoolSmart state restored` in the log or the diagnostics file's `persistence` section (see [below](#using-the-diagnostics-tab)) for what the last restart actually found on disk |
 
-### Single-Pool Limitation for Services
+### Choosing the Target Pool for Services
 
 With multiple PoolSmart pools, choose the intended pool in the service's **Pool**
 field. Calls from the management panel use the pool selected at the top of the

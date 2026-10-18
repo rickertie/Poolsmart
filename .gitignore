@@ -7,7 +7,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# MkDocs build output
+# Zensical build output
 site/
 
 # Virtual environments

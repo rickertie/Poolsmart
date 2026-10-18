@@ -172,7 +172,7 @@ See [Panel](panel.md) for the full reference. For everyday household use, instal
 
 ## Known limitations
 
-- **Services can target multiple pools.** Choose the intended pool in a service call; the management panel targets its currently selected pool. See [Troubleshooting](troubleshooting.md#targeting-services-to-a-pool).
+- **Services can target multiple pools.** Choose the intended pool in a service call; the management panel targets its currently selected pool. See [Troubleshooting](troubleshooting.md#choosing-the-target-pool-for-services).
 - **House power limit needs the right sensor.** The demand limiter expects a whole-house power sensor (e.g. from your smart meter), not the pool's own consumption. See [Configuration](configuration.md#house-power-limit).
 
 ---

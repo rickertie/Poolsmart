@@ -1,5 +1,4 @@
-/* PoolSmart — Polished Material Design System
-   Brand Guardian + UI Designer + UX Architect — v1.0
+/* PoolSmart documentation — modern Zensical theme
    WCAG 2.2 AA, 4.5:1 contrast, keyboard & reduced-motion aware
 */
 
@@ -25,7 +24,7 @@
   --ps-warning: #8a6100;
   --ps-error:   #b42318;
 
-  /* Material overrides — light */
+  /* Zensical brand colors — light */
   --md-primary-fg-color:        var(--ps-pool-800);
   --md-primary-fg-color--light: var(--ps-pool-700);
   --md-primary-fg-color--dark:  var(--ps-pool-900);
@@ -33,7 +32,7 @@
   --md-default-bg-color:        #ffffff;
   --md-default-fg-color:        var(--ps-ink);
 
-  /* Typography — Inter + JetBrains Mono (loaded via Google Fonts in mkdocs.yml) */
+  /* Typography — Inter + JetBrains Mono (configured in zensical.toml) */
   --ps-font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --ps-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -54,7 +53,7 @@
   --ps-shadow-md: 0 4px 12px rgba(15,43,70,.08), 0 2px 6px rgba(15,43,70,.06);
 }
 
-/* Dark — slate with池 blue that still passes AA on #1e1e2a-ish */
+/* Dark — slate with accessible PoolSmart cyan accents */
 [data-md-color-scheme="slate"] {
   --md-primary-fg-color:        #4dd0e1; /* light cyan remapped for dark bg */
   --md-primary-fg-color--light: #80deea;
@@ -104,18 +103,6 @@ body, .md-typeset {
 /* ── Skip link (a11y) ─────────────────────────────────────────── */
 .md-skip { background: var(--ps-pool-800); color: #fff !important; padding: .6rem 1rem; border-radius: 0 0 var(--ps-radius-sm) 0; }
 .md-skip:focus { outline: 3px solid #fff; outline-offset: -2px; }
-
-/* ── Header / Tabs ────────────────────────────────────────────── */
-.md-header { background: var(--ps-pool-800); border-bottom: 1px solid rgba(255,255,255,.08); }
-.md-header__title { font-weight: 700; letter-spacing: -0.02em; }
-.md-tabs { background: #005a6e; border-bottom: 1px solid rgba(255,255,255,.06); }
-.md-tabs__link { font-weight: 550; opacity: .92; }
-.md-tabs__link--active, .md-tabs__link:hover { opacity: 1; color: #fff; }
-.md-header__button.md-icon svg { fill: currentColor; }
-
-/* Search — larger hit area, visible focus */
-.md-search__input { border-radius: 999px; }
-.md-search__input::placeholder { color: rgba(255,255,255,.7); }
 
 /* ── Hero (home) ──────────────────────────────────────────────── */
 .ps-hero {
@@ -211,10 +198,6 @@ body, .md-typeset {
 [data-md-color-scheme="slate"] .md-nav__link--active { color: #80deea; }
 .md-nav__link { font-size: .9rem; }
 .md-nav__item--active > .md-nav__link { font-weight: 650; }
-
-/* ── Footer ───────────────────────────────────────────────────── */
-.md-footer { background: #0f1a26; }
-.md-footer-meta { background: #0b121c; }
 
 /* ── Print ────────────────────────────────────────────────────── */
 @media print {
