@@ -12,6 +12,17 @@ Every release gets a title naming what it was actually about. Read from the
 bottom up, they tell the story of a system slowly learning to stop believing its
 own paperwork.
 
+## [1.13.1] — Safety and release fixes
+
+### Fixed
+
+- Target-above-maximum setup errors now use the correct translation key in
+  English and Dutch, allowing hassfest to validate the integration.
+- No flow while the pump is running is again a critical fault, so PoolSmart
+  stops equipment when circulation is lost.
+- Learning-history export now creates its destination directory in the executor
+  alongside the file write.
+
 ## [1.13.0] — Safer Defaults, Clearer Choices
 
 ### Added
@@ -25,9 +36,8 @@ own paperwork.
 
 ### Changed
 
-- Flow and power-sensor behavior is described more clearly. A pump with no
-  measured flow now raises a warning while PoolSmart keeps circulation running;
-  an exceeded household power cap can stop heating immediately.
+- Flow and power-sensor behavior is described more clearly. An exceeded
+  household power cap can stop heating immediately.
 - Pool target temperature is checked against the configured maximum during setup
   and when options are changed.
 - Learning-history import validation now rejects malformed and implausible

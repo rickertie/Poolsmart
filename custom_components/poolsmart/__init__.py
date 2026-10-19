@@ -437,9 +437,8 @@ def _async_register_services(hass: HomeAssistant) -> None:
             return
         payload = export_payload(coordinator.store, call.data.get("sections"))
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-
         def _write() -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
         await hass.async_add_executor_job(_write)
